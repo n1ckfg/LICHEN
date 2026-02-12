@@ -1,4 +1,13 @@
 import { createModule, getRegistry } from './moduleRegistry.js';
+import { vertSrc } from './shaders/vert.js';
+const blitFrag = `
+precision highp float;
+varying vec2 vTexCoord;
+uniform sampler2D tex0;
+void main() {
+  gl_FragColor = texture2D(tex0, vec2(vTexCoord.x, 1.0 - vTexCoord.y));
+}
+`;
 
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'VideoPlayer', 'Oscillator'],
@@ -59,8 +68,23 @@ export class NodeGraphUI {
     this.panStartPanY = 0;
     this.selectedNode = null;
     this.fullscreenMonitor = null;
+    this._blitShader = null;
 
     this._createPalette();
+  }
+
+  // Render a Framebuffer onto the P2D main canvas by blitting through glCanvas
+  _drawFBO(fbo, x, y, w, h) {
+    if (!fbo) return;
+    const g = this.pipeline.glCanvas;
+    if (!this._blitShader) {
+      this._blitShader = g.createShader(vertSrc, blitFrag);
+    }
+    g.shader(this._blitShader);
+    this._blitShader.setUniform('tex0', fbo);
+    g.noStroke();
+    g.rect(-g.width / 2, -g.height / 2, g.width, g.height);
+    this.p.image(g, x, y, w, h);
   }
 
   _createPalette() {
@@ -257,7 +281,7 @@ export class NodeGraphUI {
         }
         const dx = (p.width - dw) / 2;
         const dy = (p.height - dh) / 2;
-        p.image(mod.displayTexture, dx, dy, dw, dh);
+        this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
       }
       return;
     }
@@ -410,7 +434,7 @@ export class NodeGraphUI {
       p.strokeWeight(1);
       p.rect(mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
       if (mod.displayTexture) {
-        p.image(mod.displayTexture, mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H);
+        this._drawFBO(mod.displayTexture, mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H);
       }
     }
 
@@ -425,7 +449,7 @@ export class NodeGraphUI {
       p.noStroke();
       p.rect(px, py, PREVIEW_W, PREVIEW_H, 2);
       try {
-        p.image(mod.outputFBO, px, py, PREVIEW_W, PREVIEW_H);
+        this._drawFBO(mod.outputFBO, px, py, PREVIEW_W, PREVIEW_H);
       } catch (e) {
         // FBO may not be ready yet
       }
