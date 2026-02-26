@@ -287,7 +287,7 @@ export class NodeGraphUI {
     this._paletteEl.style.display = this.fullscreenMonitor !== null ? 'none' : '';
 
     // Draw fullscreen module if active
-    if (this.fullscreenMonitor) {
+    if (this.fullscreenMonitor !== null) {
       const mod = graph.nodes.get(this.fullscreenMonitor);
       if (mod) {
         p.background(0);
@@ -524,7 +524,7 @@ export class NodeGraphUI {
   }
 
   mousePressed(mx, my, button) {
-    if (this.fullscreenMonitor) {
+    if (this.fullscreenMonitor !== null) {
       this.fullscreenMonitor = null;
       this._fullscreenExitTime = performance.now();
       return;
