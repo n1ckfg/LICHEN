@@ -60,8 +60,12 @@ export class NodeGraphUI {
     this.draggingNode = null;
     this.dragOffsetX = 0;
     this.dragOffsetY = 0;
+    this.dragStartX = 0;      // screen coords at drag mousedown
+    this.dragStartY = 0;
+    this.dragActive = false;  // true only after mouse moves beyond dead zone
     this.draggingCable = null;
     this.draggingKnob = null;
+    this._fullscreenExitTime = 0; // prevents double-click from immediately re-entering fullscreen
     this.isPanning = false;
     this.panStartX = 0;
     this.panStartY = 0;
@@ -520,6 +524,7 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor) {
       this.fullscreenMonitor = null;
+      this._fullscreenExitTime = performance.now();
       return;
     }
 
@@ -603,6 +608,9 @@ export class NodeGraphUI {
       const mod = this.pipeline.graph.nodes.get(nodeHit);
       this.dragOffsetX = world.x - mod.x;
       this.dragOffsetY = world.y - mod.y;
+      this.dragStartX = mx;
+      this.dragStartY = my;
+      this.dragActive = false;
       this.selectedNode = nodeHit;
       return;
     }
@@ -620,6 +628,12 @@ export class NodeGraphUI {
     const world = this.screenToWorld(mx, my);
 
     if (this.draggingNode !== null) {
+      // Apply a small dead zone so micro-movements during clicks/double-clicks
+      // don't displace the node and break hit-tests for the subsequent events.
+      if (!this.dragActive) {
+        if (Math.hypot(mx - this.dragStartX, my - this.dragStartY) < 4) return;
+        this.dragActive = true;
+      }
       const mod = this.pipeline.graph.nodes.get(this.draggingNode);
       if (mod) {
         mod.x = world.x - this.dragOffsetX;
@@ -663,6 +677,7 @@ export class NodeGraphUI {
     }
 
     this.draggingNode = null;
+    this.dragActive = false;
     this.draggingKnob = null;
   }
 
@@ -678,6 +693,10 @@ export class NodeGraphUI {
   }
 
   mouseDoubleClicked(mx, my) {
+    // If this double-click is part of the gesture that just exited fullscreen
+    // (i.e. the first click exited it), don't immediately re-enter.
+    if (performance.now() - this._fullscreenExitTime < 400) return;
+
     const world = this.screenToWorld(mx, my);
     const monitorHit = this.hitTestMonitorDblClick(world.x, world.y);
     if (monitorHit !== null) {
