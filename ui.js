@@ -10,7 +10,7 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'VideoPlayer', 'Oscillator'],
+  'Sources': ['Camera', 'VideoPlayer', 'Oscillator', 'ZGRASS'],
   'Core': ['Comparator', 'FunctionGenerator', 'AdderMultiplier', 'Differentiator', 'ColorEncoder', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['TV', 'Film', 'VHSC', 'PixelVision', 'GameBoy', 'HyperCard', 'Delay', 'Glitch'],
   'Output': ['Monitor'],
@@ -36,6 +36,7 @@ const MODULE_COLORS = {
   HyperCard: [85, 85, 119],
   Delay: [68, 102, 136],
   Glitch: [102, 68, 85],
+  ZGRASS: [34, 120, 68],
 };
 
 const MODULE_WIDTH = 160;
@@ -146,9 +147,9 @@ export class NodeGraphUI {
     const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
     const paramCount = Object.keys(mod.params).length;
     const paramSection = paramCount * PARAM_ROW_HEIGHT;
-    const hasPreview = mod.outputFBO && mod.type !== 'Monitor';
+    const hasPreview = mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'ZGRASS';
     const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
-    const monitorSection = mod.type === 'Monitor' ? MONITOR_PREVIEW_H + 8 : 0;
+    const monitorSection = (mod.type === 'Monitor' || mod.type === 'ZGRASS') ? MONITOR_PREVIEW_H + 8 : 0;
     const hasFileBtn = mod.type === 'VideoPlayer';
     const fileBtnSection = hasFileBtn ? 24 : 0;
     return HEADER_HEIGHT + portSection + paramSection + previewSection + monitorSection + fileBtnSection + 12;
@@ -232,7 +233,7 @@ export class NodeGraphUI {
   hitTestMonitorDblClick(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'Monitor') continue;
+      if (mod.type !== 'Monitor' && mod.type !== 'ZGRASS') continue;
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const py = mod.y + HEADER_HEIGHT + portSection;
@@ -267,10 +268,10 @@ export class NodeGraphUI {
     const p = this.p;
     const graph = this.pipeline.graph;
 
-    // Draw fullscreen monitor if active
+    // Draw fullscreen module if active
     if (this.fullscreenMonitor) {
       const mod = graph.nodes.get(this.fullscreenMonitor);
-      if (mod && mod.displayTexture) {
+      if (mod) {
         p.background(0);
         const aspect = 640 / 480;
         let dw = p.width;
@@ -281,7 +282,18 @@ export class NodeGraphUI {
         }
         const dx = (p.width - dw) / 2;
         const dy = (p.height - dh) / 2;
-        this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
+
+        if (mod.type === 'ZGRASS') {
+          // Update mouse device vars while ZGRASS is fullscreened
+          mod.updateMouseFromCanvas(p.mouseX, p.mouseY, p.width, p.height);
+          if (mod.outputFBO) {
+            this._drawFBO(mod.outputFBO, dx, dy, dw, dh);
+          }
+          // Render terminal/REPL overlays on top of the clean video
+          mod.renderOverlays(p);
+        } else if (mod.displayTexture) {
+          this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
+        }
       }
       return;
     }
@@ -438,8 +450,24 @@ export class NodeGraphUI {
       }
     }
 
-    // Module preview thumbnail (for non-Monitor modules with FBO)
-    if (mod.outputFBO && mod.type !== 'Monitor') {
+    // ZGRASS preview (clean video output, same size as Monitor preview)
+    if (mod.type === 'ZGRASS') {
+      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
+      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const py = mod.y + HEADER_HEIGHT + portSection;
+      p.fill(0);
+      p.stroke(60);
+      p.strokeWeight(1);
+      p.rect(mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
+      if (mod.outputFBO) {
+        try {
+          this._drawFBO(mod.outputFBO, mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H);
+        } catch (e) { /* FBO may not be ready yet */ }
+      }
+    }
+
+    // Module preview thumbnail (for non-Monitor, non-ZGRASS modules with FBO)
+    if (mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'ZGRASS') {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
