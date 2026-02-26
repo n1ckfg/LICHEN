@@ -309,8 +309,10 @@ export class NodeGraphUI {
           }
           // Render terminal/REPL overlays on top of the clean video
           mod.renderOverlays(p);
-        } else if (mod.displayTexture) {
-          this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
+        } else if (mod.type === 'Monitor') {
+          if (mod.displayTexture) {
+            this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
+          }
         }
       }
       return;
