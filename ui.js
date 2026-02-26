@@ -72,6 +72,7 @@ export class NodeGraphUI {
     this._blitShader = null;
 
     this._createPalette();
+    this._addDefaultNodes();
   }
 
   // Render a Framebuffer onto the P2D main canvas by blitting through glCanvas
@@ -114,6 +115,16 @@ export class NodeGraphUI {
     }
 
     document.body.appendChild(palette);
+    this._paletteEl = palette;
+  }
+
+  _addDefaultNodes() {
+    const mod = createModule('Monitor', this.pipeline.glCanvas, this.pipeline.graph.nextId);
+    const h = this.getModuleHeight(mod);
+    // Halfway between window center and lower-right corner = 75% of each dimension
+    mod.x = this.p.width * 0.75 - MODULE_WIDTH / 2;
+    mod.y = this.p.height * 0.75 - h / 2;
+    this.pipeline.graph.addNode(mod);
   }
 
   _addModule(typeName) {
@@ -267,6 +278,9 @@ export class NodeGraphUI {
   draw() {
     const p = this.p;
     const graph = this.pipeline.graph;
+
+    // Show/hide sidebar based on fullscreen state
+    this._paletteEl.style.display = this.fullscreenMonitor !== null ? 'none' : '';
 
     // Draw fullscreen module if active
     if (this.fullscreenMonitor) {
