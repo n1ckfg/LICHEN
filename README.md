@@ -1,6 +1,9 @@
-# CLAUDE.md
+# LICHEN - Modular Video Synthesizer
 
-This file provides guidance to Claude Code (claude.ai/code) when working with this repository.
+LICHEN is a browser-based modular video synthesizer inspired by the Sandin Image Processor (IP). It allows users to build complex real-time video processing patches by connecting modules in a directed acyclic graph (DAG).
+
+- **Core Technologies**: [p5.js](https://p5js.org/), WebGL (via p5.WEBGL), ES Modules
+- **No Build Step**: The project uses native browser ES modules. A simple HTTP server is all that's required to run it.
 
 ## Running the App
 
@@ -10,11 +13,7 @@ Requires `http-server` (`npm install -g http-server`).
 - **Windows**: `run.bat`
 - **Manual**: `http-server` then open `http://127.0.0.1:8080`
 
-No build step. The app uses ES modules loaded directly by the browser.
-
 ## Architecture
-
-LICHEN is a browser-based modular video synthesizer inspired by the Sandin Image Processor. Modules are connected in a node graph; each frame, the pipeline processes modules in topological order, each rendering to its own WebGL framebuffer.
 
 ### Core Data Flow
 
@@ -25,12 +24,15 @@ sketch.js (p5.js loop)
       → module.process(graph, glCanvas)  ← each module renders to its outputFBO
 ```
 
-**Key files:**
+### Key Files
+
 - `sketch.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen)
 - `pipeline.js` — `ProcessingPipeline`: holds the `ConnectionGraph`, drives per-frame processing
-- `graph.js` — `ConnectionGraph`: DAG of modules; re-runs topological sort on every structural change; serializes/deserializes the full patch as JSON
+- `graph.js` — `ConnectionGraph`: DAG of modules; re-runs topological sort on every structural change; serializes/deserializes the full patch as JSON. This is the source of truth for patch state.
 - `moduleRegistry.js` — global module registry; `registerModule(typeName, class)` / `createModule(typeName, glCanvas, id)`
 - `ui.js` — `NodeGraphUI`: full node graph editor drawn on the p5.js P2D canvas, with a DOM sidebar palette; handles pan/zoom, node drag, cable wiring, parameter knobs, and monitor preview rendering
+- `modules/Module.js` — base class for all modules; defines common behavior for shaders, FBOs, and parameters
+- `shaders/vert.js` — the shared vertex shader used by all modules for screen-quad rendering
 
 ### Module System (`modules/`)
 
@@ -43,24 +45,25 @@ Every module that produces video output:
 
 `params` is a plain object: `{ paramName: { value, min, max, step, label } }`. The UI renders each param as a draggable knob.
 
-**Module categories (as defined in `ui.js`):**
-- Sources: Camera, VideoPlayer, Oscillator
-- Core: Comparator, FunctionGenerator, AdderMultiplier, Differentiator, ColorEncoder, SyncGenerator, ValueScrambler
-- Effects: TV, Film, VHSC, PixelVision, GameBoy, HyperCard, Delay, Glitch
-- Output: Monitor
+### Module Categories
+
+- **Sources**: Camera, VideoPlayer, Oscillator, ZGRASS
+- **Core**: Comparator, FunctionGenerator, AdderMultiplier, Differentiator, ColorEncoder, SyncGenerator, ValueScrambler
+- **Effects**: TV, Film, VHSC, PixelVision, GameBoy, HyperCard, Delay, Glitch
+- **Output**: Monitor
 
 ### Shaders (`shaders/`)
 
 Fragment shaders are stored as JS template literal exports (e.g., `export const oscillatorFrag = \`...\``). `shaders/vert.js` exports the single shared vertex shader `vertSrc` used by all modules. Most modules import their own fragment shader from here.
 
-### Adding a New Module
+## Adding a New Module
 
 1. Create `shaders/mymodule.js` exporting the fragment shader source
 2. Create `modules/MyModule.js` extending `Module`, defining `inputs`, `outputs`, `params`, and `process()`; call `registerModule('MyModule', MyModuleClass)` at the end
 3. Import `'./modules/MyModule.js'` in `sketch.js`
 4. Add the type name to the appropriate category in `MODULE_CATEGORIES` in `ui.js`
 
-### ZGRASS Module
+## ZGRASS Module
 
 The ZGRASS module (`modules/ZGRASSModule.js`) is a complete embedded ZGRASS interpreter — an emulation of the Datamax UV-1 / Sandin Image Processor's ZGRASS language (from the FakeGRASS project). It has no input ports and one video output.
 
@@ -76,4 +79,11 @@ The ZGRASS module (`modules/ZGRASSModule.js`) is a complete embedded ZGRASS inte
 - Terminal + REPL overlays render over the video in fullscreen mode
 - Clicking exits fullscreen (same as Monitor)
 
-**ui.js additions for ZGRASS:** `getModuleHeight` and `_drawModule` treat ZGRASS like Monitor (large preview, `MONITOR_PREVIEW_W × MONITOR_PREVIEW_H`). `hitTestMonitorDblClick` checks for both `'Monitor'` and `'ZGRASS'` types.
+**ui.js integration:** `getModuleHeight` and `_drawModule` treat ZGRASS like Monitor (large preview, `MONITOR_PREVIEW_W × MONITOR_PREVIEW_H`). `hitTestMonitorDblClick` checks for both `'Monitor'` and `'ZGRASS'` types.
+
+## Development Conventions
+
+- **State Management**: The `ConnectionGraph` is the source of truth for the patch state.
+- **Rendering**: Modules should always render to their `outputFBO` during `process()`. The `Monitor` and `ZGRASS` modules provide previews by blitting their FBOs to the main P2D canvas in `ui.js`.
+- **Parameters**: Module parameters are normalized or use specific ranges defined in the `params` object. The UI handles scaling these values for display.
+- **Coordinate System**: p5.js uses a 2D coordinate system for the UI (top-left 0,0), while the WebGL `glCanvas` uses standard GL coordinates (centered 0,0 or screen-space depending on usage).
