@@ -1,5 +1,5 @@
 // commands.js — Command registry with abbreviation resolution
-// All ZGRASS commands register here. Supports prefix abbreviation.
+// All GRASS commands register here. Supports prefix abbreviation.
 
 export class CommandRegistry {
   constructor() {

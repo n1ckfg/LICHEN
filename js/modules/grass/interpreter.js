@@ -30,7 +30,7 @@ export class Interpreter {
     registerSystemCommands(this);
   }
 
-  // Execute a line of ZGRASS source (from REPL or task)
+  // Execute a line of GRASS source (from REPL or task)
   execLine(source, task) {
     const prevTask = this.currentTask;
     if (task) this.currentTask = task;

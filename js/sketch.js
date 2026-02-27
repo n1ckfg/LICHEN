@@ -19,7 +19,7 @@ import './modules/HyperCardModule.js';
 import './modules/DelayModule.js';
 import './modules/GlitchModule.js';
 import './modules/VideoPlayerModule.js';
-import './modules/ZGRASSModule.js';
+import './modules/GRASSModule.js';
 
 let pipeline, ui, glCanvas;
 
@@ -65,10 +65,10 @@ const sketch = (p) => {
   };
 
   p.keyPressed = () => {
-    // When a ZGRASS module is fullscreened it owns all keyboard input
+    // When a GRASS module is fullscreened it owns all keyboard input
     if (ui.fullscreenMonitor !== null) {
       const fsmod = pipeline.graph.nodes.get(ui.fullscreenMonitor);
-      if (fsmod && fsmod.type === 'ZGRASS') {
+      if (fsmod && fsmod.type === 'GRASS') {
         // ESC while editor is open saves the macro (editor handles it); stay fullscreen
         // ESC while editor is closed exits fullscreen
         if ((p.keyCode === 27) && !fsmod.editor.active) {
@@ -78,7 +78,7 @@ const sketch = (p) => {
         }
         return false;
       }
-      // Non-ZGRASS fullscreen: ESC exits
+      // Non-GRASS fullscreen: ESC exits
       if (p.key === 'Escape') {
         ui.fullscreenMonitor = null;
         return false;

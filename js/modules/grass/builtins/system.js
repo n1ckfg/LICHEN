@@ -5,7 +5,7 @@ export function registerSystemCommands(interp) {
 
   // HELP — list all commands
   reg.register('HELP', (args, switches, ctx) => {
-    ctx.terminal.println('=== LICHEN ZGRASS Commands ===');
+    ctx.terminal.println('=== LICHEN GRASS Commands ===');
     const cmds = ctx.commands.list();
     // Display in columns
     let line = '';

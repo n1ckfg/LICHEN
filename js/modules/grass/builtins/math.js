@@ -1,5 +1,5 @@
 // builtins/math.js — SIN, COS, TAN, LOG, SQRT, ABS, INT, etc.
-// Math functions in ZGRASS work in degrees by default ($RD=0).
+// Math functions in GRASS work in degrees by default ($RD=0).
 
 export function registerMathCommands(interp) {
   const reg = interp.commands;

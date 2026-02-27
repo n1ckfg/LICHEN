@@ -1,5 +1,5 @@
 // environment.js — Globals, locals (MIB stack), device variables
-// ZGRASS variable rules:
+// GRASS variable rules:
 //   - Uppercase start = global
 //   - Lowercase start = local (scoped to macro invocation)
 //   - $XX = device variable

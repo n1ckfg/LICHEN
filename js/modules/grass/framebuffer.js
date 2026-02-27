@@ -1,5 +1,5 @@
 // framebuffer.js — 320x201 2bpp framebuffer with colormode compositing
-// ZGRASS coordinates: X: -160..159, Y: -100..100 (origin at center)
+// GRASS coordinates: X: -160..159, Y: -100..100 (origin at center)
 // Internal buffer stores 2-bit values (0-3) per pixel.
 
 import { applyColormode } from './colormodes.js';
@@ -16,22 +16,22 @@ export class Framebuffer {
     this.cursorY = 0;
   }
 
-  // Convert ZGRASS coords (-160..159, -100..100) to buffer coords (0..319, 0..200)
+  // Convert GRASS coords (-160..159, -100..100) to buffer coords (0..319, 0..200)
   toBufferX(zx) {
     return (zx + 160) | 0;
   }
 
   toBufferY(zy) {
-    // ZGRASS Y: -100 is bottom, +100 is top. Buffer: 0 is top, 200 is bottom.
+    // GRASS Y: -100 is bottom, +100 is top. Buffer: 0 is top, 200 is bottom.
     return (100 - zy) | 0;
   }
 
-  // Convert buffer coords back to ZGRASS coords
-  toZgrassX(bx) {
+  // Convert buffer coords back to GRASS coords
+  toGrassX(bx) {
     return bx - 160;
   }
 
-  toZgrassY(by) {
+  toGrassY(by) {
     return 100 - by;
   }
 
@@ -40,7 +40,7 @@ export class Framebuffer {
     return bx >= 0 && bx < FB_WIDTH && by >= 0 && by < FB_HEIGHT;
   }
 
-  // Get pixel at ZGRASS coordinates (returns 2-bit value)
+  // Get pixel at GRASS coordinates (returns 2-bit value)
   getPixel(zx, zy) {
     const bx = this.toBufferX(zx);
     const by = this.toBufferY(zy);
@@ -48,7 +48,7 @@ export class Framebuffer {
     return this.pixels[by * FB_WIDTH + bx] & 3;
   }
 
-  // Set pixel at ZGRASS coordinates with colormode
+  // Set pixel at GRASS coordinates with colormode
   setPixel(zx, zy, colormode) {
     const bx = this.toBufferX(zx);
     const by = this.toBufferY(zy);
@@ -81,7 +81,7 @@ export class Framebuffer {
     this.pixels.fill(0);
   }
 
-  // Draw a filled box (ZGRASS coords: center + half-sizes)
+  // Draw a filled box (GRASS coords: center + half-sizes)
   box(cx, cy, halfW, halfH, colormode) {
     const x1 = this.toBufferX(cx - halfW);
     const y1 = this.toBufferY(cy + halfH);
@@ -132,7 +132,7 @@ export class Framebuffer {
     this.cursorY = zy;
   }
 
-  // Draw an ellipse (ZGRASS coords: center + radii)
+  // Draw an ellipse (GRASS coords: center + radii)
   circle(cx, cy, rx, ry, colormode) {
     // Midpoint ellipse algorithm
     const bcx = this.toBufferX(cx);

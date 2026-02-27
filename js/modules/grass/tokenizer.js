@@ -1,5 +1,5 @@
 // tokenizer.js — Lexer: source string -> tokens
-// ZGRASS tokens: numbers, identifiers, operators, strings ([], {}, "", ''), device vars ($XX)
+// GRASS tokens: numbers, identifiers, operators, strings ([], {}, "", ''), device vars ($XX)
 
 export const TokenType = {
   NUMBER:    'NUMBER',
@@ -55,7 +55,7 @@ export function tokenize(source) {
     }
 
     // Comment: line starting with . (but only at start of line or after newline)
-    // Actually in ZGRASS, . at start of a line is a comment but .B/.F are switches.
+    // Actually in GRASS, . at start of a line is a comment but .B/.F are switches.
     // We'll handle . as DOT token and let the parser figure it out.
 
     // Numbers (including decimals)
@@ -173,7 +173,7 @@ export function tokenize(source) {
       i += 2;
       continue;
     }
-    // Single = is also equality in ZGRASS (assignment uses :)
+    // Single = is also equality in GRASS (assignment uses :)
     if (ch === '=') {
       tokens.push({ type: TokenType.EQ, value: '=' });
       i++;

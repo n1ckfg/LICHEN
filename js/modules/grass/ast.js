@@ -1,4 +1,4 @@
-// ast.js — AST node type definitions for the ZGRASS parser
+// ast.js — AST node type definitions for the GRASS parser
 
 // Literal number
 export function NumLit(value) {

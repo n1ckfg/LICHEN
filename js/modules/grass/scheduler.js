@@ -129,7 +129,7 @@ export class Scheduler {
     const line = task.lines[task.pc].trim();
     task.pc++;
 
-    // In ZGRASS, lines starting with . are comments
+    // In GRASS, lines starting with . are comments
     if (line === '' || line.startsWith('.')) return;
 
     // Strip label prefix for execution

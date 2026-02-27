@@ -47,7 +47,7 @@ Every module that produces video output:
 
 ### Module Categories
 
-- **Sources**: Camera, VideoPlayer, Oscillator, ZGRASS
+- **Sources**: Camera, VideoPlayer, Oscillator, GRASS
 - **Core**: Comparator, FunctionGenerator, AdderMultiplier, Differentiator, ColorEncoder, SyncGenerator, ValueScrambler
 - **Effects**: TV, Film, VHSC, PixelVision, GameBoy, HyperCard, Delay, Glitch
 - **Output**: Monitor
@@ -63,27 +63,27 @@ Fragment shaders are stored as JS template literal exports (e.g., `export const 
 3. Import `'./modules/MyModule.js'` in `sketch.js`
 4. Add the type name to the appropriate category in `MODULE_CATEGORIES` in `ui.js`
 
-## ZGRASS Module
+## GRASS Module
 
-The ZGRASS module (`modules/ZGRASSModule.js`) is a complete embedded ZGRASS interpreter — an emulation of the Datamax UV-1 / Sandin Image Processor's ZGRASS language (from the FakeGRASS project). It has no input ports and one video output.
+The GRASS module (`modules/GRASSModule.js`) is a complete embedded GRASS interpreter — an emulation of the Datamax UV-1 / Sandin Image Processor's GRASS language (from the FakeGRASS project). It has no input ports and one video output.
 
-**Embedded source:** All FakeGRASS subsystems live in `modules/zgrass/` (flattened from FakeGRASS's `lang/`, `graphics/`, and `ui/` directories). No import path changes were needed since the relative structure is preserved.
+**Embedded source:** All FakeGRASS subsystems live in `modules/grass/` (flattened from FakeGRASS's `lang/`, `graphics/`, and `ui/` directories). No import path changes were needed since the relative structure is preserved.
 
-**Rendering path:** The ZGRASS 2-bit framebuffer is converted to a `p5.Image` each frame via palette lookup (`_updateFBImage()`), then uploaded to the module's WebGL `outputFBO` as a texture via the passthrough shader. The terminal/REPL overlays are NOT in the video output — they are rendered directly on the main P2D canvas only when the module is fullscreened.
+**Rendering path:** The GRASS 2-bit framebuffer is converted to a `p5.Image` each frame via palette lookup (`_updateFBImage()`), then uploaded to the module's WebGL `outputFBO` as a texture via the passthrough shader. The terminal/REPL overlays are NOT in the video output — they are rendered directly on the main P2D canvas only when the module is fullscreened.
 
 **Fullscreen behavior:**
 - Double-click the node preview to enter fullscreen (same hit-test logic as Monitor)
 - When fullscreened, all keyboard input is captured and routed to `mod.handleKey()` via `sketch.js keyPressed`
-- Mouse position is converted to ZGRASS coordinates (`$X1`/`$Y1`) each frame via `updateMouseFromCanvas()`
-- ESC (with no editor open) exits fullscreen; ESC inside the ZGRASS EDIT macro editor saves the macro
+- Mouse position is converted to GRASS coordinates (`$X1`/`$Y1`) each frame via `updateMouseFromCanvas()`
+- ESC (with no editor open) exits fullscreen; ESC inside the GRASS EDIT macro editor saves the macro
 - Terminal + REPL overlays render over the video in fullscreen mode
 - Clicking exits fullscreen (same as Monitor)
 
-**ui.js integration:** `getModuleHeight` and `_drawModule` treat ZGRASS like Monitor (large preview, `MONITOR_PREVIEW_W × MONITOR_PREVIEW_H`). `hitTestMonitorDblClick` checks for both `'Monitor'` and `'ZGRASS'` types.
+**ui.js integration:** `getModuleHeight` and `_drawModule` treat GRASS like Monitor (large preview, `MONITOR_PREVIEW_W × MONITOR_PREVIEW_H`). `hitTestMonitorDblClick` checks for both `'Monitor'` and `'GRASS'` types.
 
 ## Development Conventions
 
 - **State Management**: The `ConnectionGraph` is the source of truth for the patch state.
-- **Rendering**: Modules should always render to their `outputFBO` during `process()`. The `Monitor` and `ZGRASS` modules provide previews by blitting their FBOs to the main P2D canvas in `ui.js`.
+- **Rendering**: Modules should always render to their `outputFBO` during `process()`. The `Monitor` and `GRASS` modules provide previews by blitting their FBOs to the main P2D canvas in `ui.js`.
 - **Parameters**: Module parameters are normalized or use specific ranges defined in the `params` object. The UI handles scaling these values for display.
 - **Coordinate System**: p5.js uses a 2D coordinate system for the UI (top-left 0,0), while the WebGL `glCanvas` uses standard GL coordinates (centered 0,0 or screen-space depending on usage).

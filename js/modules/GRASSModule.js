@@ -2,19 +2,19 @@ import { Module } from './Module.js';
 import { registerModule } from '../moduleRegistry.js';
 import { passthroughFrag } from '../shaders/passthrough.js';
 
-import { Framebuffer, FB_WIDTH, FB_HEIGHT } from './zgrass/framebuffer.js';
-import { Palette } from './zgrass/palette.js';
-import { SpriteStore } from './zgrass/sprites.js';
-import { Terminal } from './zgrass/terminal.js';
-import { REPL } from './zgrass/repl.js';
-import { Editor } from './zgrass/editor.js';
-import { Environment } from './zgrass/environment.js';
-import { Interpreter } from './zgrass/interpreter.js';
-import { Scheduler } from './zgrass/scheduler.js';
+import { Framebuffer, FB_WIDTH, FB_HEIGHT } from './grass/framebuffer.js';
+import { Palette } from './grass/palette.js';
+import { SpriteStore } from './grass/sprites.js';
+import { Terminal } from './grass/terminal.js';
+import { REPL } from './grass/repl.js';
+import { Editor } from './grass/editor.js';
+import { Environment } from './grass/environment.js';
+import { Interpreter } from './grass/interpreter.js';
+import { Scheduler } from './grass/scheduler.js';
 
-export class ZGRASSModule extends Module {
+export class GRASSModule extends Module {
   constructor(glCanvas, id) {
-    super('ZGRASS', glCanvas, id);
+    super('GRASS', glCanvas, id);
     this.inputs = [];
     this.outputs = [{ name: 'out', type: 'video' }];
 
@@ -48,7 +48,7 @@ export class ZGRASSModule extends Module {
     this.createShader(passthroughFrag);
     this.createOutputFBO();
 
-    this.terminal.println('ZGRASS — UV-1 Emulator');
+    this.terminal.println('GRASS — UV-1 Emulator');
     this.terminal.println('Double-click to enter. ESC to exit.');
     this.terminal.println('');
   }
@@ -75,7 +75,7 @@ export class ZGRASSModule extends Module {
     this.outputFBO.end();
   }
 
-  // Transfer ZGRASS 2-bit framebuffer pixels into a p5.Image via palette lookup
+  // Transfer GRASS 2-bit framebuffer pixels into a p5.Image via palette lookup
   _updateFBImage() {
     const img = this.fbImage;
     const fb = this.framebuffer;
@@ -132,7 +132,7 @@ export class ZGRASSModule extends Module {
     }
   }
 
-  // Convert main canvas mouse coordinates to ZGRASS coordinate space and update device vars.
+  // Convert main canvas mouse coordinates to GRASS coordinate space and update device vars.
   // Called from ui.js when this module is fullscreened.
   updateMouseFromCanvas(mx, my, canvasW, canvasH) {
     const scaleX = canvasW / FB_WIDTH;
@@ -159,4 +159,4 @@ export class ZGRASSModule extends Module {
   }
 }
 
-registerModule('ZGRASS', ZGRASSModule);
+registerModule('GRASS', GRASSModule);

@@ -1,5 +1,5 @@
 // parser.js — Recursive descent: tokens -> AST
-// ZGRASS grammar:
+// GRASS grammar:
 //   line = [label] statement { ";" statement }
 //   statement = assignment | if_stmt | command_call
 //   assignment = IDENT ":" expr
