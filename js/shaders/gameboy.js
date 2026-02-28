@@ -32,7 +32,7 @@ void main() {
   int y = int(mod(pixelCoord.y, 3.0));
   float ditherVal = getDitherValue(x, y);
   int ditherIndex = int(ditherVal * 15.0);
-  paletteIndex = min(paletteIndex + ditherIndex, 15);
+  paletteIndex = int(min(float(paletteIndex + ditherIndex), 15.0));
 
   vec3 ditheredColor = vec3(
     float(paletteIndex / 4 - (paletteIndex / 8) * 2),
