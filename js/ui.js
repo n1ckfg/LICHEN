@@ -64,6 +64,8 @@ export class NodeGraphUI {
     this.dragStartY = 0;
     this.dragActive = false;  // true only after mouse moves beyond dead zone
     this.draggingCable = null;
+    this.pendingCable = null;     // click-to-connect: cable follows mouse after click-release on outlet
+    this._pendingTarget = null;   // input port being clicked while pendingCable is active
     this.draggingKnob = null;
     this._fullscreenExitTime = 0; // prevents double-click from immediately re-entering fullscreen
     this.isPanning = false;
@@ -347,11 +349,11 @@ export class NodeGraphUI {
       this._drawCable(p, from.x, from.y, to.x, to.y, [100, 180, 255]);
     }
 
-    // Draw in-progress cable
-    if (this.draggingCable) {
-      const dc = this.draggingCable;
+    // Draw in-progress cable (drag or click-to-connect)
+    const activeCable = this.draggingCable || this.pendingCable;
+    if (activeCable) {
       const world = this.screenToWorld(p.mouseX, p.mouseY);
-      this._drawCable(p, dc.x, dc.y, world.x, world.y, [255, 255, 100]);
+      this._drawCable(p, activeCable.x, activeCable.y, world.x, world.y, [255, 255, 100]);
     }
 
     // Draw modules
@@ -547,6 +549,20 @@ export class NodeGraphUI {
 
     const world = this.screenToWorld(mx, my);
 
+    // Click-to-connect: pending cable is active
+    if (this.pendingCable) {
+      const portHit = this.hitTestPort(world.x, world.y);
+      if (portHit && portHit.portType === 'input') {
+        // Clicked on an inlet — record target, wait for release to confirm
+        this._pendingTarget = portHit;
+        return;
+      }
+      // Clicked anywhere else — cancel
+      this.pendingCable = null;
+      this._pendingTarget = null;
+      return;
+    }
+
     // Middle-click or Alt+click: pan
     if (button === this.p.CENTER || this.p.keyIsDown(this.p.ALT)) {
       this.isPanning = true;
@@ -678,18 +694,46 @@ export class NodeGraphUI {
       return;
     }
 
+    // Click-to-connect: release on inlet completes the connection
+    if (this.pendingCable && this._pendingTarget) {
+      const world = this.screenToWorld(mx, my);
+      const portHit = this.hitTestPort(world.x, world.y);
+      if (portHit && portHit.portType === 'input' &&
+          portHit.nodeId === this._pendingTarget.nodeId &&
+          portHit.portIndex === this._pendingTarget.portIndex) {
+        this.pipeline.graph.connect(
+          this.pendingCable.fromId,
+          this.pendingCable.fromPort,
+          portHit.nodeId,
+          portHit.portIndex
+        );
+      }
+      this.pendingCable = null;
+      this._pendingTarget = null;
+      return;
+    }
+
     if (this.draggingCable) {
       const world = this.screenToWorld(mx, my);
       const portHit = this.hitTestPort(world.x, world.y);
       if (portHit && portHit.portType === 'input') {
+        // Dragged to an input port — connect (existing behavior)
         this.pipeline.graph.connect(
           this.draggingCable.fromId,
           this.draggingCable.fromPort,
           portHit.nodeId,
           portHit.portIndex
         );
+        this.draggingCable = null;
+      } else if (portHit && portHit.portType === 'output' &&
+                 portHit.nodeId === this.draggingCable.fromId &&
+                 portHit.portIndex === this.draggingCable.fromPort) {
+        // Released on the same outlet — convert to click-to-connect pending cable
+        this.pendingCable = this.draggingCable;
+        this.draggingCable = null;
+      } else {
+        this.draggingCable = null;
       }
-      this.draggingCable = null;
       return;
     }
 
