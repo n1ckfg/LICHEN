@@ -248,13 +248,26 @@ export class NodeGraphUI {
   hitTestMonitorDblClick(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'Monitor' && mod.type !== 'GRASS') continue;
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
-      const py = mod.y + HEADER_HEIGHT + portSection;
-      if (wx >= mod.x + 4 && wx <= mod.x + 4 + MONITOR_PREVIEW_W &&
-          wy >= py && wy <= py + MONITOR_PREVIEW_H) {
-        return id;
+
+      if (mod.type === 'Monitor' || mod.type === 'GRASS') {
+        // Large preview area
+        const py = mod.y + HEADER_HEIGHT + portSection;
+        if (wx >= mod.x + 4 && wx <= mod.x + 4 + MONITOR_PREVIEW_W &&
+            wy >= py && wy <= py + MONITOR_PREVIEW_H) {
+          return id;
+        }
+      } else if (mod.outputFBO) {
+        // Small preview thumbnail
+        const paramCount = Object.keys(mod.params).length;
+        const paramSection = paramCount * PARAM_ROW_HEIGHT;
+        const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 4;
+        const px = mod.x + (MODULE_WIDTH - PREVIEW_W) / 2;
+        if (wx >= px && wx <= px + PREVIEW_W &&
+            wy >= py && wy <= py + PREVIEW_H) {
+          return id;
+        }
       }
     }
     return null;
@@ -313,6 +326,8 @@ export class NodeGraphUI {
           if (mod.displayTexture) {
             this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
           }
+        } else if (mod.outputFBO) {
+          this._drawFBO(mod.outputFBO, dx, dy, dw, dh);
         }
       }
       return;
