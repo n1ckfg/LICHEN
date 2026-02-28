@@ -101,14 +101,14 @@ export class GRASSModule extends Module {
   }
 
   // Route keyboard events when this module is fullscreened.
-  // ESC when editor is inactive exits fullscreen (handled by sketch.js before this is called).
+  // ESC when editor is inactive exits fullscreen (handled by main.js before this is called).
   // ESC when editor is active saves the macro (handled here by forwarding to editor).
   handleKey(key, keyCode, p) {
     if (this.editor.active) {
       this.editor.handleKey(key, keyCode, p);
       return;
     }
-    // ESC with no active editor: kill running tasks (fullscreen exit handled by sketch.js)
+    // ESC with no active editor: kill running tasks (fullscreen exit handled by main.js)
     if (keyCode === p.ESCAPE || keyCode === 27) {
       this.scheduler.killAll();
       this.terminal.println('[BREAK]');

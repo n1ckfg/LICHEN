@@ -18,7 +18,7 @@ Requires `http-server` (`npm install -g http-server`).
 ### Core Data Flow
 
 ```
-sketch.js (p5.js loop)
+main.js (p5.js loop)
   → ProcessingPipeline.processFrame()
     → ConnectionGraph.sortedOrder (topological)
       → module.process(graph, glCanvas)  ← each module renders to its outputFBO
@@ -26,7 +26,7 @@ sketch.js (p5.js loop)
 
 ### Key Files
 
-- `sketch.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen)
+- `main.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen)
 - `pipeline.js` — `ProcessingPipeline`: holds the `ConnectionGraph`, drives per-frame processing
 - `graph.js` — `ConnectionGraph`: DAG of modules; re-runs topological sort on every structural change; serializes/deserializes the full patch as JSON. This is the source of truth for patch state.
 - `moduleRegistry.js` — global module registry; `registerModule(typeName, class)` / `createModule(typeName, glCanvas, id)`
@@ -36,7 +36,7 @@ sketch.js (p5.js loop)
 
 ### Module System (`modules/`)
 
-All modules extend `Module` (base class in `modules/Module.js`) and call `registerModule()` at the bottom of their file. Modules must be explicitly imported in `sketch.js` to be registered.
+All modules extend `Module` (base class in `modules/Module.js`) and call `registerModule()` at the bottom of their file. Modules must be explicitly imported in `main.js` to be registered.
 
 Every module that produces video output:
 1. Calls `this.createShader(fragSrc)` and `this.createOutputFBO()` in its constructor
@@ -60,7 +60,7 @@ Fragment shaders are stored as JS template literal exports (e.g., `export const 
 
 1. Create `shaders/mymodule.js` exporting the fragment shader source
 2. Create `modules/MyModule.js` extending `Module`, defining `inputs`, `outputs`, `params`, and `process()`; call `registerModule('MyModule', MyModuleClass)` at the end
-3. Import `'./modules/MyModule.js'` in `sketch.js`
+3. Import `'./modules/MyModule.js'` in `main.js`
 4. Add the type name to the appropriate category in `MODULE_CATEGORIES` in `ui.js`
 
 ## GRASS Module
@@ -73,7 +73,7 @@ The GRASS module (`modules/GRASSModule.js`) is a complete embedded GRASS interpr
 
 **Fullscreen behavior:**
 - Double-click the node preview to enter fullscreen (same hit-test logic as Monitor)
-- When fullscreened, all keyboard input is captured and routed to `mod.handleKey()` via `sketch.js keyPressed`
+- When fullscreened, all keyboard input is captured and routed to `mod.handleKey()` via `main.js keyPressed`
 - Mouse position is converted to GRASS coordinates (`$X1`/`$Y1`) each frame via `updateMouseFromCanvas()`
 - ESC (with no editor open) exits fullscreen; ESC inside the GRASS EDIT macro editor saves the macro
 - Terminal + REPL overlays render over the video in fullscreen mode
