@@ -8,9 +8,8 @@ export class TimeTunnelModule extends Module {
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
-      gamma: { value: 1.2, min: 0.5, max: 3, step: 0.01, label: 'Gamma' },
-      posterizeLevels: { value: 90, min: 2, max: 256, step: 1, label: 'Levels' },
-      texelSize: { value: 0.008, min: 0.001, max: 0.05, step: 0.001, label: 'Texel' },
+      zoom: { value: 3.0, min: 0.5, max: 10, step: 0.1, label: 'Zoom' },
+      speed: { value: 1.0, min: 0.0, max: 5, step: 0.01, label: 'Speed' },
     };
     this.createShader(timetunnelFrag);
     this.createOutputFBO();
@@ -23,9 +22,10 @@ export class TimeTunnelModule extends Module {
     glCanvas.clear();
     glCanvas.shader(this.shader);
     this.shader.setUniform('tex0', inputFBO);
-    this.shader.setUniform('gamma', this.params.gamma.value);
-    this.shader.setUniform('posterizeLevels', this.params.posterizeLevels.value);
-    this.shader.setUniform('texelSize', [this.params.texelSize.value, this.params.texelSize.value * 1.375]);
+    this.shader.setUniform('time', performance.now() / 1000.0);
+    this.shader.setUniform('uResolution', [glCanvas.width, glCanvas.height]);
+    this.shader.setUniform('zoom', this.params.zoom.value);
+    this.shader.setUniform('speed', this.params.speed.value);
     this.renderQuad();
     this.outputFBO.end();
   }
