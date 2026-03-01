@@ -1,7 +1,16 @@
 @echo off
 
-start http://127.0.0.1:8080
+set PORT=8080
 
-http-server
+:findport
+netstat -ano | findstr ":%PORT% " | findstr "LISTENING" >nul 2>&1
+if %errorlevel%==0 (
+  set /a PORT+=1
+  goto findport
+)
+
+start http://127.0.0.1:%PORT%
+
+http-server -p %PORT%
 
 @pause

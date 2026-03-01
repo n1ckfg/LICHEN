@@ -10,6 +10,12 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 
 cd "$DIR"
 
-open http://127.0.0.1:8080
+PORT=8080
 
-http-server
+while lsof -i :"$PORT" >/dev/null 2>&1; do
+  PORT=$((PORT + 1))
+done
+
+open http://127.0.0.1:$PORT
+
+http-server -p $PORT

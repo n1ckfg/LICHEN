@@ -14,6 +14,7 @@ import './modules/TVModule.js';
 import './modules/FilmModule.js';
 import './modules/VHSCModule.js';
 import './modules/PixelVisionModule.js';
+import './modules/TimeTunnelModule.js';
 import './modules/GameBoyModule.js';
 import './modules/HyperCardModule.js';
 import './modules/DelayModule.js';
