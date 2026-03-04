@@ -77,6 +77,7 @@ export class NodeGraphUI {
     this.selectedNode = null;
     this.fullscreenMonitor = null;
     this._blitShader = null;
+    this._activeParamInput = null; // currently active inline text input
 
     this._createPalette();
     this._addDefaultNodes();
@@ -264,10 +265,93 @@ export class NodeGraphUI {
     return null;
   }
 
+  hitTestParamValue(wx, wy) {
+    const graph = this.pipeline.graph;
+    for (const [id, mod] of graph.nodes) {
+      const paramNames = Object.keys(mod.params);
+      for (let i = 0; i < paramNames.length; i++) {
+        const py = this.getParamY(mod, i);
+        const ky = py + 4;
+        const rx = mod.x + MODULE_WIDTH - 8;
+        // Value text region: roughly 40px wide, 14px tall, right-aligned
+        if (wx >= rx - 40 && wx <= rx && wy >= ky - 7 && wy <= ky + 7) {
+          return { nodeId: id, paramName: paramNames[i], paramIndex: i };
+        }
+      }
+    }
+    return null;
+  }
+
   _isControlled(nodeId, paramName) {
     return this.pipeline.graph.controlConnections.some(
       c => c.toId === nodeId && c.paramName === paramName
     );
+  }
+
+  _openParamInput(nodeId, paramName, paramIndex) {
+    this._closeParamInput();
+    const mod = this.pipeline.graph.nodes.get(nodeId);
+    if (!mod) return;
+    const param = mod.params[paramName];
+    if (!param) return;
+
+    const py = this.getParamY(mod, paramIndex);
+    const ky = py + 4;
+    const rx = mod.x + MODULE_WIDTH - 8;
+
+    // Convert world coords to screen
+    const screen = this.worldToScreen(rx - 44, ky - 8);
+    const inputW = 48 * this.zoom;
+    const inputH = 16 * this.zoom;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = param.step >= 1 ? param.value.toFixed(0) : param.value.toFixed(2);
+    Object.assign(input.style, {
+      position: 'absolute',
+      left: screen.x + 'px',
+      top: screen.y + 'px',
+      width: inputW + 'px',
+      height: inputH + 'px',
+      fontSize: (9 * this.zoom) + 'px',
+      fontFamily: 'monospace',
+      textAlign: 'right',
+      background: '#1a1a2a',
+      color: '#fff',
+      border: '1px solid #6cf',
+      borderRadius: '2px',
+      padding: '0 3px',
+      outline: 'none',
+      zIndex: '1000',
+      boxSizing: 'border-box',
+    });
+
+    const commit = () => {
+      const val = parseFloat(input.value);
+      if (!isNaN(val)) {
+        mod.setParam(paramName, val);
+      }
+      this._closeParamInput();
+    };
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      if (e.key === 'Escape') { e.preventDefault(); this._closeParamInput(); }
+      e.stopPropagation();
+    });
+    input.addEventListener('blur', commit);
+
+    document.body.appendChild(input);
+    input.select();
+    input.focus();
+    this._activeParamInput = { el: input, nodeId, paramName };
+  }
+
+  _closeParamInput() {
+    if (this._activeParamInput) {
+      this._activeParamInput.el.remove();
+      this._activeParamInput = null;
+    }
   }
 
   hitTestMonitorDblClick(wx, wy) {
@@ -869,6 +953,14 @@ export class NodeGraphUI {
     if (performance.now() - this._fullscreenExitTime < 400) return;
 
     const world = this.screenToWorld(mx, my);
+
+    // Double-click on param value: open inline editor (unless controlled)
+    const valHit = this.hitTestParamValue(world.x, world.y);
+    if (valHit && !this._isControlled(valHit.nodeId, valHit.paramName)) {
+      this._openParamInput(valHit.nodeId, valHit.paramName, valHit.paramIndex);
+      return;
+    }
+
     const monitorHit = this.hitTestMonitorDblClick(world.x, world.y);
     if (monitorHit !== null) {
       const mod = this.pipeline.graph.nodes.get(monitorHit);
