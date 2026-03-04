@@ -700,7 +700,26 @@ export class NodeGraphUI {
       return;
     }
 
-    // Middle-click or Alt+click: pan
+    // Alt+click on a module: duplicate it
+    if (this.p.keyIsDown(this.p.ALT)) {
+      const nodeHit = this.hitTestNode(world.x, world.y);
+      if (nodeHit !== null) {
+        const dupId = this._duplicateNode(nodeHit);
+        if (dupId !== null) {
+          const mod = this.pipeline.graph.nodes.get(dupId);
+          this.draggingNode = dupId;
+          this.dragOffsetX = world.x - mod.x;
+          this.dragOffsetY = world.y - mod.y;
+          this.dragStartX = mx;
+          this.dragStartY = my;
+          this.dragActive = true;
+          this.selectedNode = dupId;
+        }
+        return;
+      }
+    }
+
+    // Middle-click or Alt+click (on empty space): pan
     if (button === this.p.CENTER || this.p.keyIsDown(this.p.ALT)) {
       this.isPanning = true;
       this.panStartX = mx;
@@ -1036,6 +1055,21 @@ export class NodeGraphUI {
       }
     }
     return null;
+  }
+
+  _duplicateNode(id) {
+    const src = this.pipeline.graph.nodes.get(id);
+    if (!src) return null;
+    const graph = this.pipeline.graph;
+    const glCanvas = this.pipeline.glCanvas;
+    const mod = createModule(src.type, glCanvas, graph.nextId);
+    if (!mod) return null;
+    mod.x = src.x + 20;
+    mod.y = src.y + 20;
+    for (const [k, v] of Object.entries(src.params)) {
+      mod.setParam(k, v.value);
+    }
+    return graph.addNode(mod);
   }
 
   _deleteNode(id) {
