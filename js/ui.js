@@ -485,6 +485,10 @@ export class NodeGraphUI {
       p.rect(mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
       if (mod.displayTexture) {
         this._drawFBO(mod.displayTexture, mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H);
+        // Blit to external second-screen window if open
+        if (mod.hasExtWindow && mod.hasExtWindow()) {
+          mod._blitToExtWindow(this.pipeline.glCanvas);
+        }
       }
     }
 
@@ -762,7 +766,17 @@ export class NodeGraphUI {
     const world = this.screenToWorld(mx, my);
     const monitorHit = this.hitTestMonitorDblClick(world.x, world.y);
     if (monitorHit !== null) {
-      this.fullscreenMonitor = monitorHit;
+      const mod = this.pipeline.graph.nodes.get(monitorHit);
+      if (mod && mod.type === 'Monitor') {
+        // Attempt second-screen fullscreen on Chrome/Chromium; fall back to inline
+        mod.trySecondScreenFullscreen(this.pipeline.glCanvas).then(opened => {
+          if (!opened) {
+            this.fullscreenMonitor = monitorHit;
+          }
+        });
+      } else {
+        this.fullscreenMonitor = monitorHit;
+      }
     }
   }
 
