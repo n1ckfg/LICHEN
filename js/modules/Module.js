@@ -9,6 +9,7 @@ export class Module {
     this.inputs = [];
     this.outputs = [];
     this.params = {};
+    this.controlValues = {};
     this.shader = null;
     this.outputFBO = null;
     this.glCanvas = glCanvas;
@@ -48,6 +49,11 @@ export class Module {
         Math.min(this.params[name].max, value)
       );
     }
+  }
+
+  getControlValue(portIndex) {
+    const output = this.outputs[portIndex];
+    return this.controlValues[output?.name] ?? 0;
   }
 
   getParam(name) {

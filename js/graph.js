@@ -2,6 +2,7 @@ export class ConnectionGraph {
   constructor() {
     this.nodes = new Map();
     this.connections = [];
+    this.controlConnections = [];
     this.sortedOrder = [];
     this.nextId = 0;
   }
@@ -19,6 +20,7 @@ export class ConnectionGraph {
     this.connections = this.connections.filter(
       c => c.fromId !== id && c.toId !== id
     );
+    this.disconnectAllControl(id);
     this.topologicalSort();
   }
 
@@ -54,6 +56,31 @@ export class ConnectionGraph {
 
   getOutputConnections(nodeId) {
     return this.connections.filter(c => c.fromId === nodeId);
+  }
+
+  connectControl(fromId, fromPort, toId, paramName) {
+    // Remove any existing control connection to the same target param
+    this.controlConnections = this.controlConnections.filter(
+      c => !(c.toId === toId && c.paramName === paramName)
+    );
+    this.controlConnections.push({ fromId, fromPort, toId, paramName });
+  }
+
+  disconnectControl(fromId, fromPort, toId, paramName) {
+    this.controlConnections = this.controlConnections.filter(
+      c => !(c.fromId === fromId && c.fromPort === fromPort &&
+             c.toId === toId && c.paramName === paramName)
+    );
+  }
+
+  disconnectAllControl(nodeId) {
+    this.controlConnections = this.controlConnections.filter(
+      c => c.fromId !== nodeId && c.toId !== nodeId
+    );
+  }
+
+  getControlConnections(nodeId) {
+    return this.controlConnections.filter(c => c.toId === nodeId);
   }
 
   topologicalSort() {
@@ -143,6 +170,7 @@ export class ConnectionGraph {
     return {
       nodes,
       connections: this.connections.map(c => ({ ...c })),
+      controlConnections: this.controlConnections.map(c => ({ ...c })),
       nextId: this.nextId
     };
   }
@@ -150,6 +178,7 @@ export class ConnectionGraph {
   fromJSON(data, createModuleFn) {
     this.nodes.clear();
     this.connections = [];
+    this.controlConnections = [];
     this.nextId = data.nextId || 0;
 
     for (const nodeData of data.nodes) {
@@ -169,6 +198,14 @@ export class ConnectionGraph {
     for (const c of data.connections) {
       if (this.nodes.has(c.fromId) && this.nodes.has(c.toId)) {
         this.connections.push({ ...c });
+      }
+    }
+
+    if (data.controlConnections) {
+      for (const c of data.controlConnections) {
+        if (this.nodes.has(c.fromId) && this.nodes.has(c.toId)) {
+          this.controlConnections.push({ ...c });
+        }
       }
     }
 

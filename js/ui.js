@@ -248,6 +248,28 @@ export class NodeGraphUI {
     return null;
   }
 
+  hitTestKnobPort(wx, wy) {
+    const graph = this.pipeline.graph;
+    for (const [id, mod] of graph.nodes) {
+      const paramNames = Object.keys(mod.params);
+      for (let i = 0; i < paramNames.length; i++) {
+        const py = this.getParamY(mod, i);
+        const kx = mod.x + 16;
+        const ky = py + 4;
+        if (Math.hypot(wx - kx, wy - ky) < KNOB_RADIUS + 4) {
+          return { nodeId: id, paramName: paramNames[i] };
+        }
+      }
+    }
+    return null;
+  }
+
+  _isControlled(nodeId, paramName) {
+    return this.pipeline.graph.controlConnections.some(
+      c => c.toId === nodeId && c.paramName === paramName
+    );
+  }
+
   hitTestMonitorDblClick(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
@@ -350,6 +372,20 @@ export class NodeGraphUI {
       this._drawCable(p, from.x, from.y, to.x, to.y, [100, 180, 255]);
     }
 
+    // Draw control cables (green)
+    for (const cc of graph.controlConnections) {
+      const fromMod = graph.nodes.get(cc.fromId);
+      const toMod = graph.nodes.get(cc.toId);
+      if (!fromMod || !toMod) continue;
+      const from = this.getOutputPortPos(fromMod, cc.fromPort);
+      const paramNames = Object.keys(toMod.params);
+      const paramIdx = paramNames.indexOf(cc.paramName);
+      if (paramIdx < 0) continue;
+      const py = this.getParamY(toMod, paramIdx);
+      const to = { x: toMod.x + 16, y: py + 4 };
+      this._drawCable(p, from.x, from.y, to.x, to.y, [100, 255, 130]);
+    }
+
     // Draw in-progress cable (drag or click-to-connect)
     const activeCable = this.draggingCable || this.pendingCable;
     if (activeCable) {
@@ -446,9 +482,10 @@ export class NodeGraphUI {
       const ky = py + 4;
 
       // Knob background
-      p.fill(50);
-      p.stroke(100);
-      p.strokeWeight(1);
+      const controlled = this._isControlled(id, name);
+      p.fill(controlled ? 30 : 50);
+      p.stroke(controlled ? [100, 255, 130] : 100);
+      p.strokeWeight(controlled ? 1.5 : 1);
       p.ellipse(kx, ky, KNOB_RADIUS * 2);
 
       // Knob arc (value indicator)
@@ -456,7 +493,7 @@ export class NodeGraphUI {
       const startAngle = -p.PI * 0.75;
       const endAngle = startAngle + norm * p.PI * 1.5;
       p.noFill();
-      p.stroke(100, 200, 255);
+      p.stroke(controlled ? [100, 255, 130] : [100, 200, 255]);
       p.strokeWeight(2);
       p.arc(kx, ky, KNOB_RADIUS * 2 - 2, KNOB_RADIUS * 2 - 2, startAngle, endAngle);
 
@@ -562,6 +599,16 @@ export class NodeGraphUI {
         this._pendingTarget = portHit;
         return;
       }
+      // Check if clicking a knob for control connection
+      const srcMod = this.pipeline.graph.nodes.get(this.pendingCable.fromId);
+      const isControl = srcMod && srcMod.outputs[this.pendingCable.fromPort]?.type === 'control';
+      if (isControl) {
+        const knobHit = this.hitTestKnobPort(world.x, world.y);
+        if (knobHit) {
+          this._pendingTarget = knobHit;
+          return;
+        }
+      }
       // Clicked anywhere else — cancel
       this.pendingCable = null;
       this._pendingTarget = null;
@@ -578,8 +625,18 @@ export class NodeGraphUI {
       return;
     }
 
-    // Right-click: delete cable at point or delete node
+    // Right-click: disconnect control cable on knob, or delete cable/node
     if (button === this.p.RIGHT) {
+      const knobHit = this.hitTestKnobPort(world.x, world.y);
+      if (knobHit && this._isControlled(knobHit.nodeId, knobHit.paramName)) {
+        const cc = this.pipeline.graph.controlConnections.find(
+          c => c.toId === knobHit.nodeId && c.paramName === knobHit.paramName
+        );
+        if (cc) {
+          this.pipeline.graph.disconnectControl(cc.fromId, cc.fromPort, cc.toId, cc.paramName);
+        }
+        return;
+      }
       this._handleRightClick(world);
       return;
     }
@@ -599,10 +656,27 @@ export class NodeGraphUI {
       return;
     }
 
-    // Check knob
+    // Check knob — if controlled, disconnect and start re-plugging the control cable
     const knobHit = this.hitTestKnob(world.x, world.y);
     if (knobHit) {
-      this.draggingKnob = knobHit;
+      if (this._isControlled(knobHit.nodeId, knobHit.paramName)) {
+        const cc = this.pipeline.graph.controlConnections.find(
+          c => c.toId === knobHit.nodeId && c.paramName === knobHit.paramName
+        );
+        if (cc) {
+          this.pipeline.graph.disconnectControl(cc.fromId, cc.fromPort, cc.toId, cc.paramName);
+          const srcMod = this.pipeline.graph.nodes.get(cc.fromId);
+          const pos = this.getOutputPortPos(srcMod, cc.fromPort);
+          this.draggingCable = {
+            fromId: cc.fromId,
+            fromPort: cc.fromPort,
+            x: pos.x,
+            y: pos.y,
+          };
+        }
+      } else {
+        this.draggingKnob = knobHit;
+      }
       return;
     }
 
@@ -699,19 +773,33 @@ export class NodeGraphUI {
       return;
     }
 
-    // Click-to-connect: release on inlet completes the connection
+    // Click-to-connect: release on inlet or knob completes the connection
     if (this.pendingCable && this._pendingTarget) {
       const world = this.screenToWorld(mx, my);
-      const portHit = this.hitTestPort(world.x, world.y);
-      if (portHit && portHit.portType === 'input' &&
-          portHit.nodeId === this._pendingTarget.nodeId &&
-          portHit.portIndex === this._pendingTarget.portIndex) {
-        this.pipeline.graph.connect(
-          this.pendingCable.fromId,
-          this.pendingCable.fromPort,
-          portHit.nodeId,
-          portHit.portIndex
-        );
+      if (this._pendingTarget.paramName) {
+        // Target is a knob
+        const knobHit = this.hitTestKnobPort(world.x, world.y);
+        if (knobHit && knobHit.nodeId === this._pendingTarget.nodeId &&
+            knobHit.paramName === this._pendingTarget.paramName) {
+          this.pipeline.graph.connectControl(
+            this.pendingCable.fromId,
+            this.pendingCable.fromPort,
+            knobHit.nodeId,
+            knobHit.paramName
+          );
+        }
+      } else {
+        const portHit = this.hitTestPort(world.x, world.y);
+        if (portHit && portHit.portType === 'input' &&
+            portHit.nodeId === this._pendingTarget.nodeId &&
+            portHit.portIndex === this._pendingTarget.portIndex) {
+          this.pipeline.graph.connect(
+            this.pendingCable.fromId,
+            this.pendingCable.fromPort,
+            portHit.nodeId,
+            portHit.portIndex
+          );
+        }
       }
       this.pendingCable = null;
       this._pendingTarget = null;
@@ -721,6 +809,22 @@ export class NodeGraphUI {
     if (this.draggingCable) {
       const world = this.screenToWorld(mx, my);
       const portHit = this.hitTestPort(world.x, world.y);
+      // Check if dropped on a knob (control connection)
+      const srcMod = this.pipeline.graph.nodes.get(this.draggingCable.fromId);
+      const isControl = srcMod && srcMod.outputs[this.draggingCable.fromPort]?.type === 'control';
+      if (isControl) {
+        const knobHit = this.hitTestKnobPort(world.x, world.y);
+        if (knobHit) {
+          this.pipeline.graph.connectControl(
+            this.draggingCable.fromId,
+            this.draggingCable.fromPort,
+            knobHit.nodeId,
+            knobHit.paramName
+          );
+          this.draggingCable = null;
+          return;
+        }
+      }
       if (portHit && portHit.portType === 'input') {
         // Dragged to an input port — connect (existing behavior)
         this.pipeline.graph.connect(
@@ -781,8 +885,25 @@ export class NodeGraphUI {
   }
 
   _handleRightClick(world) {
-    // Check if clicking near a cable to delete it
     const graph = this.pipeline.graph;
+    // Check if clicking near a control cable to delete it
+    for (let i = graph.controlConnections.length - 1; i >= 0; i--) {
+      const cc = graph.controlConnections[i];
+      const fromMod = graph.nodes.get(cc.fromId);
+      const toMod = graph.nodes.get(cc.toId);
+      if (!fromMod || !toMod) continue;
+      const from = this.getOutputPortPos(fromMod, cc.fromPort);
+      const paramNames = Object.keys(toMod.params);
+      const paramIdx = paramNames.indexOf(cc.paramName);
+      if (paramIdx < 0) continue;
+      const py = this.getParamY(toMod, paramIdx);
+      const to = { x: toMod.x + 16, y: py + 4 };
+      if (this._distToCable(world.x, world.y, from.x, from.y, to.x, to.y) < 10) {
+        graph.controlConnections.splice(i, 1);
+        return;
+      }
+    }
+    // Check if clicking near a regular cable to delete it
     for (let i = graph.connections.length - 1; i >= 0; i--) {
       const conn = graph.connections[i];
       const fromMod = graph.nodes.get(conn.fromId);
@@ -828,7 +949,7 @@ export class NodeGraphUI {
     const mod = this.pipeline.graph.nodes.get(id);
     if (mod) {
       mod.dispose();
-      this.pipeline.graph.removeNode(id);
+      this.pipeline.graph.removeNode(id); // also calls disconnectAllControl
       if (this.selectedNode === id) this.selectedNode = null;
       if (this.fullscreenMonitor === id) this.fullscreenMonitor = null;
     }
