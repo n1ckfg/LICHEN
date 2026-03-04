@@ -461,7 +461,8 @@ export class NodeGraphUI {
     // Output ports
     for (let i = 0; i < mod.outputs.length; i++) {
       const pos = this.getOutputPortPos(mod, i);
-      p.fill(255, 136, 68);
+      const isControlPort = mod.outputs[i].type === 'control';
+      p.fill(isControlPort ? [100, 255, 130] : [255, 136, 68]);
       p.stroke(255);
       p.strokeWeight(1.5);
       p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
