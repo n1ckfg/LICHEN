@@ -10,7 +10,7 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'VideoPlayer', 'Oscillator', 'GRASS'],
+  'Sources': ['Camera', 'VideoPlayer', 'NAPLPS', 'Oscillator', 'GRASS'],
   'Core': ['Comparator', 'FunctionGenerator', 'AdderMultiplier', 'Differentiator', 'ColorEncoder', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['TV', 'Film', 'VHSC', 'PixelVision', 'TimeTunnel', 'GameBoy', 'HyperCard', 'Delay', 'Glitch'],
   'Output': ['Monitor'],
@@ -19,6 +19,7 @@ const MODULE_CATEGORIES = {
 const MODULE_COLORS = {
   Camera: [34, 85, 170],
   VideoPlayer: [34, 85, 170],
+  NAPLPS: [170, 85, 136],
   Oscillator: [34, 136, 85],
   Monitor: [170, 85, 34],
   Comparator: [136, 85, 34],
@@ -169,7 +170,7 @@ export class NodeGraphUI {
     const hasPreview = mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS';
     const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
     const monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS') ? MONITOR_PREVIEW_H + 8 : 0;
-    const hasFileBtn = mod.type === 'VideoPlayer';
+    const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS';
     const fileBtnSection = hasFileBtn ? 24 : 0;
     return HEADER_HEIGHT + portSection + paramSection + previewSection + monitorSection + fileBtnSection + 12;
   }
@@ -385,7 +386,7 @@ export class NodeGraphUI {
   hitTestVideoPlayerBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'VideoPlayer') continue;
+      if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS') continue;
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramCount = Object.keys(mod.params).length;
@@ -647,8 +648,8 @@ export class NodeGraphUI {
       }
     }
 
-    // VideoPlayer file button
-    if (mod.type === 'VideoPlayer') {
+    // File picker button (VideoPlayer, NAPLPS)
+    if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS') {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
@@ -663,7 +664,8 @@ export class NodeGraphUI {
       p.fill(200);
       p.textSize(9);
       p.textAlign(p.CENTER, p.CENTER);
-      p.text('Load Video...', mod.x + MODULE_WIDTH / 2, btnY + 10);
+      const btnLabel = mod.type === 'NAPLPS' ? 'Load .nap...' : 'Load Video...';
+      p.text(btnLabel, mod.x + MODULE_WIDTH / 2, btnY + 10);
     }
   }
 

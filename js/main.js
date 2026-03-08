@@ -21,6 +21,7 @@ import './modules/DelayModule.js';
 import './modules/GlitchModule.js';
 import './modules/VideoPlayerModule.js';
 import './modules/GRASSModule.js';
+import './modules/NAPLPSModule.js';
 
 let pipeline, ui, glCanvas;
 

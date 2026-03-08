@@ -7,6 +7,25 @@
   <title>LICHEN: LIveCoding Historical ENvironment</title>
   <link rel="stylesheet" href="./css/style.css">
   <script src="./js/libraries/p5.min.js"></script>
+  <script>
+    // Shims for Processing/p5 global functions used by naplps.js
+    var pow = Math.pow;
+    var sqrt = Math.sqrt;
+    var abs = Math.abs;
+    var floor = Math.floor;
+    var ceil = Math.ceil;
+    var round = Math.round;
+    var min = Math.min;
+    var max = Math.max;
+    var sin = Math.sin;
+    var cos = Math.cos;
+    var tan = Math.tan;
+    var PI = Math.PI;
+    var int = function(v) { return Math.trunc(v); };
+    var float = parseFloat;
+    var str = String;
+  </script>
+  <script src="./js/modules/naplps/naplps.js"></script>
 </head>
 
 <body>
