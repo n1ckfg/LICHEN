@@ -1,7 +1,5 @@
-"use strict";
-
-/* 
-+ + +          NAPLPS for JavaScript          + + + 
+/*
++ + +          NAPLPS for JavaScript          + + +
 + + +     (part of the TelidonP5 Project)     + + +
 + + +   Nick Fox-Gieg  https://fox-gieg.com   + + +
 
@@ -1656,7 +1654,16 @@ class NapEncoder {
 		returns.push(this.makeNapOpcode(_isFill));
 		returns.push(this.makeNapPoints(_points));
 
-		return returns.join("");	
+		return returns.join("");
 	}
 }
+
+export {
+	NapDecoder,
+	NapEncoder,
+	NapCmd,
+	NapInputWrapper,
+	Vector2,
+	Vector3
+};
 

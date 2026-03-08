@@ -1,4 +1,4 @@
-"use strict";
+import { NapDecoder } from './naplps.js';
 
 // 5. Drawing class--this is where it all comes together.
 // p5.js-specific drawing code is separated here.
@@ -349,5 +349,7 @@ class TelidonDrawCmd {
 	        }
     	}
     }
-    
+
 }
+
+export { TelidonDraw, TelidonDrawCmd };

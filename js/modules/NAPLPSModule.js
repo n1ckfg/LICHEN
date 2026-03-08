@@ -1,6 +1,7 @@
 import { Module } from './Module.js';
 import { passthroughFrag } from '../shaders/passthrough.js';
 import { registerModule } from '../moduleRegistry.js';
+import { NapDecoder } from './naplps/naplps.js';
 
 export class NAPLPSModule extends Module {
   constructor(glCanvas, id) {
