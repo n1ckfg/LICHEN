@@ -10,9 +10,9 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'VideoPlayer', 'NAPLPS', 'Oscillator', 'GRASS'],
-  'Core': ['Comparator', 'FunctionGenerator', 'AdderMultiplier', 'Differentiator', 'ColorEncoder', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['TV', 'Film', 'VHSC', 'PixelVision', 'TimeTunnel', 'GameBoy', 'HyperCard', 'Delay', 'Glitch'],
+  'Sources': ['Camera', 'GRASS', 'NAPLPS', 'Oscillator', 'VideoPlayer'],
+  'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
+  'Effects': ['Delay', 'Film', 'GameBoy', 'Glitch', 'HyperCard', 'PixelVision', 'TimeTunnel', 'TV', 'VHSC'],
   'Output': ['Monitor'],
 };
 
@@ -82,6 +82,8 @@ export class NodeGraphUI {
 
     this._createPalette();
     this._addDefaultNodes();
+    this._searchPopup = null;
+    this._allModuleTypes = Object.values(MODULE_CATEGORIES).flat().sort();
   }
 
   // Render a Framebuffer onto the P2D main canvas by blitting through glCanvas
@@ -353,6 +355,143 @@ export class NodeGraphUI {
       this._activeParamInput.el.remove();
       this._activeParamInput = null;
     }
+  }
+
+  _openSearchPopup(screenX, screenY) {
+    this._closeSearchPopup();
+
+    const world = this.screenToWorld(screenX, screenY);
+
+    const container = document.createElement('div');
+    container.className = 'module-search-popup';
+    Object.assign(container.style, {
+      position: 'absolute',
+      left: screenX + 'px',
+      top: screenY + 'px',
+      background: '#1a1a2a',
+      border: '1px solid #6cf',
+      borderRadius: '4px',
+      padding: '4px',
+      zIndex: '1001',
+      minWidth: '160px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+    });
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.placeholder = 'Search modules...';
+    Object.assign(input.style, {
+      width: '100%',
+      padding: '6px 8px',
+      fontSize: '12px',
+      fontFamily: 'monospace',
+      background: '#252535',
+      color: '#fff',
+      border: '1px solid #444',
+      borderRadius: '3px',
+      outline: 'none',
+      boxSizing: 'border-box',
+    });
+
+    const resultsList = document.createElement('div');
+    Object.assign(resultsList.style, {
+      marginTop: '4px',
+      maxHeight: '200px',
+      overflowY: 'auto',
+    });
+
+    container.appendChild(input);
+    container.appendChild(resultsList);
+    document.body.appendChild(container);
+
+    let selectedIndex = 0;
+    let filteredModules = [...this._allModuleTypes];
+
+    const renderResults = () => {
+      resultsList.innerHTML = '';
+      filteredModules.forEach((mod, i) => {
+        const item = document.createElement('div');
+        item.textContent = mod;
+        Object.assign(item.style, {
+          padding: '6px 8px',
+          cursor: 'pointer',
+          fontSize: '11px',
+          fontFamily: 'monospace',
+          color: i === selectedIndex ? '#fff' : '#aaa',
+          background: i === selectedIndex ? '#3a5a8a' : 'transparent',
+          borderRadius: '2px',
+        });
+        item.addEventListener('mouseenter', () => {
+          selectedIndex = i;
+          renderResults();
+        });
+        item.addEventListener('click', () => {
+          this._addModuleAt(mod, world.x, world.y);
+          this._closeSearchPopup();
+        });
+        resultsList.appendChild(item);
+      });
+    };
+
+    const updateFilter = () => {
+      const query = input.value.toLowerCase();
+      filteredModules = this._allModuleTypes.filter(m => m.toLowerCase().includes(query));
+      selectedIndex = 0;
+      renderResults();
+    };
+
+    input.addEventListener('input', updateFilter);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = Math.min(selectedIndex + 1, filteredModules.length - 1);
+        renderResults();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = Math.max(selectedIndex - 1, 0);
+        renderResults();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (filteredModules.length > 0) {
+          this._addModuleAt(filteredModules[selectedIndex], world.x, world.y);
+          this._closeSearchPopup();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        this._closeSearchPopup();
+      }
+      e.stopPropagation();
+    });
+
+    // Close on click outside
+    const closeOnClickOutside = (e) => {
+      if (!container.contains(e.target)) {
+        this._closeSearchPopup();
+        document.removeEventListener('mousedown', closeOnClickOutside);
+      }
+    };
+    setTimeout(() => document.addEventListener('mousedown', closeOnClickOutside), 0);
+
+    renderResults();
+    input.focus();
+    this._searchPopup = { el: container, closeHandler: closeOnClickOutside };
+  }
+
+  _closeSearchPopup() {
+    if (this._searchPopup) {
+      document.removeEventListener('mousedown', this._searchPopup.closeHandler);
+      this._searchPopup.el.remove();
+      this._searchPopup = null;
+    }
+  }
+
+  _addModuleAt(typeName, worldX, worldY) {
+    const graph = this.pipeline.graph;
+    const glCanvas = this.pipeline.glCanvas;
+    const mod = createModule(typeName, glCanvas, graph.nextId);
+    mod.x = worldX;
+    mod.y = worldY;
+    graph.addNode(mod);
   }
 
   hitTestMonitorDblClick(wx, wy) {
@@ -995,6 +1134,13 @@ export class NodeGraphUI {
       } else {
         this.fullscreenMonitor = monitorHit;
       }
+      return;
+    }
+
+    // Double-click on empty canvas: open search popup
+    const nodeHit = this.hitTestNode(world.x, world.y);
+    if (nodeHit === null) {
+      this._openSearchPopup(mx, my);
     }
   }
 
