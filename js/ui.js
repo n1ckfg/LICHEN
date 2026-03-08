@@ -407,6 +407,14 @@ export class NodeGraphUI {
     let selectedIndex = 0;
     let filteredModules = [...this._allModuleTypes];
 
+    const updateSelection = () => {
+      const items = resultsList.children;
+      for (let i = 0; i < items.length; i++) {
+        items[i].style.color = i === selectedIndex ? '#fff' : '#aaa';
+        items[i].style.background = i === selectedIndex ? '#3a5a8a' : 'transparent';
+      }
+    };
+
     const renderResults = () => {
       resultsList.innerHTML = '';
       filteredModules.forEach((mod, i) => {
@@ -423,9 +431,11 @@ export class NodeGraphUI {
         });
         item.addEventListener('mouseenter', () => {
           selectedIndex = i;
-          renderResults();
+          updateSelection();
         });
-        item.addEventListener('click', () => {
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
           this._addModuleAt(mod, world.x, world.y);
           this._closeSearchPopup();
         });
