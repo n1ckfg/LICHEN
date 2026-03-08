@@ -22,6 +22,10 @@ https://github.com/processing-js/processing-js
 * @returns {String}
 */
 
+const int = function(v) { 
+    return Math.trunc(v); 
+};
+
 function binary(num, numBits) {
     let bit;
     if (numBits > 0) {
@@ -585,17 +589,17 @@ class NapDataArray {
         // However in almost all cases we can assume XY.
         this.bitsPerByte = 3; // int
         this.firstBitSign = true; // bool, should be true for all domain options?
-        this.bitVals = this.getBitValsSigned(n);//pow(2, (n.length * this.bitsPerByte) - int(this.firstBitSign)); // float
+        this.bitVals = this.getBitValsSigned(n);//Math.pow(2, (n.length * this.bitsPerByte) - int(this.firstBitSign)); // float
     }
     
     getBitValsUnsigned(n) {
-        const returns = pow(2, (n.length * this.bitsPerByte)); 
+        const returns = Math.pow(2, (n.length * this.bitsPerByte)); 
         console.log("Bitvals unsigned: " + returns);
         return returns;
     }
 
     getBitValsSigned(n) {
-        const returns = pow(2, (n.length * this.bitsPerByte) - int(this.firstBitSign))
+        const returns = Math.pow(2, (n.length * this.bitsPerByte) - int(this.firstBitSign))
         console.log("Bitvals signed: " + returns);
         return returns;
     }
@@ -1474,11 +1478,11 @@ class NapEncoder {
 	}
 
     getBitValsUnsigned(n) {
-        return pow(2, (n.length * this.bitsPerByte));
+        return Math.pow(2, (n.length * this.bitsPerByte));
     }
 
     getBitValsSigned(n) {
-        return pow(2, (n.length * this.bitsPerByte) - int(this.firstBitSign))
+        return Math.pow(2, (n.length * this.bitsPerByte) - int(this.firstBitSign))
     }
 
 	makeNapVector2(input) {
