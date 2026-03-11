@@ -1,0 +1,257 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "type": "Monitor",
+      "x": 1449.5797947322092,
+      "y": 409.54528258461283,
+      "params": {}
+    },
+    {
+      "id": 1,
+      "type": "Oscillator",
+      "x": 232.38486058105747,
+      "y": 79.36972865059273,
+      "params": {
+        "frequency": 0.6733333333333333,
+        "waveform": 0,
+        "direction": 0.4533333333333333
+      }
+    },
+    {
+      "id": 2,
+      "type": "Camera",
+      "x": 688.811472574537,
+      "y": 23.25397222680408,
+      "params": {}
+    },
+    {
+      "id": 3,
+      "type": "Comparator",
+      "x": 556.5273300242347,
+      "y": 167.53162414492022,
+      "params": {
+        "threshold": 0.9539548968817468
+      }
+    },
+    {
+      "id": 4,
+      "type": "AdderMultiplier",
+      "x": 545.6808539269294,
+      "y": 362.2794670028433,
+      "params": {
+        "mode": 0.8600000000000001,
+        "mixVal": 0.5,
+        "contrast": 1
+      }
+    },
+    {
+      "id": 5,
+      "type": "AdderMultiplier",
+      "x": 735.0527388419468,
+      "y": 213.67571751275653,
+      "params": {
+        "mode": 0,
+        "mixVal": 0.5,
+        "contrast": 1
+      }
+    },
+    {
+      "id": 6,
+      "type": "Differentiator",
+      "x": 961.2222560475034,
+      "y": 156.18644748892103,
+      "params": {
+        "strength": 1.0333333333333334
+      }
+    },
+    {
+      "id": 7,
+      "type": "TimeTunnel",
+      "x": 1130.1495552793422,
+      "y": 75.88699241125374,
+      "params": {
+        "zoom": 9.562571520376595,
+        "speed": 2.9
+      }
+    },
+    {
+      "id": 8,
+      "type": "ColorEncoder",
+      "x": 1221.4141152653833,
+      "y": 422.4239724583553,
+      "params": {
+        "phaseR": 0,
+        "phaseG": 0.3347599999999997,
+        "phaseB": 3.518813333333333,
+        "frequency": 10
+      }
+    },
+    {
+      "id": 9,
+      "type": "SyncGenerator",
+      "x": 1177.6132297726695,
+      "y": 264.63020383281327,
+      "params": {
+        "steps": 4,
+        "mode": 0
+      }
+    },
+    {
+      "id": 10,
+      "type": "Differentiator",
+      "x": 723.2516849311409,
+      "y": 477.8686726735673,
+      "params": {
+        "strength": 1
+      }
+    },
+    {
+      "id": 12,
+      "type": "AdderMultiplier",
+      "x": 956.0423100287919,
+      "y": 616.7436578374056,
+      "params": {
+        "mode": 0,
+        "mixVal": 0.5,
+        "contrast": 1
+      }
+    },
+    {
+      "id": 13,
+      "type": "Delay",
+      "x": 577.0974562929854,
+      "y": 668.36502889027,
+      "params": {
+        "delaySpeed": 0.2,
+        "lumaThreshold": 0.5,
+        "alphaMax": 1,
+        "alphaMin": 0.1
+      }
+    },
+    {
+      "id": 14,
+      "type": "VHSC",
+      "x": 1186.036176288872,
+      "y": 709.0069803155507,
+      "params": {
+        "gamma": 1.2,
+        "posterizeLevels": 83.22666666666677,
+        "texelSize": 0.0477437899472056
+      }
+    }
+  ],
+  "connections": [
+    {
+      "fromId": 2,
+      "fromPort": 0,
+      "toId": 3,
+      "toPort": 0
+    },
+    {
+      "fromId": 3,
+      "fromPort": 0,
+      "toId": 4,
+      "toPort": 0
+    },
+    {
+      "fromId": 2,
+      "fromPort": 0,
+      "toId": 4,
+      "toPort": 1
+    },
+    {
+      "fromId": 4,
+      "fromPort": 0,
+      "toId": 5,
+      "toPort": 0
+    },
+    {
+      "fromId": 7,
+      "fromPort": 0,
+      "toId": 8,
+      "toPort": 0
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 9,
+      "toPort": 0
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 6,
+      "toPort": 0
+    },
+    {
+      "fromId": 2,
+      "fromPort": 0,
+      "toId": 7,
+      "toPort": 0
+    },
+    {
+      "fromId": 5,
+      "fromPort": 0,
+      "toId": 10,
+      "toPort": 0
+    },
+    {
+      "fromId": 10,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 1
+    },
+    {
+      "fromId": 5,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 0
+    },
+    {
+      "fromId": 6,
+      "fromPort": 0,
+      "toId": 13,
+      "toPort": 0
+    },
+    {
+      "fromId": 13,
+      "fromPort": 0,
+      "toId": 5,
+      "toPort": 1
+    },
+    {
+      "fromId": 12,
+      "fromPort": 0,
+      "toId": 14,
+      "toPort": 0
+    },
+    {
+      "fromId": 14,
+      "fromPort": 0,
+      "toId": 0,
+      "toPort": 0
+    }
+  ],
+  "controlConnections": [
+    {
+      "fromId": 1,
+      "fromPort": 1,
+      "toId": 3,
+      "paramName": "threshold"
+    },
+    {
+      "fromId": 1,
+      "fromPort": 1,
+      "toId": 7,
+      "paramName": "zoom"
+    },
+    {
+      "fromId": 1,
+      "fromPort": 1,
+      "toId": 14,
+      "paramName": "texelSize"
+    }
+  ],
+  "nextId": 15
+}

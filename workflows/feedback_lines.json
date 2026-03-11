@@ -1,0 +1,196 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "type": "Monitor",
+      "x": 1118.5,
+      "y": 598.75,
+      "params": {}
+    },
+    {
+      "id": 2,
+      "type": "ColorEncoder",
+      "x": 477.36247919765844,
+      "y": 314.9429484786124,
+      "params": {
+        "phaseR": 0,
+        "phaseG": 0.00164453593691484,
+        "phaseB": 4.189,
+        "frequency": 3.706
+      }
+    },
+    {
+      "id": 3,
+      "type": "Oscillator",
+      "x": 269.2861118278363,
+      "y": 313.0142774452584,
+      "params": {
+        "frequency": 0.1,
+        "waveform": 0,
+        "direction": 0
+      }
+    },
+    {
+      "id": 4,
+      "type": "Differentiator",
+      "x": 521.0834460023339,
+      "y": 146.6031548546839,
+      "params": {
+        "strength": 0.00130871871471816
+      }
+    },
+    {
+      "id": 6,
+      "type": "VideoPlayer",
+      "x": 289.7134132960646,
+      "y": 72.59625993554414,
+      "params": {
+        "speed": 1
+      }
+    },
+    {
+      "id": 9,
+      "type": "ValueScrambler",
+      "x": 471.40434884728757,
+      "y": 537.7530464014994,
+      "params": {
+        "levels": 22.800000000000004,
+        "scramble": 0.000261743742943632
+      }
+    },
+    {
+      "id": 10,
+      "type": "AdderMultiplier",
+      "x": 1085.4373685595224,
+      "y": 287.8695726159612,
+      "params": {
+        "mode": 1.3,
+        "mixVal": 0.000261743742943632,
+        "contrast": 2.7199999999999998
+      }
+    },
+    {
+      "id": 12,
+      "type": "PixelVision",
+      "x": 687.9702022498673,
+      "y": 533.6215327454564,
+      "params": {
+        "gamma": 0.5166666666666666,
+        "posterizeLevels": 2.0664829107076823,
+        "texelSize": 0.005386666666666666
+      }
+    },
+    {
+      "id": 13,
+      "type": "VHSC",
+      "x": 932.0629132182257,
+      "y": 587.1874082307959,
+      "params": {
+        "gamma": 3,
+        "posterizeLevels": 256,
+        "texelSize": 0.013226666666666668
+      }
+    },
+    {
+      "id": 14,
+      "type": "Delay",
+      "x": 758.6658821173462,
+      "y": 251.45552407648074,
+      "params": {
+        "delaySpeed": 0.16,
+        "lumaThreshold": 0,
+        "alphaMax": 0.94,
+        "alphaMin": 0.3733333333333333
+      }
+    }
+  ],
+  "connections": [
+    {
+      "fromId": 6,
+      "fromPort": 0,
+      "toId": 4,
+      "toPort": 0
+    },
+    {
+      "fromId": 4,
+      "fromPort": 0,
+      "toId": 2,
+      "toPort": 0
+    },
+    {
+      "fromId": 2,
+      "fromPort": 0,
+      "toId": 9,
+      "toPort": 0
+    },
+    {
+      "fromId": 12,
+      "fromPort": 0,
+      "toId": 10,
+      "toPort": 1
+    },
+    {
+      "fromId": 9,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 0
+    },
+    {
+      "fromId": 10,
+      "fromPort": 0,
+      "toId": 13,
+      "toPort": 0
+    },
+    {
+      "fromId": 13,
+      "fromPort": 0,
+      "toId": 0,
+      "toPort": 0
+    },
+    {
+      "fromId": 2,
+      "fromPort": 0,
+      "toId": 14,
+      "toPort": 0
+    },
+    {
+      "fromId": 14,
+      "fromPort": 0,
+      "toId": 10,
+      "toPort": 0
+    }
+  ],
+  "controlConnections": [
+    {
+      "fromId": 3,
+      "fromPort": 1,
+      "toId": 4,
+      "paramName": "strength"
+    },
+    {
+      "fromId": 3,
+      "fromPort": 1,
+      "toId": 2,
+      "paramName": "phaseG"
+    },
+    {
+      "fromId": 3,
+      "fromPort": 1,
+      "toId": 9,
+      "paramName": "scramble"
+    },
+    {
+      "fromId": 3,
+      "fromPort": 1,
+      "toId": 12,
+      "paramName": "posterizeLevels"
+    },
+    {
+      "fromId": 3,
+      "fromPort": 1,
+      "toId": 10,
+      "paramName": "mixVal"
+    }
+  ],
+  "nextId": 15
+}
