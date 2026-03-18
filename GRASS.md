@@ -1,14 +1,15 @@
 # GRASS Language Reference
 
+## Terminology
+<ul>
+   <li>Picture prototype, snap: sprite.</li>
+</ul>
+
 ## Duplicates
 <pre>
-   - ARRAY is duplicated in: Current, Publications
-   - CIRCLE is duplicated in: Current, Implementations
    - DELETE is duplicated in: Current, Publications
-   - DISPLAY is duplicated in: Current, Implementations
    - EDIT is duplicated in: Current, Publications
    - GOTO is duplicated in: Current, Publications
-   - HELP is duplicated in: Current, Implementations
    - INPUT is duplicated in: Current, Publications
    - MOVE is duplicated in: Current, Publications
    - ONERROR is duplicated in: Current, Publications
@@ -26,7 +27,7 @@
 Calculate the absolute value.<br>
 
 **ARRAY `name, size, [size2]`**<br>
-Create a 1D or 2D numeric array with the specified dimensions.<br>
+Create a 1D or 2D numeric array with the specified dimensions. In a 2D array, the second and third arguments are rows and columns.<br>
 
 **ASC `char`**<br>
 Convert a character to its corresponding numeric code.<br>
@@ -58,8 +59,8 @@ Calculate the cosine of `angle`.<br>
 **DELETE `name`**<br>
 Remove a variable or macro with the specified `name`.<br>
 
-**DISPLAY `snap, x, y, [displaymode]`**<br>
-Blit a previously captured sprite (`snap`) to the screen at position (`x`, `y`) using an optional `displaymode`.<br>
+**DISPLAY `name, x, y, [displaymode]`**<br>
+Blit a previously captured picture prototype (`name`) to the screen at position (`x`, `y`) using an optional `displaymode`.<br>
 
 **EDIT `name`**<br>
 Open the full-screen editor for a macro `name`.<br>
@@ -161,9 +162,6 @@ Pause execution of the current macro for `n` frames (1/60s per frame).<br>
 
 **ANYARGS**<br>
 Tells if there are arguments passed to a macro. (ZGRASS)<br>
-
-**ARRAY `name, size` (or `name, rows, cols`)**<br>
-Creates an array of the specified size. (ZGRASS)<br>
 
 **BYE**<br>
 Logs user out; useful for changing disk areas. (GRASS)<br>
@@ -486,15 +484,6 @@ Modifies or accesses individual vector endpoints. (GRASS)<br>
 **CENTER `x, y`**<br>
 Set the drawing origin/center. (GRASS-RT1)<br>
 
-**CIRCLE**<br>
-Draws an ellipse on the screen and has options for building picture prototype lists. (ZGRASS, GRASS-RT1)<br>
-
-**DISPLAY `name, x, y, displaymode`**<br>
-Causes a picture prototype (or snap) to be exclusive or'ed or placed onto the screen and updated when necessary. (ZGRASS, GRASS-RT1)<br>
-
-**HELP `command-name`**<br>
-Prints command names and required argument types for assistance. (GRASS, ZGRASS, GRASS-RT1)<br>
-
 **KALIEDOSCOPE `n, x, y`**<br>
 Set up a kaleidoscope drawing modifier. (GRASS-RT1)<br>
 
@@ -506,3 +495,13 @@ Set up a mirror drawing modifier. (GRASS-RT1)<br>
 
 **MULTI `xs, ys, xc, yc`**<br>
 Set up a multi drawing modifier. (GRASS-RT1)<br>
+
+
+### Alternative Versions
+
+**CIRCLE**<br>
+Draws an ellipse on the screen and has options for building picture prototype lists. (ZGRASS, GRASS-RT1)<br>
+
+**HELP `command-name`**<br>
+Prints command names and required argument types for assistance. (GRASS, ZGRASS, GRASS-RT1)<br>
+
