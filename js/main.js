@@ -100,7 +100,8 @@ const sketch = (p) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'sandin-patch.json';
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      a.download = `lichen-patch_${timestamp}.json`;
       a.click();
       URL.revokeObjectURL(url);
       return false;
