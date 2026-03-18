@@ -15,6 +15,9 @@ export class RuttEtraModule extends Module {
       depth: { value: 80, min: 0, max: 300, step: 1, label: 'Max Line Depth' },
       rotationX: { value: 0.3, min: -1.5, max: 1.5, step: 0.05, label: 'Rotation X' },
       rotationY: { value: 0, min: -1.5, max: 1.5, step: 0.05, label: 'Rotation Y' },
+      // Performance parameters
+      frameSkip: { value: 1, min: 1, max: 6, step: 1, label: 'Frame Skip' },
+      adaptiveDetail: { value: 0, min: 0, max: 50, step: 1, label: 'Adaptive Detail' },
     };
 
     const p = glCanvas._pInst;
@@ -41,6 +44,8 @@ export class RuttEtraModule extends Module {
     this.dataG = null;
     this.dataB = null;
 
+    // Frame skipping state
+    this.frameCount = 0;
   }
 
   process(graph, glCanvas) {
@@ -52,20 +57,28 @@ export class RuttEtraModule extends Module {
       return;
     }
 
-    // Get input framebuffer as a p5.Image for pixel access
-    const img = inputFBO.get();
-    img.loadPixels();
+    // Frame skipping - only process every N frames
+    const frameSkip = Math.round(this.getParam('frameSkip'));
+    this.frameCount++;
 
-    const scanStep = Math.round(this.getParam('scanStep'));
-    const depth = this.getParam('depth');
+    if (this.frameCount >= frameSkip) {
+      this.frameCount = 0;
 
-    // Update line data from current frame
-    this._createLines(img, scanStep, depth);
+      // Get input framebuffer as a p5.Image for pixel access
+      const img = inputFBO.get();
+      img.loadPixels();
 
-    // Draw 3D lines to WEBGL graphics buffer
-    this._drawToGraphics();
+      const scanStep = Math.round(this.getParam('scanStep'));
+      const depth = this.getParam('depth');
 
-    // Copy PG buffer to output FBO
+      // Update line data from current frame
+      this._createLines(img, scanStep, depth);
+
+      // Draw 3D lines to WEBGL graphics buffer
+      this._drawToGraphics();
+    }
+
+    // Always copy PG buffer to output (shows last rendered frame)
     this.outputFBO.begin();
     glCanvas.clear();
     glCanvas.shader(this.shader);
@@ -158,6 +171,7 @@ export class RuttEtraModule extends Module {
     const opacity = this.getParam('opacity');
     const rotX = this.getParam('rotationX');
     const rotY = this.getParam('rotationY');
+    const adaptiveDetail = this.getParam('adaptiveDetail');
     const alpha = opacity * 255;
 
     const rows = this.rows;
@@ -195,29 +209,44 @@ export class RuttEtraModule extends Module {
       pg.beginShape();
       const rowStart = row * cols;
 
-      // Reset color tracking at start of each row
+      // Reset tracking at start of each row
       let lastR = -999, lastG = -999, lastB = -999;
+      let lastDrawnZ = -99999;
+      let lastDrawnCol = -1;
 
       for (let col = 0; col < cols; col++) {
         const idx = rowStart + col;
-        const r = dataR[idx];
-        const g = dataG[idx];
-        const b = dataB[idx];
+        const z = dataZ[idx];
 
-        // Only update stroke if color changed significantly
-        const dr = r - lastR;
-        const dg = g - lastG;
-        const db = b - lastB;
-        if (dr > colorThreshold || dr < -colorThreshold ||
-            dg > colorThreshold || dg < -colorThreshold ||
-            db > colorThreshold || db < -colorThreshold) {
-          pg.stroke(r, g, b, alpha);
-          lastR = r;
-          lastG = g;
-          lastB = b;
+        // Adaptive detail: skip vertices with similar Z (low contrast regions)
+        // Always draw first, last, and vertices with significant Z change
+        const isFirst = col === 0;
+        const isLast = col === cols - 1;
+        const zDelta = z - lastDrawnZ;
+        const significantChange = zDelta > adaptiveDetail || zDelta < -adaptiveDetail;
+
+        if (isFirst || isLast || significantChange || adaptiveDetail === 0) {
+          const r = dataR[idx];
+          const g = dataG[idx];
+          const b = dataB[idx];
+
+          // Only update stroke if color changed significantly
+          const dr = r - lastR;
+          const dg = g - lastG;
+          const db = b - lastB;
+          if (dr > colorThreshold || dr < -colorThreshold ||
+              dg > colorThreshold || dg < -colorThreshold ||
+              db > colorThreshold || db < -colorThreshold) {
+            pg.stroke(r, g, b, alpha);
+            lastR = r;
+            lastG = g;
+            lastB = b;
+          }
+
+          pg.vertex(dataX[idx], dataY[idx], z);
+          lastDrawnZ = z;
+          lastDrawnCol = col;
         }
-
-        pg.vertex(dataX[idx], dataY[idx], dataZ[idx]);
       }
       pg.endShape();
     }
