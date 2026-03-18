@@ -1,5 +1,25 @@
 # GRASS Language Reference
 
+## Duplicates
+<pre>
+   - ARRAY is duplicated in: Current, Publications
+   - CIRCLE is duplicated in: Current, Implementations
+   - DELETE is duplicated in: Current, Publications
+   - DISPLAY is duplicated in: Current, Implementations
+   - EDIT is duplicated in: Current, Publications
+   - GOTO is duplicated in: Current, Publications
+   - HELP is duplicated in: Current, Implementations
+   - INPUT is duplicated in: Current, Publications
+   - MOVE is duplicated in: Current, Publications
+   - ONERROR is duplicated in: Current, Publications
+   - PRINT is duplicated in: Current, Publications
+   - PROMPT is duplicated in: Current, Publications
+   - RETURN is duplicated in: Current, Publications
+   - SKIP is duplicated in: Current, Publications
+   - WAIT is duplicated in: Current, Publications
+</pre>
+
+
 ## Current
 
 **ABS `value`**<br>
@@ -133,6 +153,7 @@ Convert a string to a number.<br>
 
 **WAIT `n`**<br>
 Pause execution of the current macro for `n` frames (1/60s per frame).<br>
+
 
 ## Referenced
 
@@ -459,28 +480,29 @@ Changes the PUTDSK device. (GRASS)<br>
 **ZAPPOINT `lname, n, x, y, z, k`**<br>
 Modifies or accesses individual vector endpoints. (GRASS)<br>
 
+
 ### Implementations
 
 **CENTER `x, y`**<br>
-Set the drawing origin/center. (FakeGRASS)<br>
+Set the drawing origin/center. (GRASS-RT1)<br>
 
 **CIRCLE**<br>
-Draws an ellipse on the screen and has options for building picture prototype lists. (ZGRASS, FakeGRASS)<br>
+Draws an ellipse on the screen and has options for building picture prototype lists. (ZGRASS, GRASS-RT1)<br>
 
 **DISPLAY `name, x, y, displaymode`**<br>
-Causes a picture prototype (or snap) to be exclusive or'ed or placed onto the screen and updated when necessary. (ZGRASS, FakeGRASS)<br>
+Causes a picture prototype (or snap) to be exclusive or'ed or placed onto the screen and updated when necessary. (ZGRASS, GRASS-RT1)<br>
 
 **HELP `command-name`**<br>
-Prints command names and required argument types for assistance. (GRASS, ZGRASS, FakeGRASS)<br>
+Prints command names and required argument types for assistance. (GRASS, ZGRASS, GRASS-RT1)<br>
 
 **KALIEDOSCOPE `n, x, y`**<br>
-Set up a kaleidoscope drawing modifier. (FakeGRASS)<br>
+Set up a kaleidoscope drawing modifier. (GRASS-RT1)<br>
 
 **KILL**<br>
-Clear all drawing modifiers. (FakeGRASS)<br>
+Clear all drawing modifiers. (GRASS-RT1)<br>
 
 **MIRROR `x, y, xc, yc`**<br>
-Set up a mirror drawing modifier. (FakeGRASS)<br>
+Set up a mirror drawing modifier. (GRASS-RT1)<br>
 
 **MULTI `xs, ys, xc, yc`**<br>
-Set up a multi drawing modifier. (FakeGRASS)<br>
+Set up a multi drawing modifier. (GRASS-RT1)<br>
