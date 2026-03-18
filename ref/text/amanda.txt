@@ -1,0 +1,368 @@
+Copy-It-Right
+The Distribution Religion:
+The Media Archaeology of the Sandin Image Processor
+Amanda Long
+Independent Artist and Scholar
+New York, United States
+amandacamillelong@gmail.com
+
+Abstract
+How do artists store and organize hardware and software? I investigate the analog Sandin Image Processor
+hardware using "zombie media" archaeology, examining
+the concept of "obsolete" or "dead" media to find sustainable, socially equitable art and design solutions by remaking hardware modules as software. Because Sandin
+shared the Copy-It-Right: The Distribution Religion
+manual, more than 20 copies of the IP were made. As a
+testament to the success of the IP community’s engagement and maintenance, the machines continue to operate
+through the care of artists who actively engage the tool
+for new projects. Sandin’s IP proposes preservation
+through replication, re-implementation, open-access archives/storage, DIY activities, and community BuildIt/Fix-it parties. It represents an artist self-archiving and
+organizing resources to copy-it-right.
+
+In 2021, I began to research the Sandin IP and set out to
+explore the possibilities of carrying on the spirit and ethos
+of this earlier era by reconstructing the analog hardware as
+digital software—to open the black box of image processing by tracing the genealogy of the analog imageprocessing techniques. Multiple Sandin IPs are still active
+in private and public collections; artist Amy Karle, the
+School of the Art Institute of Chicago and Alfred University maintain their own living IPs. To create my own living
+IP requires a further step: a transformation to an opensource zombie media vessel.
+
+Keywords
+zombie media archaeology; open-source history; video
+synthesizer; archive; digital cultural heritage; new media
+art; global archiving network; ISEA, Summit on New Media Archiving
+
+Introduction
+Pioneering computer models such as Dan Sandin’s Image
+Processor (IP) (1969–73) (figures 1 and 2) give users
+agency and expose the invisible labor behind the mysterious inner workings—the black box—of image processing
+and new media art archiving. Bruce Latour uses the term
+“black box” to describe the obfuscation of time, labor, and
+materials:
+Look around the room. . . . Consider how many black
+boxes there are in the room. Open the black boxes; examine the assemblies inside. Each of the parts inside the
+black box is itself a black box full of parts. If any part
+were to break, how many humans would immediately
+materialize around each? How far back in time, away in
+space, should we retrace our steps to follow all those silent entities that contribute peacefully to your reading
+this chapter at your desk?[1]
+
+Figure 1. Dan Sandin, 5 Minute Romp thru the IP (1973). This
+DIY video introduced his Sandin IP and its capabilities to process
+a live video in real time. Video still 5:58 min. ©Dan Sandin
+
+From the point of view of new media art archiving
+methodology, the Sandin IP offers a case study to find
+solutions for new media art archiving. This case study may
+be one of the strategies to overcome the existing archival
+challenge. Multiple video synthesizers survive and thrive
+because of the Distribution Religion vision Sandin employed centered on human interconnection and low- or nocost activities: community as a “resource,” open-source
+sharing of intellectual property, artists’ self-archive, and
+DIY activities. Terry Wong’s article “Global Archiving
+Network: A Case Study at the Second Summit on New
+Media Art Archiving at ISEA 2022,” states:
+
+New media art is a contemporary-art category in which
+the media itself is very technology-dependent. Artists often incorporate emerging technologies in their artworks
+and constantly redefine the category. Unlike many other
+more static traditional art media, this evolving genre of
+art faces a severe problem: many recently created artworks can no longer be exhibited and may disappear
+without a trace due to technology obsolescence, lack of
+data, and insufficient documentation.[2]
+Defying obsolescence, Sandin’s IP remains active after
+50 years. Researching and replicating Sandin’s HIGH TEK
+synthesizer led me to the black box keys of zombie media
+archaeology. How do artists store and organize hardware
+and software? Or how can a culture build lifespan into a
+model with a vision wider than that of profit? To envision
+the infrastructure for a new media art archive requires
+looking at sustainable designs and art. The example of the
+analog IP provides a confusing challenge: how to preserve
+a video instrument, a high-technology invention with intricate parts and purposes. In attempting to remake the analog
+hardware as digital software, I learned that Sandin’s IP
+synthesizer lives on its users. Sandin emphasized community as the main energy “resource.” The relationships
+formed foster a culture of support for high-technology,
+nonhuman machines that require the delicate human hand
+and creative mind to survive.
+What is old or new? What is original or a copy? Who or
+what is the average type or deviant? Foucault in The Archeology of Knowledge (1969) states that these dualisms,
+old–new, original–traditional, average–deviant, become a
+value judgment. In listening to Foucault’s appeal to reevaluate binary differences, Zombie Media conceptually stems
+from media archaeology, a new materialist approach for
+investigating technology. Hertz and Parikka state that
+zombie media “is concerned with media that is not only out
+of use, but resurrected to new uses, contexts and adaptations.”[3] My methodology investigates the analog Sandin
+IP (IP) using “zombie media” archaeology to examine the
+concept of “obsolete” or “dead” media to find sustainable,
+socially equitable art and design solutions. As an artist
+remaking the hardware modules as software 50 years later,
+I believe the process could open artistic possibilities and
+bend history. Hertz and Parikka describe how “assembled
+into new constructions, such materials and ideas become
+zombies that carry with them histories but are also reminders of the nonhuman temporalities involved in technical
+media.”[4] Media and memory are interchangeable in that
+the ideas need a vessel for storage and transfer. Silicon
+Valley corporate software companies now start by building
+a community of users, gaining the user’s contact information, and beginning a relationship of communication.
+They set up a system in which the user is relevant and
+central, but in contrast to the Sandin IP, with its community Build-It and Fix-it parties and the subsequent opensource model, they do not give the user agency with the
+product they have purchased. The open-source model of
+sharing and building community can become the common
+
+model for challenging the communication systems that
+now dominate. New media artists and archivists can benefit from the advice Sandin gave me in a Zoom interview
+titled “Property Rites”; held to discuss the IP.
+In that community-building adventure, [we] have this
+“copy-it-right” idea that rather than trying to prevent
+people from copying your stuff the best strategy was to
+let them copy it and distribute it…expand its reach.[5]
+
+Figure 2. Dan Sandin’s IP (1971–73). Note that the cables act as
+“patches” between the modular analog computers that process the
+video signal. Photo by Rosa Menkman, taken April 3, 2015, at the
+School of the Art Institute of Chicago, where the IP operates to
+this day. ©Wikipedia.
+
+Figure 3. Amy Karle, BioFeedback (2011) performance, video
+art. Installation view at Detroit Institute of the Arts. A zombie
+resurrection for the Sandin IP with the artist Amy Karle performing and repurposing the Sandin IP. She maintains and operates
+her own IP which was formerly artist Bob Synder's from Chicago.
+Photo by Andre LaRoche. ©Amy Karle.
+
+Do-It-Yourself
+The IP, as Sandin explains in the live-recorded 1973 analog video 5 Minute Romp thru the IP, “is a general-purpose
+analog computer, a general-purpose patch programmable
+[computer], meaning [a] program [made] by patch ca-
+
+bles.”[6] Sandin demonstrates the IP modules in real time
+to the viewers, embodying a DIY spirit of how they, too,
+can build a computer to process their moving images. The
+IP manual, with the title and manifesto of the Distribution
+Religion, details how Sandin’s project was simultaneously
+an artistic, an engineering, and a political project designed
+to broaden access to, interest in, and understanding of
+image processing. Currently, the implications are reaching
+out more broadly to new media art archiving. When this
+DIY approach is applied now, it challenges the obfuscation
+about artworks for replication and archival purposes.
+
+Open-Source—The Distribution Religion
+When video emerged as a medium in the late 1960s,
+Sandin created the IP, a video synthesizer with analog
+computer modules known as “open-source hardware.” He
+designed its modules to be replicated by other artists as a
+way of building community and disrupting the network of
+communications under corporate control. As he explains,
+“I wanted people to copy [the IP] because I figured that
+was a better distribution mechanism than me trying to
+create a company, which I was not interested in doing.”[7]
+The IP, despite the name, was not intended to process still
+images; Sandin’s concept was always for the IP to be a
+video instrument in real time. With the arrival of the
+Portapak video camera in the late 1960s, image processing
+opened the floodgates of utopian thought and potential for
+analog video technology.
+An activist against the Vietnam War, Sandin was in
+graduate school studying nuclear physics in 1968 when he
+saw Scott Bartlett’s experimental film OffOn, of the same
+year, which uses video processing. Deeply inspired, Sandin
+built the IP in the subsequent five years. As the manager of
+a particle accelerator, he operated wall-size generalpurpose analog computers. Applying the physics of the
+particle accelerator technology to video required a prophetic conceptual leap, collaboration, and commitment. Sandin
+explained to me, in our interview, that he discussed wanting a very powerful device for manipulating images with
+fellow physicist Russ Dobson, asking, “What would it
+mean to build the visual equivalent of a Moog Model Two
+analog synthesizer?”[8] Dobson answered that first, you
+needed to increase its bandwidth. The Moog had a 20–50
+kilohertz bandwidth, whereas the IP went up to 5 megahertz because that was the bandwidth of a video channel.
+The philosophy of reciprocity and generosity as it related to sharing intellectual property espoused a belief in the
+coevolution of humans and machines, because independent
+media relies on its hardware or software being robust,
+accessible, and affordable. In Sandin’s model, the creator(s) share as much information as can be provided to the
+users transparently. The Sandin IP hardware manual begins
+with the heading “Distribution Religion.” The open-source
+movement’s conceptual origins can be traced partly to the
+capitalized text at the beginning of the IP’s 117-page DIY
+manual on how to make the IP, a video art performance
+instrument:
+
+DISTRIBUTION RELIGION
+THE IMAGE PROCESSOR MAY BE COPIED BY
+INDIVIDUALS AND NOT-FOR-PROFIT
+INSTITUTIONS WITHOUT CHARGE. FOR-PROFIT
+INSTITUTIONS WILL HAVE TO NEGOTIATE FOR
+PERMISSION TO COPY. I THINK CULTURE HAS TO
+LEARN TO USE HIGH TEK MACHINES FOR
+PERSONAL AESTHETIC, RELIGIOUS, INTUITIVE,
+COMPREHENSIVE, EXPLORATORY GROWTH. THE
+DEVELOPMENT OF MACHINES LIKE THE IMAGE
+PROCESSOR IS A PART OF THE EVOLUTION. I AM
+PAID BY THE STATE, AT LEAST IN PART, TO DO
+AND DISSEMINATE THIS INFORMATION; SO I
+DO.[9]
+The introductory words attempt to facilitate cooperation,
+collaboration, and exploration without exploitation. As he
+stated, as a faculty member at a state university, Sandin
+was paid by the state. He pointed to a strong connection
+between scholars’ obligations to share their research and
+open-access scholarly publishing made available by universities. The manifesto evokes a transcendentalist hope in
+the spirit of self-learning and a belief in the symbiotic
+relationship between humans and machines. It serves as an
+ideology for teaching others to copy the designs for subverting capitalist cultural production using independent
+media. The model challenges the ideology of planned obsolescence that is built into the economy. By opening the
+IP’s black box, the “Distribution Religion” manual acts as
+a force to expand proprietary hardware, software, and corporate control of video technology to include a world of
+tinkerers and activists. It saw, in the early 1970s, the ability
+to make, edit, and produce videos as essential to being
+heard. As Sandin noted, “If you challenge capitalism, you
+are going to lose . . .[It’s important] to be able to hack out a
+methodology for yourself so you can do what you
+want.”[10] Community was one of the most important
+things about these ideas. The phrase “Copy-It-Right”
+evolved to express the intention that people should copy
+the software or hardware, because, says Sandin, “if you
+don’t have anybody using it, your software is irrelevant.”[11] The goal was to increase exposure and build a
+community. Asking people to “copy-it-right” and giving
+them permission create a relationship between the creator
+of the IP and the users. This could be true of any software
+platform and its users if the creator(s) collect(s) the names
+and contact information of users. However, as Sandin emphasizes, he also believes that intellectual property is essential for artists because it allows them to support themselves and not “pump gas.” He is part of a posthuman
+movement to shift the labor of the means of production to
+the user’s hands to enhance creativity and community
+interconnection.
+
+Community Building Adventures
+Sandin describes the IP as “interactive installation art on
+video signals.”[12] It was designed for use in a classroom
+
+or lab to open up the space behind the screen for accessible
+computer science and engineering education presented
+through a hands-on STEAM project. At the heart of the
+IP’s concept is the notion of intellectual property shared
+cooperatively for the benefit of humanity, a philosophy
+that also applies to the open-source movement. Thus, the
+serves as a pioneering model of open-source activism. If an
+artist who built the IP wrote to him with questions about
+the complex circuit-building project, Sandin often answered, and he continues to do so. In return, he wanted
+these users to share the video art they made using the by
+mailing him a recording of it. Building and operating the
+IP hardware inevitably came with wear-and-tear tech issues, resulting in repair or “Fix-it” sessions. Fix-it sessions
+could be called parties, too, as Sandin describes them—
+gatherings with pizza, beer, and friends—opportunities for
+artists in the image-processing community to share tools
+and expertise.
+
+spirit of Sandin’s Distribution Religion, the Sandin IP
+patch I have created is available to download and learn
+from in GitHub; note that MaxMSPJitter programs are
+nicknamed “patches” by the developers and users to continue the tradition. Zombie media archaeology professes
+that “we need to develop similar circuit bending, art, and
+activist practices as an analytical and creative methodology: hence the turn to archives in a wider sense that also
+encompasses circuits, switches, chips, and other high-tech
+processes.”[17] The digital Sandin IP project attempts to
+“open the black box” at the heart of image processing and
+modern data. What I aim to challenge is the binary logic of
+capitalist thinking, which excludes the user while hiding
+the invisible labor and environmental destruction behind
+the circuits. The open-source sharing model offers an alternative vision of a symbiotic and posthuman world in
+which the machines are us. Let’s tinker with new media
+archiving. To build your own IP for your archive, visit
+https://github.com/amandalong/Sandin-Image-Processor.
+
+When you build a high-tech device, there has to be an
+infrastructure to maintain it. . . . [It] all grew very naturally out of community . . . the community itself was the
+resource that made all of the [gear we created and disseminated] work.[13]
+Herein lies the difference he emphasized between isolating
+corporate service maintenance contracts and what he and
+his compatriots were doing: IP maintenance operated as a
+group community activity, and, Sandin explained, “it was
+very effective at keeping high technology alive.”[14]
+Testament to the success of the IP community’s engagement and maintenance, the IP continues to operate
+through the care of university labs such as Alfred, SAIC
+and artists such as Amy Karle. The IP, unlike technology,
+remains friendly to what Hertz and Parrika call a “black
+box . . . a system that is not technically understood or accessed, and as a result these technologies are often completely unusable when they become obsolete or broken.”[15] Often, Fix-it parties were called “Build-it” parties or “Inauguration” parties. Building IP requires about a
+hundred cables for patching because the process could be
+challenging technically and the equipment pricey. Therefore, another type of “Fix-it” party would become a
+“Build-it” session when Sandin borrowed the tools from
+the television station at the University of Illinois at Chicago to work with a “production line” of IP users: artists
+gathered to fabricate several hundred cables for each other
+to patch the programmable modular computers together.[16]
+
+The Original—Copy IP
+The analog-computer-module logic has evolved into a
+digital data-flow software program called MaxMSPJitter.1
+Whereas Sandin made computer hardware to process video, I am using the IP’s hardware technology as the inspiration for developing open-source software (figure 4). In the
+1
+
+An open-source version, Pure Data, exists, too.
+
+Figure 4. Amanda Long, screenshot of the Sandin software patch
+draft with modules to match the physical analog modules and
+cables. Note the digital symbolic representations of the analog
+patch cable and modules. The graphic user interface GUI cannot
+replicate the tactile, tangible interface joy of turning the dials and
+plugging in the cables, but it does provide satisfying real-time
+image processing aesthetics to mimic the analog Sandin IP.
+©Amanda Long.
+
+Acknowledgements
+I thank Dan Sandin for inventing the IP and for his generosity of spirit in answering both technical and philosophical questions about the system. The Sandin IP “zapped a
+hole” in my mind. Also, special thanks go to Amy Karle
+for her interview about the Sandin IP and her advice to
+connect to ISEA; and to William Rapaport for his writing
+encouragement.
+
+References
+[1] Bruno Latour, Pandora’s Hope: Essays on the Reality of
+Science Studies (Cambridge: Harvard University Press, 1999),
+185.
+[2] Terry Wong, “Global Archiving Network: A Case Study at
+the Second Summit on New Media Art Archiving at ISEA2022,”
+16,
+https://www.researchgate.net/publication/366066485_ISEA2022_
+Proceedings-of-the-Second-Summit-on-New-Media-ArtArchiving#fullTextFileContent.
+[3] Garnet Hertz and Jussi Parikka, “Five Principles of Zombie
+Media,” 429, accessed December 17, 2022,
+https://www.researchgate.net/publication/273062231_Five_Princi
+ples_of_Zombie_Media.
+[4] Hertz and Parikka, “Zombie Media: Circuit Bending Media
+Archaeology into an Art Method,” Leonardo 45, no. 5 (2012):
+429. https://www.jstor.org/stable/41690216.
+[5] Dan Sandin, interview with Amanda Long via Zoom, “Property Rites,” 0:02–0:38. Descript audio,
+https://share.descript.com/view/ZU02PDqJJqe.
+[6] Dan Sandin, 5 Minute Romp thru the IP, 1973, YouTube
+video, https://www.youtube.com/watch?v=8qh6jRzjmcY.
+Dan Sandin later shared his version, which has a different ending,
+https://vimeo.com/663928209.
+[7] Sandin interview, “Property Rites,” 11:16–11:21.
+[8] Sandin interview, “Property Rites,” 01:05:17–21.
+[9] Dan Sandin and Phil Morton, Distribution Religion (Image
+Processor manual), February 28, 1976 (with handwritten notes
+from October 1978), page 3.
+http://www.criticalartware.net/DistributionReligion/DistributionR
+eligion.pdf.
+[10] Sandin interview, “Radical Architecture,” 33:52.
+[11] Sandin interview, “Radical Architecture,” 58:41.
+[12] Sandin interview, “Property Rites,” 01:23:42.
+[13] Sandin interview “Radical Architecture,” 28:42–50, 32:52–
+33:01.
+[14] Sandin interview, “Radical Architecture,” 36:52–37:04.
+[15] Hertz and Parikka, “Zombie Media,” 428.
+[16] Sandin interview, “Radical Architecture,” 28:57.
+[17] Hertz and Parikka, “Zombie Media,” 429–30.
+
+Author Biography
+Amanda Long is a video sculptor, animator, mirror maker, lover
+of the Earth and Sun and the animals, and a dreamer of fairy-tale
+visions. She fantasizes about giving technology a soul and making peace between humans and nature. Long’s artworks enable
+their viewers to share the role of being an artist by being active
+participants. She wants the artwork to be a type of “reclamation,”
+to offer people a sense of power over how they are represented on
+camera and over the space in which the artwork is shown. Her
+installations include Silly Faces aka Strike a Pose, National Portrait Gallery, Smithsonian, Washington, D.C. (2016); Wishing
+Well, Dyckman Farmhouse Museum, New York City (2016); and
+Portal at Socrates Sculpture Park, New York City (2014). A
+second installation of Silly Faces and an Animation Station
+opened at the Katara Children’s Mall, Doha, Qatar, in fall 2022.
+
+

@@ -1,0 +1,2241 @@
+DATAMAX UV-1
+
+Zgrass LESSONS
+October 27, 1981
+
+(C) Copyright 1981
+Real Time Design, Inc.
+
+DATAMAX UV-1 Zgrass LESSONS
+(C) Copyright 1981 Real Time Design, Inc.
+October 27, 1981
+
+LESSON 0
+
+READ ME FIRST
+
+Zgrass is a graphics programming language. It is
+probably closer to BASIC than any other language, yet it is
+much more flexible and general than BASIC. The presumption
+in these lessons is that you already know how to program
+BASIC (at least BALLY BASIC) and are familiar with loops,
+IF's, GOTO's, variables, and so on, and are ready to learn
+what makes Zgrass tick. The essential differences between
+Zgrass and BASIC are:
+1. Zgrass allows any number of programs and
+subroutines, each named, and they can run in
+series or parallel. BASIC has one unnamed program
+and a lot of GOSUB's.
+2. Zgrass has an interactive full-screen editor.
+BASIC edits with line numbers.
+
+3. Zgrass has good ways of passing arguments to
+subroutines; BASIC has none.
+4. Zgrass can construct programs and run them with
+string manipulation features; BASIC cannot.
+5. Zgrass has excellent debugging aids: single
+step, run-time listing, and error trapping; BASIC
+doesn't.
+6. Zgrass has fast, advanced
+most BASICs use peek and poke.
+7. BASIC has FOR/NEXT.
+
+graphics commands;
+
+Zgrass does without.
+
+In order to learn Zgrass, you will have to explore it.
+Fortunately, this is not hard and is very rewarding. These
+lessons are to help you start exploring. They don't teach
+you how to program or write games, they just present the
+tools to you and encourage you to build your own. The first
+six lessons concentrate on defining the playing field. Pay
+close attention!
+If you find a word being used that you do not
+understand, consult the Glossary. Once you get through the
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 0
+
+Page 2
+
+lessons, read the Glossary in detail. You'll find yourself
+understanding some of the esoterica. Some of the advanced
+features you may never use or understand and it may take
+awhile for you to see why some of the diversions from BASIC
+were necessary. Before long, however, you will find going
+back to BASIC unbearable.
+Just to get you started, there's a test program called
+NB in the system. Press the red RST on the UV-1 front panel
+and answer Y. Then type the two letters NB and press the
+RETURN key. An image will appear. Type NB and press RETURN
+again. The image will undo itself. For more action, type
+NB.Band press RETURN. You can stop this by pressing the
+CTRL (called CONTROL on some keyboards) key, holding it down
+and simultaneously pressing the C key. Have fun!
+
+End of Lesson 0.
+
+10/27/8:
+
+LESSON 1
+
+DATAHAX IJV-1 Zgrass LESSON 1
+
+GETTING ST ART ED
+
+Wher. Zgras~ first starts up, you see a '>' on the
+terminal screen. This is the "attention mark" and it means
+Zgrass is waitin£ for you to type something. To mcike sure
+it's liste~ing, press the RETIJRN key. It should put an
+attention mJrk on the next line (if not, push the RST button
+on the LJV-1 front panel). \.lhenever there is an attention
+mark, you can type a COMMAND.
+Aside frar: graphics output, the primary means of
+communication frcrn Zgrass to you is the PRINT COMMAND. It is
+your window into Zgrass. \./her.ever you what to find out what
+something w::.11 evaluate to, type in PRINT plus that thing.
+Separate PRINT and the thing by a single space and press the
+RETURN key to end the command. (The RETURN key performs the
+same function as the GO key in BALLY BASIC, you might
+observe.) Unless you've already pressed the RETURN key,
+mistakes can be corrected by typing RUB to erase and
+re-typine correctly. Try these:
+
+PRINT 5
+PP.INT 5*5
+
+PRINT 5*2+2
+PRIH 5*(2+2)
+PRH:T (5*2)+3
+PRINT 100/3
+The above exarnples illustrate using Zgrass as an overweight
+pocket calculator. When doing arithmetic in Zgrass, you
+must observe the PRECEDENCE of OPERATORS. The OPERATORS
+above are +,* and /. To discover the other operators in
+Zgrass and their prece:ence, look up both OPERATOR and
+PRECD:'.NCE ir, the Glossary now.
+Zgrass has some operators that don't exist in BASIC.
+The random n~"Tlber operator is the percent sign:%. It takes
+the two nmbers on either side of it and yields (returns) a
+nunber randomly chosen between them. The lower bound is
+sometimes chosen but the upper never is, although it can get
+very close. Try:
+PRINT 11,5
+several times. Notice that you get fractions.
+
+"-"
+
+Another operator in Zgr-ass
+
+is the ASSIGNMENT operator,
+
+You car; type:
+
+PRINT A=i0~1CO
+and tr.e nu'Tlt.,t.:r rarv:o,n:y chosPr, betweer, 1C and 100 will be
+prir;ted and stored in VARIABLE A. Normally you do not want
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 1
+
+Page 2
+
+to see the printout everytime you store sanething in a
+variable so you leave out the PRINT:
+A:101100
+Zgrass does not like extraneous spaces, except at the
+beginning of a line, so
+A= 101100
+
+will generate ERROR #20. Spaces on the end of a line are
+tough to see because you can't tell where the NEXTLINE
+character is. If you press CTRL down and press Y at the
+same time (hereafter referred to as CTRL+Y) an"!" will be
+printed where the NEXTLINE's are so you can see them.
+Another CTRL+Y turns this feature off, so it is called a
+toggle after its similarity to toggle light switches.
+In any event, you can always find out the current value
+of A by typing:
+f-RINT A
+The concept of an EXPRESSION is central to Zgrass. All
+the thing~ you have typed followirg the PRINT's above are
+expressions. PRINT always gives the value of an expression.
+The smallest expression is a single number or variable and
+lar~er express10ns are made up of smaller expressions glued
+together with operators.
+In fact, even "PRINT 10" is an
+expression, as is every legal thing you can type in ZGRASS
+besides CTPL characters. You can verify that "PRINT 10" is
+an expression by:
+PRil:T PRINT 1C
+
+which will rri~t a 1C then a 1. The one is the value of the
+expression "PRINT 10" wr.ich the leftmost PRINT gives. It
+prints a 1 because the PRIN: command and all other commands
+wh::.ch h,.we nc:r,ing ~Cr'c meaningful to evaluate to gi Vl: 1 's
+to indicate 11 success 11 •
+Evaluating to a value is often
+referred to as
+"returning" a value depending on the context. In these
+lessons, we will talk about returning values, which should
+never be confused with the RETURN key. To avoid confusion
+between the RffiRN command which returns values and the
+RETURN key, we nor."!ally call the character generated by the
+RETURN key a "fJEXTLINE." That's why we say CTRL+Y puts "! '" s
+where NEXTLINES are i~stead of where RETURN's are. (Many
+people refer to NEXTLINES as "carriage .returns" which makes
+no sense whatsoever on a cathode ray tube terminal.)
+To drive home the point of returning values which PRINT
+prints out,i:.ry:
+PRINT PRINT PRINT 10
+
+10/27/81
+
+DATA~.AX UV-1 Zgrass LESSON 1
+
+Page 3
+
+Any Zgrass command can have its expressions put in
+parentheses instead. Try:
+PRINT(10)
+PRINT(PRINT(PRINT(10)))
+Note the lack of spaces. The 10 is called an "argunent" by
+computer folk and is an indication that computer languages
+were developed by mathematicians, not social psychologist~
+or artists. At any rate, argunerits are always separated by
+commas:
+PRINT 10,20,30
+PRINT(l0,20,30)
+The parentheses are used to clarify the nesting. The only
+reason we do not require them always is that they are a pain
+to type all the time (if we did require parentheses, by the
+w2y, you would be able to type spaces anywhere, but we don't
+so you can't). People seem to have an inordinate amount of
+trouble accepting two different
+formats for enclosing
+argur.ent~ to commands. Please make sure you re-read the
+above few paragraphs un:il they are clear to you.
+Try this last PRINT evaluation:
+
+FRINT(PRINT(1C)+PRI~T(5))
+
+Each print inside the parentheses returns a 1 after printing
+its argument and the SLIT! of the two 1's is printed by the
+leftmost PRINT which prints 2. (The 1 it returns is lost
+because it is not assigned or passed on to anything.)
+There are, of course, more simple ways to arrive at one
+2nd one are two, but understanding the connections between
+arguments, commands and values returned is critical to
+developing a feel for zooming around in Zgrass and seeing
+h™ Zgrass is far mere powerful than BASIC .. •
+WHAT COMMANDS DO
+In addition to printing 10 on the terminal, PRINT 10
+returns a 1 to whatever called it because it had nothing
+better to returr, than "success." That's reasonable because
+it did its work as a side effect of returning that 1.
+Commands generally are interesting because of what they do
+rather tha~ what they return. Fer example, type:
+HELP
+Look at the last line. Now type (make sure there's no space
+between the parentheses):
+PRINT HELP()
+and you'll see a 1 there. The point of this is that
+commands cause other things to happen besides returning a
+value. FlJNCTIONs are commands that return a value but
+otherwize don't chanee anythir.e. It is possible to have
+expressions which contain beth COIT'lTlands and functions since
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 1
+
+Page 4
+
+the distinction is, in
+essence, artificial, but
+constructions are confusing, especially to saneone
+trying to read your programs.
+
+such
+else
+
+Functions are generally used as parts of complex
+expressions and were invented because once you get past
+about ten operators, you sirrultaneously run out of
+punctuation symbols and the capacity to remember what they
+do. Functions have names like cOITITlands (you are probably
+familiar with SIN, COS, TAN, Lex;, 8nd SQRT, for example) and
+you can create your own functions and commands in Zgrass
+quite easily. We'll show you how in the next lesson.
+Meanwhile, l~t' s do some graphics commands. Try:
+BOX 0,0,300,200,3
+BOX 75,0,20,100,2
+BOX -75,0,20,100,1
+BOX 0,0,200,10,0
+The BOX command draws· 0 filled-in rectangle defined by its
+arguments:
+BOX XCENTER,YCENTEE,XSIZE,YSIZE,COLORMODE
+X and Y ?-re the horizont2l and vertical coordinates and have
+the ranges:
+-160<X<159
+-100<Y<100
+The last argument to BOX is the COLORMODE. There are lots
+of these, but for r.aw, assume O is white, 1 is red, 2 is
+green and 3 js blue.
+The POINT comrr.and allows you to draw points on the TV
+screen. An individual point (from now on called a "pixel"
+to avoid confusion with the POINT command) is sometimes hard
+to see, especially if you are using a regular TV. Try:
+BOX 0,0,320,200,3;POINT 100,20,0
+Look up the POINT command if the arguments are not obvious
+to you.
+While looking up the POINT command, you might have
+noticed a PCH,;T functicn,too. When the COLORMODE is not
+specified. Zgra~~; :3ssumes yc,u wont it returned to you as a
+value. The values range 0-~ if the coordinate is on-screen
+and-; is returned if the p:xel specified is off-screen.
+Try:
+CLEAR
+Box c,o,1co,1ca,3
+BOX 0,0,50,50,2
+PO.INT 0,0, 1
+and:
+PRINT POI(O,O), POI(O, 1), POI( 30,-30), POI(200,200)
+So, POINT use:l 3S a fu~ct ion only returns a value while
+POINT used as a command chan~es the screen
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 1
+
+Page 5
+
+One last c1:lmmand for this lesson: CLEAR. CLEAR erases
+the TV screen. CLEAR.CRT (or CL.C for short) erases the
+tenninal screen. The 11 .CRT" is called a switch. Switches
+are used to modify some system cCfflllands and are separately
+docllTlented in the Glossary.
+
+End of Lesson 1.
+
+This page intentionally left blank
+
+10/27/81
+
+LESSON 2
+
+DATAMAX UV-1 Zgrass LESSON 2
+
+WRITING MACROS
+
+It's pretty difficult to find a prograntning language
+that doesn't deal with numbers coherently. However, the use
+and handling of
+alpham.rneric text
+( called "character
+strings")
+so
+fundamental
+to our
+natural
+language
+communication, is, in fact, a clllTlsy add-on to most popular
+programrr.ir:g lar.g'..lae;es. Or.ly the most primitive and ad-hoc
+constructs are availabl~ to the user in BA~IC or FORTRAN,
+for examp:P. Zgrass, on the other hand, uses character
+strings as its way of building and stori~g user programs so
+string manipulation is as much a part of the language as
+nl..lT'erical computation.
+S7R::::1,Gs ( l'.)o~: l;p the defir.i ~io:. in t.he Glossary if it's
+a ne~ concep: t0 ycu) are defined much the same as numbers
+except yo~ need tc specify dalimiters (special punctuation)
+whic~ first, in~icate that they are strings and second, say
+where th~y enc. Tne stri~g delimiters in Zgrass are:
+" , ' , [ , J . { 2nd !
+the last four o: which ca~ be nested. Try:
+FRINT "HELLO!"
+or
+FRINT [HELLJ!}
+
+To assign a 5tring to a variatle, type:
+J!.: [ b.SLLO ! J
+
+and then try:
+PRIN7 A,A,A,A,A
+Unlike in BASIC, you do not ne~d to use a '$' to indicate a
+string variabla; Zgrass is pretty good at figuring it out.
+You may use '$' i': a n2irr.e- if yo'...l fir.ct it comfortable. For
+the t:~e being, 8Void naMes that star: with a $ and have
+exactly two additicna! characte~s to eliminate possible
+conflict with DEVICE VARIABLE: names (see LESSON 7 and the
+Glossary). Also, do not :..Jse $CHAR1 as a name, since that is
+used by the TEXT co~~and.
+Note that there are spa~es between the HELLO! 's when
+pririted as above. ?RI~:: always puts a space after the thing
+it prints.- To el:~inate the spaces, try:
+F~It-;T A&A&.:..&t.&.4
+
+The 1 & 1 is the concatenation
+string expressicr.
+
+operator
+
+and
+
+it
+
+creates a
+
+As st:te·::: before, Zgr2ss stores your programs as
+stri:",gs. ·..:c :::s:: i::ro~rar::s : r, :'.grass '.·1P.CRC s.
+So, to create
+11
+
+1
+
+11
+
+10/27/87
+
+DATAMA.X UV-1 Zgrass LESSON 2
+
+Page 2
+
+a macro. you assign the string that contains the commands to
+a variable. Try:
+O:[BOX 0,0,100,100,2
+BOX 50,50,100,100,3]
+(Note the plus sign (+) which appears when a multi-line
+string is being typed and Zgrass is waiting for you to type
+the matching delimiter.)
+To run this
+
+macro, just
+
+type Q and press
+
+the RETURN
+
+key.
+You sho~ld wonder why the letter O was used instead of
+A. If you use A as a name above, you will get ERROR #39
+(try it). The reason is very important and the result of a
+great design difference between Zgrass and other languages:
+abbreviation. At:.tri:>v~atio" allows you to interact with
+Zgrass faster than if yo~ had to spell everything out all
+the time.
+What you are doing in assigning the string to Q is
+creating a macro, as we said. You can also think of it as
+creating your own com~and named Q. There aren't any system
+commands starting with Q so Zgrass can tell right away that
+it is your command you want to run. Since Zgrass 2.llows you
+to abbreviate, you will notice that His enough for HELP, P
+for PRINT. etc. (HELP will tell you what the first command
+in each alphabetical grouping is and you can always get at
+it with its first letter.) Since H by itself always gets to
+HELP, you cannot have a macro named Hand expect to be able
+to run it. You can have a string variable or ntlllber
+variable named H without any problems, but you can't run it
+if it's supposed to be a macro.
+A few examples might help clarify:
+P:100
+PRINT P
+p p
+P P 10
+The PRI~T? and PP are the same. However, P P 10 is the
+same as PRINT PRINT 10 or PRINT(PRINT(10)). It's that
+innocent little spac~ between the P and the 10 that causes
+Zgrass to look for commands instead of variables. And it
+always looks at system commands first. Watch out for
+extraneous spaces!
+Why all this confusion? It's to help you avoid lots of
+typing. You can create a macro like this one:
+QUANTIZED$SECOND$DEGREE$SPACE$INVADERS:[BOX 0,0,100,100,3)
+and run it by typing 0, assLITling it's your only thing
+starting with a Q. Even if you are a good typist, you will
+appreciate abbreviation once you get used to it. HELP can
+tell you what the system names are, and you can avoid
+
+10/27181
+
+DATAMAX UV-1 Zgrass LESSON 2
+
+Page 3
+
+abbreviations of them for macro names. If you do name a
+macro BO, which is a abbreviation for BOX, just assign it to
+another name:
+MYBO::BC
+and run MYBO.
+Particularly error-prone names are WAIT, TIME, GET,
+PUT, and ONE. Use HELP to figure out what commands these
+are abbreviations for.
+The command USEMAP lists all the names currently in
+use. O:ice you start using names longer than one letter,
+they show up in the USEMAP command. Try the following:
+ABC: 10
+DEF:[SIRINGYTHINGY]
+USEMAP
+DELETE wi 11 remove them:
+DEL ABC
+USEM;.?
+
+Let's do a simple macro:
+MANYBCXES:[CLEAR
+A:300
+10 A::A-3
+IF A>O,BOX O,O,A,A,A\4;GOTO 10]
+Run MANYBOXES. Notice that a comma is used to delimit the
+conditional part of the IF command. The semi-colon allows a
+second command (GOTO) to be in the scope of the IF command.
+The 1 \ 1 is the modulus operator and assures the COLORMODE
+will not exceed 3.
+
+If you are a terrible typist and cannot get this
+program in straight, persevere. The next lesson will show a
+much more humane way to create macros. Line nL1T1bers are
+used only as labels for GOTO's and have nothing to do with
+line ordering. In fact, GOTO labels can have letters too,
+as lonis as they start with a number. 1AGAIN, 3DEATH, 4TEEN
+are a:l legal labels.Another example:
+RANDJMCROSSES:[CLEAR
+1MORE X:-160% 159
+
+Y:-100~1(,0
+LINE X-10,Y,4
+LINE X+1u,Y,3
+LINE X,Y-10,4
+LINE X,Y+l0,3
+
+GOTO 1MORE]
+This macro puts little crosses on the screen until you press
+CTRL+C or BREAK. The 4 as colormode above places the
+starting point of the line to be drawn each time. See the
+LINE command 1~ the Glossary.
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 2
+
+Page 4
+
+Note that if you like to have your programs fonnatted
+so that labels are at the left edge and commands indented a
+little, you can use spaces as the first characters of the
+lines you choose. You cannot use tabs, however. Use of
+spaces does chew up memory, but you can do it.
+Zgrass encourages you to write several small macros
+rather than one large program as BASIC requires you to do.
+~all macros are easier to configure as software tools. In
+case you are tempted to write enormous programs, Zgrass, for
+internal reasons, limits you to 99 SKIPS, GOTOS and IFS in a
+single macro. Macros cannot exceed· 4000 characters either.
+Even the EDIT command (next lesson) works best on small
+programs. So break your bad BASIC habits!
+
+End of Lesson 2.
+
+10/27/81
+
+LESSON 3
+
+DATAMAX UV-1 Zgrass LESSON 3
+
+EDITING
+
+Editing is the act of creating and changing a character
+string. In the process of developing a complex graphics
+simulation, for example, you do a lot of editing. In BASIC,
+editing is done with line nunbers. Zgrass allows you to
+roam around a page of text on your terminal screen with the
+ED IT command.
+To start, type:
+EDIT TEST
+The screen should clear. Just start typing the following:
+PR "THIS IS LINE 1"
+PR "THIS IS LINE 2"
+PR "THIS IS LINE 3"
+Note that you do not put brackets or other string delimiters
+in. EDIT does tha: automatically.
+You move the cursor with the arrow keys. Now practice
+getting the cursor under any character you choose.
+Change the quotes in the first line to single quotes by
+positioning the cursor under them one at a time and typing a
+single quote each time. You can change any character by
+typing over it.
+Now press RETIJRN. There's an open line now. Type:
+THIS rs THE NEW LINE 2
+Move the cursor dcwn and change old line 2 to line 3, etc.
+To change the 1 in the first line to ONE, position the
+cursor under the 1 and type ONE. You have wiped out the end
+11
+though, so type it in again. It's easy to type characters
+at the end of a line.
+To change it to "THIS IS NOT LINE ONE", position the
+cursor under the L, press the HOME key and type NOT plus a
+space. Move the cursor down a line to get out of insert
+mode.
+To delete the word NOT, position the cursor under the N
+and press ESC three times. Type it one time more to delete
+the extra space.
+Some other EilIT functions:
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 3
+
+Page 2
+
+-To delete a whole line, press the TAB key.
+-To exit fran EDIT, CTRL+E.
+-To exit but ignore all changes made in EDIT, press BREAK.
+-To insert before the first line, press the HOME key
+and type away.
+-To insert a NEXTLINE in the middle of a line,
+press the HOME key first.
+EDIT also allows you to move and copy lines or parts of
+lines. In order to do this, you must set two pointers, one
+indicating the start and one past the last character to be
+copied or moved by positioning the cursor and typing CTRL+S
+each time. A single quote will appear temporarily to
+indicate the pointer. (If you make a mistake, type CTRL+T
+to erase the pointers.) Then position the cursor again to
+where you want the text to go and type CTRL+D to move the
+text there or CTRL+F to copy it there. If you confuse
+things horribly, press BREAK and try EDIT again.
+After a while, using EDIT will
+be forever spoiled.
+
+End of Lesson 3.
+
+become easy and you will
+
+10/27/81
+
+LESSON 4
+
+DATA."tAX UV-1 Zgrass LESSON 4
+
+MORE ON MACROS
+
+All the macros in this lesson should be typed in with
+EDIT. Remember to only type the characters between the
+square brackets when in EDIT. Try:
+TRIANGLES:[CLEAR
+PRINT "LOa< AT THE TV! II
+SIZE:O
+1UP SIZE:SIZE+2
+LINE O,SIZE*2,U
+LINE -SIZE,-SIZE, 1
+LINE SIZE,-SIZE,2
+LINE O,SIZE*2,3
+IF SIZE<SO,GOTO 1UP]
+Run TRIANGLES. If there are any
+carefully arid EDIT it.
+
+errors, check your macro
+
+You can speed up TRIANGLES a bit by COMPILing it:
+COMPILE TRHNGLES,CT
+and then run CT as you would any macro or command.
+For too many reasons to go i~to here, Zgrass has no
+FOR/NEXT constru~t. You must build loops out of IF's and
+GOTO's, explicit:y testing conditions. The iteration and
+testing step can be combined, if you prefer:
+IF (SIZE:SIZE+2)<50,GOTO 1UP)
+although this would necessitate SIZE to be initially set to
+2 instead of 0, ar?d the removal of the 11 SIZE:SIZE+2" in the
+line starting with 1UP, in this particular case. It's ok to
+have a label witho~t anything following it, by the way.
+You should be wo~cering about that assignment inside
+the IF. It's possible because Zgrass does not use the same
+operator for assignment and logical equals as BASIC does.
+Zgrass uses 1 - - 1 (double equals) for logical equality
+testi~g. It's 8nother minor deviation fran BASIC to get
+used to. Note its use:
+COUNTDOWN: [ A: 10
+1LESS PRINT A
+A:A-1
+IF A::5, PP. "HALFWAY THERE"
+IF A>O,GOTO 1LESS
+PRINT "BLASTOFF"]
+Run this one ar.d t~en edit it so the A::5 is A:5. The loop
+will never end sir.ce A is continually assigned 5. To
+further cl?rify:
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 4
+
+Page 2
+
+PRINT 5==5
+PRINT 5::6
+So, 11 true 11 is 1 and "false 11 is zero.
+IF takes the rest of the line if the stuff between it
+and the comma evoluates to non-zero. Therefore, IF 1,PRINT
+11
+HI! 11 would always print HI!
+The next macro will draw sweeping lines of random
+colors forming an ellipse 300•150 pixels:
+SWEEP:[ANGLE:O
+CLEAR
+X:SIN(ANGLE)*150
+Y:COS(ANGLE)*75
+LINE X, Y,4
+LINE -X,-Y, 1i4
+IF ( ANGLE:ANG LE+2) <'i80, SKIP -4]
+Note the SKIP -4 in the last line. It is a shorthand way of
+doing GOTO's without the need for labels. It goes back four
+lines. SKIP 2 ~ould go down two lines (not skip the next
+two lines as you might thi~k, that would be SKIP 3). SKIP 0
+keeps executing t~e same line it is on.
+As in BASIC, the INPUT cormnand is used to get responses
+from the user of the macro:
+!-'.C'vlr-:P!JYEClXES= [ C!:.EAR
+FROMPT "NUMBER OF BOXES TO DRAW?"
+INPUT QUA!~
+XCENTC:R:-16G
+BOX XCENIE!i:XCE~'TER+20,0, 18, 18,3
+IF (QUAN:QUAN-1)>0,SKIP -1)
+If you answer with too big a nunber for QUAN, boxes will be
+dra~TJ off-screen.
+To wra~ the boxes around in a grid, try:
+GRIDBOXES:[CLEAR
+PROMPT "NUM?ER OF BOXES TO DRAW?"
+INPUT QUA!~
+YC::NTER=SO
+XCENTER:-16C
+eox XCENTER:XCEtITER ... 2(',.YCENTER, 18, 18,3
+IF ( QiJAN=OUAl~-1) ::0, RETIJRN
+IF XCENTER:=140,YCENTER:YCENTER-20;SKIP -3
+SKIP -3]
+after running GRIDBOXES, try:
+GRIDBOXES 30
+and notice that no prompt appears. If a macro is passed
+argLr11ents like the 30 above, the PRI~T and PROMPT commands
+are automatically sup~ressed. You can tell if there are
+arguments passed with the ANYARGS cor-»·nand, just look it up.
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 4
+
+Page 3
+
+Now try:
+SINECURVE::( PROMPT "WHAT'S THE OFFSET TO BE?"
+INPUT OFFSET
+X::-160
+ANGLE::O
+POINT OFFSET+X,SIN(ANGLE)*80,3
+ANGLE::ANGLE+2
+IF (X::X+1)<159,SKIP -2)
+with:
+
+SINF.CURVE 0
+SINECURVE 30
+
+To sho.. how macros can be used as subroutines for other
+macros, try:
+MANYSINES:[ PROMPT "FIRST OFFSET?"
+PROMPT "LAST OFFSET?"
+PROMPT "HCW MA~1Y?"
+INPUT FIRST,LAST,QUAN
+INCREMENT:(LAST-FIRST)/QUAN
+SINECURVE FIRST
+IF (FIRST:FIRST+INCREMENT)<:LAST,SKIP -1]
+You can ans.er the questions by typing:
+MANYSINES
+or specify arguments:
+MANYSINES O, 100,5
+If you choose to speed up SINECURVE, you can compile it, but
+remember to change MANYSINES to refer to the compiled name:
+COMPILE SINECIJRVE, FASTSINE
+As a further note, you can also input strings. Use the
+INPUT.SIR command:
+NAMES:( PROMPT "WHAT'S YOUR NAME?"
+INP .STR XXXX
+FRINT "THAT'S FUNNY!, 11 ,XXXX, 11 IS MY NAME TOO!"]
+
+End of Lesson 4.
+
+This page intentionally left blank
+
+10/27/81
+
+LESSON 5
+
+DATAMAX UV-1 Zgrass LESSON 5
+
+STORING MACROS ON TAPE AND DISK
+
+With luck, by this point, you may have some macros
+worth saving. If you do not have a disk yet, or want to
+send someone a tape copy, you need to know how to use
+GETTAPE and PUTTAPE.
+Zgrass's audio tape storage has some advanced features
+when compared with standard BASIC tape handling. Zgrass
+allows you to ea~ily store several copies of a macro so that
+if an error is detected while reading it back, the next copy
+can be automatically retrieved. It also will print out a
+directory of the tape as it is looking for a file by name,
+if you wish.
+PUTTAFE works on macros, arrays, swap modules and
+screen dunps. So far, you've only used macros. You cannot
+PUTTA?E compiled macros or n1..1nber variables. Screen dumps
+are 16K byte blocks which are memory dumps of the screen,
+useful for storing pictures instead of the instructions to
+dra~ the pictures. A screen dump gets PUTTAPED when you use
+the .TV switch and a name.
+The required cable hookups for tape storage are
+described in the hardware manual for the UV-1.
+To store a macro on tape, you need to specify three
+things:
+PUTTAPE NUMBER,MACRONAME,[SOME DESCRIPTIVE MESSAGE]
+where the NUMBER is the nLillber of times to write the file
+out (2 or more is suggested), and the message in brackets is
+supposed to be descriptive so that when you look at the tape
+three months fran now you know what it's for. You can see
+the nL1nber count down in binary in console lights 8-15 as
+the copies are being put on tape.
+For example, to PUTTAPE a macro called SHIRLEY, get the
+tape deck ready, type· in the following line but don't press
+the RETURN key yet:
+PUTTAPE 2,SHIRLEY,lSHIRLEY DRAWS PINK ELEPHANT HATS]
+set the tape deck in RECORD with the tape moving and then
+press RETIIRN. When you get the attention mark back, stop
+the deck.
+Since Zgrass programming usually involves creating
+several macros as software tools, it's a good idea to have
+macros for ea~h major task that do nothing but GETTAPE and
+
+10/27/81
+
+DATAf!AX UV-1 Zgrass LESSON 5
+
+Page 2
+
+PIJTTAPE all the pieces. You cannot conveniently reclaim
+data space on an audio cassette, so always work in the mode
+of reading all the parts in, change them as necessary for
+debugging and write them out in order.
+To GETTAPE a file named SHIRLEY, simply type:
+GETTAPE SHIRLEY
+Press the RE11.JRN key and start the audio tape up, making
+sure that the cables are connected, of course.
+If there is an error detected in the tape read, you
+will see
+BAD-AUTO RETRY
+and the next copy will be gotten. You can test this feature
+by turning the audio level down all the way during a GETTAPE
+for an instant.
+It's actually a good idea to rewind your tape, and type
+GETTAPE XXXXX after you've PUTIAPED your macros, before you
+RESTART the system. Assuming XXXXX is not a name on the
+tape, GETTAPE will scan the entries, print the directory
+information, verify the integrity of the data (if it doesn't
+say BAD DA TA, it's ok) , and keep going. If you encounter
+some errors, you can re-?JTTAPE the macros again. Get out
+of GETTAPE or PUTTAPE by pressing the red button marked
+11
+RST 11 on the UV-1 front panel.
+If you are thorough and methodical about saving your
+Zgrass macros, arrays and so _on, you will not lose your
+temper when the power company glitches, or you find a bug in
+Zgrass that erases all your macros in memory.
+USING THE MICROPOLIS DIS~ AND DGET/DPUT
+The Micropolis 5" floppy disk system supplied with
+Zgrass units has a lot of software support. All disk
+commands begin with a D. and ofter. only require two
+characters (for example, DU works f8r DUSEMAP, DG for DGET,
+etc.). These disks wil! hold apprcximately 180,000 bytes on
+each surface giving a total of over 700,000 bytes of storage
+on-line.
+The primary difference between tape and disk is randcxn
+access. Disks have diskmaps (sometimes called directories)
+which tell you what is on them and the system where the data
+is stored on the. disk. Unlike audio tape, access to
+different parts of the disk is easy so it can junp around
+alot. You do not have to store stuff sequentially as you do
+with audio tape.
+
+10/27/81
+
+DATA.MAX UV-1 Zgrass LESSON 5
+
+Page 3
+
+Another difference is deletion. You can update stuff
+simply by
+putting
+it out again. The DPUT command
+autanatically keeps one backup for you for safety. Of
+course, the disk is much faster than audio tape as well.
+One note: names stored on disks are generally referred
+to as 'files' so do not get confused by the terminology.
+Files are just things stored on the disk, nothing more.
+The first thing you should do is insert your system
+disk into drive 0. You do this by gently pushing the disk
+in the slot, keeping the label up and the little notch to
+the left. Then push the lever with the blue on it down
+until it catches. Then type:
+DSETIJP 0
+
+DUSEMAP
+and you will see a listing of all the swap modules on your
+systerr: disk. Now put a blank disk in drive 1. Type:
+DSETIJP 1
+
+DI;HT 200
+
+This will erase the disk and then initialize it to accept a
+maximurr. of 200 names. Type DUSEMAP and you will see how
+many sectors (each is 512 bytes) are left.
+If you get an error when trying to DINIT, the disk may
+not be formatted, in which case you must first DFORMAT it.
+See the Glossary.
+Now type:
+DS ~ (the system starts up with disk O setup)
+SAM:NB
+DPUT SAM,[SAM IS A COPY OF NB]
+DUSEMAP
+and ycu will see SAM in the disk map. If y9u RESTART then
+type:
+DGET SAM
+t.:SEMAP
+you will see SAM in memory.
+If you DPUT SJ.t•: and then type DUSEMAP, you will see SAM
+and a backup copy of SAM (type is listed as BAK). The
+second and subsequent times you DPUT something you do not
+have to include a message (the stuff in square brackets)
+unless you want
+to change the message. DPUT always
+maintains one and only one BAK.
+
+You can DGET a BAK with DGET.BAK NAME.
+You can delete a name on the disk with DDELETE NAME.
+save space on the disk, you can get rid of
+BAKs with DDELETE. BAK NAME. There is also a command DBAKS
+which removes all BAKs frro the disk. You only need to
+!f you ~a~t to
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 5
+
+Page 4
+
+remove BAKs if you need the space, which is not normally the
+case.
+The reverse side of disk O is called disk 4, so you use
+DSETIJP 4 to get at it. Of course, it must have been DINIT'd
+at sane previous time. The reverse of disk 1 is called disk
+5. If you have two Micropolis dual drives, you get disks
+2,3 and 6,7 as well.
+The Glossary has descriptions of the rest of the disk
+commands. One concept that has to be explained in detail,
+though, is the sutmap. Sutmaps are essentially little disk
+maps which you can use to partition your disk into areas
+specific to individual projects you are working on. Once
+you are working within a subnap, all disk commands reference
+only that sutrnap and cannot get fran or put into any other
+sutrnap. The only exception to the rule is that if DGET
+cannot find a name within the sutrnap, it will go look
+throLlgh the regular .disl-crnap (but not any other sutmaps) for
+the name, so you can DGET swap modules and any other 'tools'
+you often use that are stored in the regular disk map.
+The way
+
+you get
+
+into a sutrnap the
+
+first time
+
+is to
+
+type:
+DCREATE SIJBMA?NAME, [ MESSAGE J
+For example, try:
+DCREATE PAINT,[PAINT PRCGRAM SUBMAPJ
+DUSEMAP
+Nothing is there at present. If you DPUT a name, it will
+shO',.., up with DUSH'.AP. To get back to the regular disk map,
+type:
+DSETtJP n
+where n is the disk you're using. To get back to the sutrnap
+PAINT, type:
+DSETIJP n,PAlNT
+The regular disk map holds entries for all the subnaps so
+you can tell what their names are. You can actually store
+things under a submapnarre without having created the sutmap
+with DCREATE but you will not know they are there unless you
+possess an extraordinary memory. You have to pay attention
+when you change disks, in particular, so you do not DPUT
+into sutrnaps which have not been DCREATE'd on that disk. It
+would take an enormous amount of overhead to have Zgrass
+check each time for whether the sutmap has been created.
+DDSMAP, a swap module, will remove a sutrnap and all its
+entries.
+The disk commands turn off the rest of the system while
+operating so you cannot type ahead as you normally can.
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 5
+
+Page 5
+
+There are also two other artifacts: the stripe command
+temporarily freezes and the system timer device variables
+are suspended during disk access time. Control characters
+are not listened to either, so if you want to use CTRL+W
+with DUSEMAP, make sure you press the keys before the
+command starts going.
+You should also check out DLOAD.
+Please read about the other disk commands
+Glossary at your leisure.
+
+F.nd of Lesson 5.
+
+in
+
+the.
+
+This page intentionally left blank
+
+10/27/81
+
+LESSON 6
+
+DATAMAX UV-1 Zgrass LESSON 6
+
+DEBUGGING
+
+This lesson is about what to do when your program
+doesn't do what you expect it to do. There are several
+classes of reasons for unexpected behavior. The first class
+involves SYNTAX errors.
+Syntax errors are essentially errors in spelling,
+punctuation, abbreviation or specifying arguments to a
+command. Syntax errors can always be fixed with EDIT.
+Examples of syntax errors are:
+Spelling errors:
+HILP instead of HELP
+help instead of HELP (is caplock key on?)
+POINT instead of POINT (zero instead of 0)
+Punctuation errors:
+POINT 14;30,4 (';' should be a ',')
+SKIP-2
+(needs a space)
+POINT (14,30,2) (if parer.theses, no space allowed)
+TEST:"PRINT ' 11 ' 11
+(double quote inside double -:iuotes)
+If A:10,PRINT "huh?" (this always prints. Use'==')
+Be particularly careful to match parentheses and brackets.
+Quotes, single and double, cannot be nested like brackets
+and parentheses can . .Although you might at first be more
+comfortable with quotes fran experience with BASIC, strings
+defined with brackets (both curly and square) seem easier to
+locate when you're debugging.
+RECKLESS ABBREVIATIO~:
+DOODLE CR1,CR2,CR3,CR4,CR5,CR6,CR7,CR8,CR9,CR10,CR11
+will cause confusion because CR1 is an abbreviation for CR10
+and CR11 as well as, in this case, probably a variable name
+itself. Use names like CR01 if you have a names like CR10.
+SIN FIRST,ORIGINAL
+SIN is a system function so you can't use it for a macro
+name. If you get into this situation, reassign the macro
+name by typing:
+SIN1:SIN
+You can delete SIN then, if you want to clean things up.
+(Astute note: si~ce you created SINl after SIN, the
+reference to SIN in DELETE SIN will find the first SIN, not
+SIN1. If you typed DELETE SIN again, it would get rid of
+SIN1, of course. Since there is no way to pass system
+cormnand names as arguments, you can': actually delete the
+SINE command. ever. if ye:; try.)
+
+10/27/81
+
+DATAMA.X UV-1 Zgrass LESSON 6
+
+Page 2
+
+MISSING ARGUMENTS:
+Often you omit something a canrnand wants as an
+argument. HELP gives you the argLJnents in brief for each
+system command and
+function, and the Glossary gives
+information in detail. Sometimes unbalanced parentheses or
+brackets will confuse the argl..lTlent scanner, other times it's
+a misplaced comma or semi-colon. Proofreading is essential
+in Zgrass sirce there is not nearly the redundancy present
+in English or BASIC.
+OTHER TYPES OF ERRORS:
+There are three other types of errors you will
+encounter: logic errors, incorrect assl.lllptions, and running
+out of space and time. We will discuss all of these in
+detail.
+!~correct assunptions arise from poor doc1..1T1entation or
+instruction on our part and bad guessing by you. It is
+impossible to describe everything a prograrrrning language
+does or can do (which is why they're so intriguing, of
+course) so the best we can do is get you to a level at which
+you can tell whether it is your problem or a shortcoming of
+Zgrass when the unexpected happens.
+
+DEBUGGING STEPS:
+First, check for syntax errors. If there are none
+apparent, check that the commands you are using actually do
+what you expect them to do. If possible, use the command
+outside a macro in its simplest form. Use nl..lTlbers instead
+of expressions since the error will often be in your
+expression. not in the command, something you should
+discover as soon as possible.
+Always
+
+debug
+
+in
+interpretive mode (non-compiled).
+as a macro should work as a compiled
+dcesn't,
+it's our fault unless it's
+
+Anything that works
+
+macro (if
+it
+dOC\..ITlented).
+
+Macros which make you unhappy do so because they
+generate errors or don't do what they're supposed to. The
+former are ea!ier to detect because Zgrass points them out
+and gives you an error nllllber which you can look up in the
+Glossary. You can list the program as it is executing with
+CTRL+X and you will see the last lines executed before the
+error is generated. You can print the values of variables
+and
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 6
+
+see what's wrong. A second CTRL+X
+will pressing CTRL+C or BREAK.
+
+cancels
+
+Page 3
+list mode, as
+
+Jf you are still having trouble, once you get to the
+part of the program causing the error, press CTRL+D. This
+puts you into single step mode. Each time Zgrass sees a
+NEXTLINE or semi-colon, it prints a 1 # 1 and acts like it's
+in attention mode. You can type c01T1Tiands to see what's in
+variables, and/or press RETIJRN to continue one step at a
+time. A second CTRL+D plus a RETURN gets you out of single
+step.
+There is also a once-only CTRL+D. You get it by
+pressing CTRL+Z. ft RETURN key press gets you back into the
+macro.
+Since it is easy to ED~T in Zgrass, put PRINT's in
+crucial places to test your variables in a loop. You can
+then use the pr ir,t. control characters ( CTRL+O, CTP.L+Q) to
+alter execution or printing of the variables. CTRL+O will
+suppress output to the terminal but other..iize allow the
+macro to execute so if you put a PRINT in a loop and don't
+want to see it all the tirr.e, type CTRL+O to turn printing
+off, another one to resune printing. CTRL+Q stops not only
+the printing but the execution as well when ycur macro is
+trying to print. It's good for waiting while you scratch
+your head trying to figure out the problem. Another CTRL+Q
+will resune printing. You can't type anythir.g when stopped
+with a CTRL+Q, by the way, as you can in CTRL+Z or CTRL+D
+modes.
+CTRL+W is also useful for seeing a terminal screen-full
+of information at a time. Press the RET0RN key to get 20
+lines of text at a time after ycu press CTRL+W. Another
+CTRL+W will get you out of this mode. (We used CTRL+W in
+Lesson 1 to page through the HELP command.)
+SPACE AND TIME PROOLE~S:
+Zgrass has a lot of memory for a small system. If you
+use a lot of arrays, syste~ swap modules, or many, many
+large macros, you can run out of space. The only recourse
+is to delete some of the stuff that's taking up all the
+space. You may have to design some graphics sequences to
+GETTAPE or DGET parts while running, deleting stuff that is
+no longer needed.
+Getting things to run faster is the real problem,
+though. The compiler speeds things up, of course. If
+you're really pressed for time, try modifying your macros to
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 6
+
+do less computation, use less array
+references. etc. Games programmers
+their cleverness.
+
+get paid
+
+Page 4
+
+very well for
+
+You now have the tools
+necessary to debug your
+programs. It still isn't easy, but it's most of what we
+call programming.
+
+Fnd of Lesson 6.
+
+10/27/81
+
+LESSON 7
+
+DATAMAX UV-1 Zgrass LESSON 7
+
+DEVICE VARIABLES AND PORTS
+
+Devices (also sanetimes called "peripherals") are
+hardware gadgets that hang off the computer system and do
+the comrrunication with hllTlans or other computers. So far
+you've communicated with Zgrass by typing on a terminal and
+it talked back with graphics on the TV and characters on the
+terminal. There are several other devices available in
+Zgrass some of which you access via DEVICE VARIABLES and
+others you read/write via PORTs. Ports are a more primitive
+way of accessing the hardware. Device variables have been
+provided for hardware features that share ports in a complex
+way and for timing-related software/hardware programming.
+Simpler devices _(like the LED lights and switches, for
+instance) can be set or read easily by the PORT command so
+the overhead in providing device variables for them is not
+justified.
+Device variables do not show up in USE~AP. They all
+start with a dollar sign and have two more letters.
+You can have your rn,,;r. variable names with dollar signs as
+the first character, so you might want to always have three
+or more characters following the dollar sign to avoid
+conflict with device variables. Many device variables are
+acted upon by the system every 1/60 second.
+For instance, find a joystick and plug it into the
+leftmost joystick hole in the front panel. There are four
+device variables which report the values received at each
+hole sixty times a second. For hole 1 (notice that the
+ntJ11ber on top of the joystick knob only corresponds if you
+take the care to plug it intc the correct hole), the device
+variables are as follows:
+$T1 is zero if the trigger is out, 1 if in.
+$K1 ranges from -128 to +127 when you turn the knob as
+you would a voll..lTle control.
+
+... the knob is in the center position,
+$X 1 is 0 1.
+1 if the knob is pushed to the right and
+-1 if the knob is pushed to the left
+
+is O if the knob is in the center position,
+if the knob is pushed away from you and
+_,1 if
+the knob is pulled toward you
+assuning you hold the joystick with the trigger pointing
+away from you.
+$Y1
+
+10/27/81
+
+DATAM.I\X UV-1 Zgrass LESSON 7
+
+Page 2
+
+The easiest way to discover the values of a device
+variable is to print it in a loop while changing its values:
+RANGE:[PRINT $T1;SKIP O)
+and so on.
+Let's write a simple drawing routine which puts a point
+down whenever the trigger is pulled in:
+DRAW:[IF $T1::1,POINT X:X+$X1,Y:Y+$Y1,3
+SKIP -1)
+This program r.eeds improvement, though. You can't tell where
+the point is going to be unless the trigger is in. You also
+can't erase any points put down in error. Try:
+DRAi✓ :[POrnT X:X+$X1,Y:Y+$Y1,3
+IF $T1::0,POINT X,Y,O
+SKIF -2]
+This DRAW will erase the point you see at the current
+accl.lTlulated X,Y position unless the trigger is in. It's
+st:11 pre:ty hard to see the dot, though, so let's put a
+cursor in:
+DRAW:[K:O
+X:X+$X1 ;Y:Y+$Y1
+BOX X,Y,1,20,5
+BOX X,Y,20,1,5
+IF (K:K+1)\2::1 ,SKIP -2
+IF $T1::1,BOX X,Y,3,3,$K1/6~+2
+SKIP -5]
+This DRAv.' uses several tricks. First, COLORMODE 5 is used
+with LINE to allow
+the red lines to flash without
+overwriting already drawn blue points. If we used COLORMODE
+1, the red lines would erase the blue points. Secondly,
+COLORMODE 5 applied twice erases the red lines. Color modes
+4-7 are done by special hardware in the system and will be
+aiscussed in detail in the next lesson. The four LINE
+commands are done twice by the testing of K modulo 2 which
+evaluates to O or 1 each time. Finally,· the $K1/64+2
+evaluates to 0,1,2, or 3 and sets the COLORMODE of the point
+drawn so you can erase with O or draw with red, green or
+blue by turning the knob.
+It's less easy to figure out how to use device
+variables you set instead of read. .The hue and brightness
+associated with the four colors on the screen are set by
+Zgrass sixty times a second based on what values you have
+stored in $LO, $L1, $L2 and $L3. Print out the values of
+these variables:
+PRINT $LO,$L1,$L2,$L3
+Zgrass autanatically puts these values in $LO-$L3 when you
+restart the system or type CTRL+E.
+The colors are arranged in 8 brightness levels of 32
+colors yielding a choice of 256 colors. Setting $LO to 127,
+
+10/27/81
+
+DATAMAX UV-1 2grass LESSON 7
+
+Page 3
+
+for example, turns the screen to yellow. Try:
+COLORS:[$LO:$LO+$Xl;SKIP O]
+Let's make finding your favorite colors easier:
+CHOOSY:[PRINT "MOVE THE KNOB SIDE TO SIDE
+TO CHANGE COLOR
+AND TURN IT TO CHANGE BRIGI-ITNESS
+PULL TRIGGER TO PRINT VALUE"
+A:O
+A:A+$X1*8;IF A<O,A:O
+IF A>248,A:248
+$LO:A+$K1/32+4
+IF $T1::1,PRINT $LO
+SKIP -4]
+The $K1/32+4 evaluates to a nllTlber in the range of 0-7 plus
+a fraction. Since $LO is used as an integer value, the
+fractional part is tossed away.
+Now, look in the Glossary under DEVICE VARIABLES. Of
+primary interest are $HB and $BC. Try setting them to
+nunbers within their ranges and see the results. When you
+set $HS to 20, for example, the screen new shows the right
+half colors $RO-$R3. Draw a set of color bars:
+CBARS:[CL;A:-149;C:0;$HB:21
+$R0:0;$R1:82;$R2:43;$R3:249
+$L0:7;$L1:213;$L2:126;$L3:164
+IF A<115,BOX A:A+45,0,46,202,C:(C+1)\3+1;SKIP 0]
+You can easily make a pocket watch out of 2grass with
+the system time device variables:
+CLOCK:[PRINT "INPUT HOUR,MINUTE,SECOND 11
+INPUT $HR,$MN,$SC
+PRINT $HR,$MN,$SC;SKIP O]
+There are also ten system timers $20-$29 which you can
+use to control things over time. Many device variables are
+used for setting options in the software. See the Glossary
+for complete details. $RD, for example, if O, sets the
+system to use degrees for angle movement; if 1, radians are
+used. All device variables except the $LO-$R3 and $HB are
+set to zero on RESTART, so the default settings are the ones
+that correspond tc the device variable being O. See the
+examples under DEVICE VARIABLES.
+PORTS:
+Use of the PORT command and function are docunented in
+the Glossary.
+You must use ports to get at the console switches, light up
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 7
+
+Page 4
+
+the console lights, and to directly access the music
+synthesizer.
+The rest of the ports you diddle at your own
+software risk--yo~ can't break the hardware by setting
+ports, of course.
+
+End of Lesson 7
+
+10/27/81
+
+LESSON 8
+
+DATAMAX UV-l Zgrass LESSON 8
+
+ARRAYS (Optional Lesson)
+
+Computer prograrrrning languages have been largely built
+around what computers do well. One thing they do well is
+manipulate lists of things. A string is a list of
+characters, as you know, one after another. Also corrmon are
+lists of nunbers, and these are called ARRAYs. (There are
+also string arrays in Zgrass, but let's ignore them for
+now.)
+
+An array with N elements looks like:
+C
+1
+2
+
+3
+4
+
+N-1
+Before we get into the mechanics of accessing individual
+array elements, let's discuss the benefits of using arrays.
+First, it takes at least 16 bytes to store the name and
+value of a named numeric variable. So 100 named variables
+take up at least 1600 bytes. Second, you have to get
+fancier than you presently know how to change all 100 of
+them in a loop with less than 100 different assignment
+statements, and it's not very fast anyway. Besides, it's a
+pain to type in so many names.
+To create an array, use the array command:
+AR RAY STUFF, 100
+STUFF now has 100 elements called STUFF(O), STUFF(1),
+... ,STUFF(99). To rrir~ out the values of STUFF, you have
+to write a macro:
+PRSruFF:[N:O
+PRINT STUFF( N)
+IF (N:N+1)<100,SK -1]
+Run PRSTUFF. Of course, all values are 0. Try:
+STUFF(91):12345
+PRSTIJFF
+You'll see the 12345 in element 91. We'll pretty up the
+array printing later on.
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 8
+
+Page 2
+
+The major negative aspects of using arrays are that
+first, STUFF(9i) is not a very good name, compared with
+GUNA!~GLE or BIGNURSE, for example, and, second, you wind up
+typing a lot of parentheses.
+Geanetrical problems lend themselves to array-based
+solutions. We will show you how to rotate a pyramid in 3-D
+using arrays. Let's look at the x,y,z coordinates and the
+color. The base is blue, and the lines going to the apex
+are red and green:
+X
+y
+z
+color
+4
+50
+O
+0
+0
+0
+50 3
+0
+-50
+O
+3
+0
+0
+-50 3
+1
+0
+50 0
+1
+O
+0
+50
+0
+0
+-50 4
+O
+50 0
+2
+0
+2
+-50 O
+We will store the 40 nunbers above in an array called PYR.
+First, create it:
+ARRAY PYP,40
+X values are in PYR(O), PYR(4), PYR(8), .. . ,PYR(36)
+Y values are in PYR(1), PYR(5), PYR( 9), .. . ,PYR(37)
+Z values are in PYR(2), PYR( 6), PYR(10), .. . ,PYR(38)
+Colors
+are in PYR(3), PYR(7), PYR(11), .. . ,PYR(39)
+that is, for values of N fran 0 to 9,
+X's are in PYR(N*4)
+Y's are in PYR(N*4+1)
+Z's are in PYR(N*4+2)
+Colors are in PYR(N*4+3)
+Cf course, we have to load up PYR:
+ENTER: [ PRINT "TYPE ENDPOINT NUMBER, X,Y,Z,COLOR
+VALUES:"
+INPUT N,X,Y,Z,K
+PYR(N*4):X
+PYR(N*4+1):Y
+PYR(N*4+2):Z
+PYR(N*4+3):K
+SKIP -6)
+Run ENTER and type these values:
+0,50,0,0,4
+1,0,0,50,3
+
+2,-50,0,0,3
+3,0,0,-50,3
+4,50,0,0,3
+5,0,50,0,1
+6,0,0,50,1
+
+10/27/81
+
+DATAHAX UV-1 Zgrass LESSON 8
+
+7,0,0,-50,4
+8,0,50,0,2
+9,-50,0,0,2
+If you make a mistake, just retype
+color. Use CTRL+C to get out.
+
+the nlJllber,
+
+Page 3
+
+x,y,z and
+
+Now let's print the values out in a table:
+PRPYR:[N:O
+L:O
+PROMPT "PYR( "&( 4*N+U&") =11 , PYR( 4*N+L)
+IF (L:L+1)<4,SKIP -1
+PRINT
+IF (N:N+1)<10,SKIP -4)
+PRINT with no arguments prints just a NEXTLI~E. Be careful
+of the punctuation! The 1 &1 s are used to eliminate the
+spaces that commas in the same place would cause. If any of
+the element~ is incorrect when you run PRPYR, change it with
+ENTER.
+Store PYR on tape:
+PUTTAFE 2,PYR,[PYRAMID ENDPOINT ARRAY FOR LESSONS)
+Rewind the tape and type CTRL+N then:
+GfiTA?E XXXXXX
+to verify that PYR is stored without errors. If it doesn't
+say BAD DATA, PYR is stored properly. If you have a disk,
+DPUT PYR instead.
+N0w let's draw the contents of PYR. To see a 3-D
+object on a 2-D screen, you have to do a projection. The
+easiest projEction is done by thr<J,,Jing away the z-axis
+coordinates. Just use the x, y and color values as
+argl..l!Tlents to the LI~E command:
+DRA',.JPYR:[ CLEAR
+N:C
+
+LINE PYR( N*4), PYR( N*4+ 1), PYR( N*4+3)
+IF (N:N+1)<10,SKIP -1)
+A straig~t-or projection like this is not very interesting,
+of course. So, we'll rotate the image. If you don't
+understand the SINE/COSINE math below, take it on faith.
+To rotate PYR around the center of the screen (z-axis),
+you change the endpoints by the following formula:
+XNEW:X*COS(ANGLE)+Y*SIN( ANGLE)
+YNEW:-X*SIN( ANGLE)+Y*COS( ANGLE)
+ZNEW:Z
+
+So our macro for z-axis rotation is:
+ZROT:[A:O
+BOX O 0,110,110,0
+S::SI!\ A)
+
+C=COS A)
+N:O
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 8
+
+Page 4
+
+L:N*4
+LIN PY(L)*C+PY(L+1)*S,-PY(L)*S+PY(L+1)*C,PY(L+3)
+IF (N:N+1)<10,SKIP -2
+WAIT 1
+A:A+6;SKIP -8]
+Note that PY is being used as an abbreviation for PYR. If
+you change the -8 to a -7 in the last line, you'll get a
+built-up image. COOJpile ZROT to make it go faster:
+COM ZROT,CZROT
+CZROT
+We still can't see the z-axis information because,
+obviously, we haven't used any PYR(L+2)'s yet. We have to
+rotate around different axes. Rotation around the x-axis is
+given by:
+XNEW:X
+YNEW::. Y*COS( ANGLE)-Z*SIN( ANGLE)
+ZNEW: Y*SIN( ANGLE)+Z*COS( ANGLE)
+Of course, we a re:;' t using ZNEW. But we wil 1. Try :
+XROT:[A:O
+BOX 0,0,110,110,0
+S:SIN(A);C:COS(A)
+N:O
+L:N*Ll
+LINE PYR(L),PYR(L+1)*C-PYR(L+2)*S,PYR(L+3)
+IF (N:N+1)<1C,SKIP -2
+A:A+6; SKIP -6]
+Similarly, y-axis rotation is given by:
+XNtw:X*COS(ANGLE)+Z*SIN(ANGLE)
+YNEW:Y
+ZNEW:-X*SIN( ANGLE)+Z*COS( ANGLE)
+Rotating around two axes at once is more visually
+inte,esting. First we compute the rotati~n around x then
+apply the
+rotation around
+y. We need to use the
+intermediate value of Z in the computation of the y
+rotation:
+DOUBLEROT:[A:O;B:O
+10CLEAn IF $Tl::i,BOX 0,0,110,110,0
+SA:SIN(A);SB:SIN(B);CA:COS(A);CB:COS(B)
+N:O
+.COMFUTE X ROTATION NEW X,Y,Z (THIS IS A COMMENT)
+1MOVE XXROT:PYR(N*4)
+YXROT:PYR(N*4+1)*CA-PYR(N*4+2)*SA
+ZXROT:PYR(N*4+1)*SA+PYR(N*4+2)*CA
+.COMFUTE Y ROTATION WITH NE,; X,Y,Z
+X:XXROT*CB+ZXROT*SB
+Y:YXROT
+. DRAv./ THE LINE
+LINE X,Y,PYR(N*4+?,)
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 8
+
+Page 5
+
+IF (N:N+1)<10,GOTO 1MOVE
+A:A+6;B:B+12;GOTO 10CLEAR]
+Note the addition of trigger control of image clearing. You
+can tighten up OOUBLEROT by combining expressions, at the
+expense of clarity. It will go faster compiled, of course.
+Comments may be interspersed with code if the first
+character is a period. The entire line is taken as a
+comment and skipped, even if there is a ';' in the line.
+Zgrass allows multi-dimensional arrays. We could have
+defined PYR by:
+ARRAY PYR 10,4
+giving 40 elements:
+PYR(O,O), PYR(0,1), PYR(0,2), PYR(0,3)
+PYR ( 1 , 0) , PYR ( 1 , 1) , PYR ( 1 , 2) , PYR ( 1 , 3 )
+PYR(9,0), PY~(9,1), PYR(9,2), PYR(9,3)
+This would eliminate the multiplication of N*4 each time, so
+?RPYR would look like:
+PRPYR:[N:O
+L:O
+PROMPT "PYR("&N&', '&L&")=",PYR(N,L)
+IF (L:L+1)<4,SKIP -1
+PRINT
+IF (N:N+1),10,SK!P -4]
+You may find this conceptually clearer, but maybe not. The
+following example uses a 2-D array well. Let's make an
+array to hold th~ positions of pieces in a checkerboard.
+F.ach array element will correspond to a square on the board.
+AO means no piece, 1 means red, 2 means red king, -1 means
+black piece, -2 means olack king. The initial board setup
+can be done by:
+ARRAY CHECKERBOARD,8,8
+DATA:[Y:O
+INPUT CHECKERBOARC(X,Y)
+IF (Y:Y+1)<8,SKIP -1)
+CHECKFILL:[X:0
+DATA 1 , O, 1 , O, O, 0, - 1 , 0
+X:X+1
+
+DATA o,1,o,o,o,-1,0,-1
+IF (X:X+1)<8,SKIP -3]
+Note the mimicking of BASIC's DATA statement.
+the checkers game is up to you!
+
+End of Lesson 8.
+
+The rest of
+
+This page intentionally left blank
+
+1O; 27 /21
+
+LESSON 9
+
+DATAMAX UV-1 Zgrass LESSON 9
+
+MORE ON GRAPHICS
+
+-Zgrass is a graphics language by design. It provides
+high-level commands for creating and manipulating visual
+informatio~. The highest level commands in Zgrass are those
+operating on arrays called "snaps" (after "snapshots") which
+are saved parts of the tv screen, in essence. They are
+defined by the Sf~J..P command and drawn by the DISPLAY
+command:
+
+ST EST: [ CLE.AR
+
+BOX 0,0,20,20,3
+BOX 5,C,10,15,2
+BOY -5,0, 10, 15, 1
+SNAP IT,0,0,20,20
+DISPLAY IT,-160%159,-100%100,0;SKIP OJ
+The last argment of DISPLA.Y is the DISPLAYMODE. 0 means
+plop the snap on the screen erasing whatever was there
+before. DISPLAYMODE O works just like COLORMODE 0-3, Now,
+EDIT STEST so its last line reads:
+
+DISPLAY IT,X:X~$X1,Y:Y+$Y1,0;SKIP 0
+
+Plug in a jc:rstick into the leftmost joystick socket and run
+STEST. You'll notice that you "drag" the edge around. One
+way to avoid th~s is to make the snap larger to include some
+"white space'' around it. Change STEST as follows and run
+it:
+SNAF IT,0,0,24,2il
+You can have any pa~tern stored in a snap as long as it fits
+in the largest rneriiory segment left. The CORE command will
+give yoi.; a 1 ist of tr,e memory segments. The largest snap you
+can store is about a quarter of the screen. Larger snaps
+display slower than srr,aller snaps, of course.
+In the dra~iris ~rogram in Lesson 7, we used COLORMODE 5
+to flash a crosshair cu~sor. We can do the same trick with
+DISPLAYMODE 1:
+DRAW;.;[CLEAR
+LINE 10,0,4
+LINE -10, 0, i
+LINE 0,-10,4
+LINE O, 10, ~
+SNAP CURS,0,0,20,20
+
+X:X+~X1;Y:Y+$11
+
+DISP CllRS,X~ Y, 1;DISP CURS,X, Y, 1
+IF $Tl::1,POINT X,Y,$K1/6l.!+?
+
+SKIP -3]
+Two success~ ve r:~.PU Yr~O:)E 1 's will draw and erase the
+crossr:air cursc-,r w:i thou'.: affectir.g the point!3 you have drawn
+by pullinE the tr~rs~~.
+
+10/27/81
+
+DATAM.AX UV-1 Zgrass LESSON 9
+
+Page 2
+
+WHAT'S ACTUALLY GOING ON:
+You can. in fact, construct any image possible on the
+320x201 pixel TV screen with the colonnades you've learned
+so far. However, to do the animated graphics required in
+video games, several features were designed into the custom
+Bally hardware. Zgrass uses these and adds software to give
+you a rather complete set of graphic capabilities for what
+you can do with two bits per pixel.
+Plop (colormodes 0-3 and displaymode 0) works just like
+assignment. The old value is replaced with the new one.
+All other color and display modes are binary functions, that
+is, they take two values and return a new value which is
+placed on the screen. The first value taken is what is on
+the screen at the given pixel, the second is given or
+implied by the colc.r/display mode, and the function itself
+is also given or implied by the color/display mode.
+You might wonder just how many unique results you can
+get from the functions of two two-pixel values. A lot.
+We've tried to provide the most useful ones: 2i colormodes
+and 15 displayrnodes with 9 options each.
+Rather than do a paragraph on each mode, we will show
+you how to figure them out. Some are quite clear fran a
+verbal description (for example, displaymode 60 is "plop
+only the green and blue portions of this snap"). Unless
+you've tinkered with Boolean Algebra, some functions will be
+new to you and unless you've done extensive graphics
+already, the visual ramifications will be surprising.
+We will explain several of the functions with TRUTH
+Tft.BLEs. Truth tables are like multiplication tables except
+they can
+show other
+things
+than
+show
+results of
+multiplication.
+The truth table for multiplication of numbers up to 4 is:
+* II U
+~
+
+I
+I
+
+0 l O : 0 : 0 l O : C
+
+2 : O: 2 : u : 6 : 8
+
+3 : O : 3 : 6 : 9 :12
+4 : C : 4 : E :12 :16
+
+You have no trouble lcok:ng up tre value of 3•4, presumably.
+
+10/27/81
+
+DATA!'-1.AX UV-1 Zgrass LESSON 9
+
+Page 3
+
+Multiplication tables usually stop at 12*12, but could go on
+forever. The truth tables we use are limited to two bit
+results and thus have
+only four values like the following truth table for addition
+modulo 4:
+\4
+
+: O: 1 : 2 : 3
+
+0
+
+: 0 : ·1 : 2 : 3
+
+1
+
+:1:2:3:0
+
+2
+
+: 2 : 3 : O: 1
+
+3
+
+: 3 : 0 : 1 : 2
+
+The functions we will describe are cormnutative, that is, the
+order of the values can be reversed without affecting the
+result. (Addition and multiplication are commutative;
+subtraction and division are not, for example.) If you wish,
+you can adopt the convention that what's on the screen is
+looked up along the left edge of the table and what is
+indicated by the color/display mode is along the top edge.
+Colormodes 4-7 and displaymode 1 are the hardest to
+understand so we'll skip them and come back later. For now,
+let's do logical OR and AND.
+Colormodes 8-11 and display mode 2 do a logical OR
+function between the value on the screen and the value
+indicated by the colormode (or the value in the snap at that
+point for DISPLAY). Try the following:
+BOX 0,0,100,100,2
+BOX 0,-25,50,50,1
+BOX 0,25,50,50,3
+BOX -25,0,50,50,9
+Colormode 9 is "OR with red" or, more precisely: 11 0R with
+01." Let's explain that better. We have two bits at each
+pixel, giving four possible values: O, 1, 2, and 3. In
+binary, they are 00, 01, 10 and 11 (pronounced zero-zero,
+zero-one, one-zero and one-one, respectively). You may have
+noticed that:
+$LC corresponds to a pixel value of 00
+$L1 corresponds to a pixel value of 01
+$L1 corresponds to a pixel value of 10
+$12 corresponds to a pixel value of 11
+When Zgrass comes up, the default colors are white, red,
+green and blue. So when we refer to a pixel as green, we
+mean it has a 10 binary value. You can confuse yourself
+horribly if, for example, you switch the values of $12 and
+$L3 like thi~:
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 9
+
+Page 4
+
+A:$L2
+$L2:$L3
+$L3:A
+so don't do it, at least in this part of the lesson.
+Whenever we refer to white, red, green or blue, it assLmes
+the default colors are in $LO-$L4.
+
+Look at the boxes on the screen again. Now look up the
+truth table for OR (it's under OR!) You can see why the
+green box OR 1 ed with red turns blue by reading the table: 10
+OR 01 is 11. You can also see that OR'ing anything with 00
+doesn't change it and OR'ing anything with 11 changes it to
+11. (Observation reveals that some of the colonnades are
+redundant, by the way.) In words, OR produces a zero only if
+both corresponding bits were zero. Otherwize it puts a one
+there.
+Let's try the AND modes (12-15):
+BOX 0,0,100,100,1
+BOX 0,-25,50,50,2
+BOX 0,25,50,50,14
+BOX -25,0,50,50,14
+14 is AND with green (10). You should be able figure out
+what's going on by looking at the truth table for AND. In
+words, AND leaves a 1 in the bit only if both values had a 1
+in that bit, otherwize it's zeroed.
+XOR (exclusive-or) is the trickiest but most useful
+color/display mode function besides plop. Look up the XOR
+truth table. XOR yields a one when the corresponding bits
+are different and a zero when they are the same:
+10 XOR 10 IS 00
+10 XOR 00 IS 10
+10 XOR 01 IS 11
+etc.
+You can see that XOR on a blank screen is the same as plop
+or OR on a blank screen. But try:
+NB
+
+NB
+
+To see why the second NB erased the first, print NB:
+PRINT NB
+(NB is a system macro, by the way). Note that it assures
+the colormode is betwP.en 5 and 7 by using the modulus
+operator. The lowercase letters are local variables which
+we'll explain in Lesson 11. Drawing anything twice with XOR
+will undo it.
+You ought to take sor.i~ time out to experiment with the
+colormodes and displaymodes. Here's a simple program by
+Jane Veeder to do some drawing:
+JANEDRAW:(PROMPT "WHAT'S THE XSIZE,YSIZE OF THE
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 9
+
+Page 5
+
+DRAWING BOX?"
+INPUT WIZE,HIZE
+PROMPT "WHAT'S THE SPACING FACTOR OF BOX CENTERS? (0
+TO 10)"
+INPUT SPACING
+PROMPT "WHAT COLORMODE? (1 TO 15)"
+INPUT KOLOR
+PROMPT "CLEAR THE TV? (YORN)"
+INPUT.STR ANSWER;IF ANSWER::'Y',CLEAR
+PRINT "MOVE JOYSTICK KNOB TO POSITION, HOLD TRIGGER
+TO DRAW"
+X:O;Y:O
+X:X+$X 1*SPACING
+Y:Y+$Y1*SPACING
+BOX X,Y,WIZE,HIZE,7
+BOX X,Y,WIZE,HIZE,7
+IF $T1::0,SKIP -4
+BOX X,Y,WIZE,HIZE,KOLOR;SKIP -5)
+Now that you've experimented a while with XOR, clear
+the screen and we'll do sanething tricky. First type in:
+BEHIND:[X:-100
+Y:50
+LINEX,Y,4
+LINE X,-Y,2
+IF (X:X+5)<51,SKIP -2
+X:-100
+BOX X,0,20,20,5
+BOX X,0,20,20,5
+IF (X:X+1)<51,SKIP -2]
+When you run BEHIND, you will note that the green lines are
+turned blue where the box is but are restored when the box
+is erased. Type the following:
+•
+$L2:$L3
+The lines turn blue. Run BEHIND again. The red box appears
+to be traveling behind the blue lines because we've made
+both $L2 and $L3 the same color. When the red box is behind
+the blue lines, the value of the blue pixels is 11; when it
+is not there, the value is 10. So, by giving up a color,
+you cary make one color appear to pass behind another. Now
+type CTRL+B to restore the colors to default. Set $L1:$L3
+and run BEHIND again. The box is now "in front of" the
+lines.
+You now have the skills to decipher the rest of the
+color and display modes.
+
+End of Lesson 9.
+
+This page intentionally left blank
+
+10/27/81
+
+LESSON 10
+
+DATAMAX UV-1 Zgrass LESSON 10
+
+SWAP MODULES
+
+Zgrass is rather tightly crall1Tled into 32K of read-only
+memory (ROM). Some commands and functions we wanted to have
+in ROM just wouldn't fit so we distribute them on tape to be
+read in and executed just like macros. Such commands and
+functions are called SWAP MDOULES because you sort of swap
+some of your random-access memory (RAM) for the privilege of
+using them.
+Besides allowing for more commands and functions than
+can fit in 32K ROM, swap modules have two other benefits:
+they can be changed, updated, and added to by us without
+having to send you new ROM's and, with the Zgrass assembler
+(separate package and documentation), you or your friendly
+neighborhood Z-80 wizard can add your own commands written
+in Z-80 assembler.
+Replacing a macro with a well-coded
+swap module can result in speed increases of two to maybe a
+thousand times depending on what you're doing. A skilled
+person can even do things that Zgrass won't let you, like
+put some of the information USEMAP gives you into variables,
+for instance.
+•
+If you do not have disks, the swap modules are
+distributed to you in alphabetical order on audio tape. You
+GETTAPE them just like anything else. You should copy your
+swap module tape early on because repeated use of any
+revolving mechanical recording medium will eventually result
+in its failure. If you have disks, the swap modules are on
+the disk we send you and you use DGET to bring them in.
+Read about the TXT command in the Glossary and try the
+following (substitute DGET for GETIAPE if you have disks):
+GETTAPE TXT
+XYAXES:[LINE 160,-80,4
+LINE -140,-80,1
+LINE -140, 100, 1
+X:-146;Y:-88
+N:O
+TXT X,Y,1,1,3,0,0,N
+X:X+20
+IF (N:N+1)<15,SKIP -2
+N:O;X:-146
+TXT X, Y, 1, 1 , 2, 0, 0, ~I
+Y:Y+20
+IF (N:N+1)<10, SKIP -2]
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 10
+
+Page 2
+
+Zgrass also has a rather complete string manipulation
+package. Besides the concatenation operator
+(&), the
+following are available: ASCII, STRING, BUMP, FORMAT, LEN,
+LPAD, MATCH, REPLACE, SUBSTR. Sane of these are swaps and
+you should try out these and other swap modules once you
+find a use for them.
+Many of the disk utilities are swap modules.
+find them under the D's in the Glossary.
+
+Fnd of Lesson 10.
+
+You will
+
+10/27/81
+
+LESSON 11
+
+DATAHAX UV-1 Zgrass LESSON 11
+
+ADVANCED CONCEPTS
+
+If you print out the system test macro NB:
+PRINT NB
+you will notice the lowercase variables a and b. Variables
+that begin with lowercase letters (a-z) are LOCAL VARIABLES,
+that is, they are known only to the macro they're in, just
+like labels for GOTOs. These variables are stored in a list
+attached to the memory automatically allocated to keep track
+of each macro call and are deleted whenever the macro
+returns. CTRL+C will also automatically delete all local
+variables.
+Local variables have the following benefits:
+1. They are zeroed whenever the macro is called.
+?. They go away when the macro returns.
+
+3. Recursion is possible.
+4. You can create software tools without having to
+worry about names conflicting with other macros.
+5. They never conflict with system command names.
+6. Local strings and arrays are allowed.
+
+Local
+though:
+
+variables
+
+have
+
+the
+
+following
+
+difficulties,
+
+1. They don't show up in USEMAP and cannot be
+interrogated by typing CTPL+Z and printing the
+values. You have to put the PRINT :--ight in the
+macro.
+
+2. They are not known to called macros so you have
+to pass the
+values (this
+is actually good
+programming practice, anyway). In order to pass
+local variables that are not part of expressions,
+use the? operator to force evaluation in the
+current macro context:
+SAM:[a:10
+b:20
+
+PRINT SQUAREM(?a,?b)]
+
+10/27/81
+
+DATAMA.X UV-1 Zgrass LESSON 11
+
+Page 2
+
+SOUAREM:(INPUT a,b
+RETURN a*a+b*b]
+The a,b in each case are different variables because
+they are in different macros.
+PARALLELISM:
+Once you start communicating using animation, you
+realize how important
+timing is. Zgrass has several
+advanced features for controlling timing and sequencing of
+execution.
+You are, by no..i, quite familiar with typing commands
+and running macros. When you are running a macro, you
+cannot type a command and expect it to execute without
+typing CTRL+Z. Zgrass has two modes of operation that allow
+macros to run and accept corrnnands fran attention mode at the
+same time. These modes give you the capability of
+foreground and background parallelism. So far, you've only
+used the middleground!
+You can run a macro in the background by using the .B
+switch on it. Try:
+CHANGE:[$LO:$LO+$X1*8
+$L1:$L1+$Y1*8
+$L2:$K1]
+CHANGE.B
+NB.B
+Notice that even though NB is drawing, you can change $LO,
+$L1 and $L2 with the joystick. You can also clear the
+screen at will or type other command5, start other .B
+macros, etc. (Note that variable b .in NB is not
+re-initialized so it continues to increment until ERROR#23
+eventually happens.)
+Zgrass interleaves the command lines in CHANGE with
+those in NB and also slips in anything you type at the
+keyboard. Press CTRL+X and see the interleaving (press
+CTRL+Q to stop/start the printing).
+If you run a macro at nonnal (middleground) level, it
+will suspend the .B macros until it is done. Thus, regular
+macros have precedence over .B's. You can stop all .B
+macros with CTRL+C or stop them selectively with the STOP
+command. If you press CTRL+A, .B macros will be interleaved
+with regular macros. You can set CTRL+A with the CONTROL
+command, of course.
+You can also run macros in the foreground with .F. A
+.F macro has precedence over .B and regular macros . . F
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 11
+
+Page 3
+
+macros are assuned to be short and not contain infinite
+loops. They are restarted every 1/60 second or as fast as
+possible. It is a good idea to canpile .F macros for speed.
+The TIMEOOT comnand allows you to have the .F macro
+execute at multiples of 1/60 second. Say you want to draw
+an XOR box every five seconds. Five times sixty is 300. Try
+the following:
+TIMEDBOX:[TIMEOUT 300
+BOX 0,0,200,200,7]
+COMPILE TIHEDBOX,CTIME
+CTIME.F
+You can have regular or .B macros running at the same time
+(try NB!).
+
+Sane further notes:
+1. . B macros start over frcm the beginning
+autCJllatically unless STOPped. No SKIP or GOTO is
+needed.
+2. The interleaving of .B macros is on a
+line-by-line basis. Semi-colons don't count,
+blank lines do, so you can fine-tune the
+interleaving.
+
+3.. F macros don't interleave.
+to be short.
+
+They
+
+are assuned
+
+4. Macros run frcm within a .B macro are not
+interleaved unless run as .B. If called without a
+.B, they are interleaved as if they were a single
+line. If run with a .B, they run in parallel with
+the macro they're run fran. You can setup
+variables to cause one .B macro to wait for
+another to continue, of course.
+5. You can .B or .F the same macro multiple times,
+up to 128 times. You can have any nunber of .B
+and .F macros running at once. Obviously, things
+get pretty slow after a while.
+6. It's a good idea to use local variables in .B
+and .F macros, especially if you.Ba macro twice
+at the same time.
+7. When executing in .B or .F mode, the local
+variables are not re-initialized to zero when the
+macro restarts at the beginning.
+8. If your .B and .F macros have a lot of
+time-consuning graphics, the interleaving will not
+
+10/27/81
+
+DATAMAX UV-1 Zgrass LESSON 11
+
+Page 4
+
+appear to be particularly smooth.
+
+ERROR TRAPPING:
+If you wish. you can trap error messages and process
+them yourself, a useful feature for bulletproofing software
+for naive users.
+The ONERROR command takes a label like GOTO but the
+label is only branched to when an error occurs. For
+instance:
+.
+UGH:(ARRAY SAM,10
+A:-1
+ONERROR 10UT
+PR SAM(A:A+1);SKIP 0
+10UT PRINT "SAM OUT OF BOUNDS"]
+You can get the error number and command line in error into
+variables with the GETERROR swap command. LOOPMAX is a
+canmand used to catch infinite loops.
+
+LOOPMAX and ONERROR do not work when canpiled.
+
+End of Lesson 11 and End of Lessons.
+
+
