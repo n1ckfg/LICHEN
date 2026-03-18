@@ -28,13 +28,18 @@ export class RuttEtraModule extends Module {
     this.createShader(passthroughFrag);
     this.createOutputFBO();
 
-    // Cached line data
-    this.lineData = [];
+    // Cached dimensions
     this.lastScanStep = -1;
-    this.lastDepth = -1;
+    this.cols = 0;
+    this.rows = 0;
 
-    // Snapshot buffer to capture input frame
-    this.snapshotImg = null;
+    // Pre-allocated typed arrays (much faster than object arrays)
+    this.dataX = null;
+    this.dataY = null;
+    this.dataZ = null;
+    this.dataR = null;
+    this.dataG = null;
+    this.dataB = null;
   }
 
   process(graph, glCanvas) {
@@ -47,19 +52,14 @@ export class RuttEtraModule extends Module {
     }
 
     // Get input framebuffer as a p5.Image for pixel access
-    this.snapshotImg = inputFBO.get();
-    this.snapshotImg.loadPixels();
+    const img = inputFBO.get();
+    img.loadPixels();
 
-    // Regenerate line data if params changed
     const scanStep = Math.round(this.getParam('scanStep'));
     const depth = this.getParam('depth');
-    if (scanStep !== this.lastScanStep || depth !== this.lastDepth) {
-      this.lastScanStep = scanStep;
-      this.lastDepth = depth;
-    }
 
-    // Always regenerate lines from current frame
-    this._createLines(this.snapshotImg, scanStep, depth);
+    // Update line data from current frame
+    this._createLines(img, scanStep, depth);
 
     // Draw 3D lines to WEBGL graphics buffer
     this._drawToGraphics();
@@ -77,33 +77,58 @@ export class RuttEtraModule extends Module {
     const w = img.width;
     const h = img.height;
     const pixels = img.pixels;
+    const halfW = w / 2;
+    const halfH = h / 2;
+    const halfDepth = depth / 2;
 
-    this.lineData = [];
+    const rows = Math.floor(h / scanStep);
+    const cols = Math.floor(w / scanStep);
+    const total = rows * cols;
 
-    for (let y = 0; y < h; y += scanStep) {
-      const line = [];
-      for (let x = 0; x < w; x += scanStep) {
-        const idx = (y * w + x) * 4;
-        const r = pixels[idx];
-        const g = pixels[idx + 1];
-        const b = pixels[idx + 2];
+    // Reallocate typed arrays if grid size changed
+    if (this.rows !== rows || this.cols !== cols) {
+      this.rows = rows;
+      this.cols = cols;
+      this.dataX = new Float32Array(total);
+      this.dataY = new Float32Array(total);
+      this.dataZ = new Float32Array(total);
+      this.dataR = new Uint8Array(total);
+      this.dataG = new Uint8Array(total);
+      this.dataB = new Uint8Array(total);
 
-        // Calculate brightness (same formula as sketch.js)
+      // Pre-compute static X/Y positions
+      let idx = 0;
+      for (let row = 0; row < rows; row++) {
+        const y = row * scanStep - halfH;
+        for (let col = 0; col < cols; col++) {
+          const x = col * scanStep - halfW;
+          this.dataX[idx] = x;
+          this.dataY[idx] = y;
+          idx++;
+        }
+      }
+    }
+
+    // Update Z and colors each frame
+    let idx = 0;
+    for (let row = 0; row < rows; row++) {
+      const py = row * scanStep;
+      for (let col = 0; col < cols; col++) {
+        const px = col * scanStep;
+        const pIdx = (py * w + px) * 4;
+
+        const r = pixels[pIdx];
+        const g = pixels[pIdx + 1];
+        const b = pixels[pIdx + 2];
+
         const brightness = (0.34 * r + 0.5 * g + 0.16 * b) / 255;
 
-        // Z displacement based on brightness
-        const z = -brightness * depth + depth / 2;
-
-        line.push({
-          x: x - w / 2,
-          y: y - h / 2,
-          z: z,
-          r: r,
-          g: g,
-          b: b
-        });
+        this.dataZ[idx] = -brightness * depth + halfDepth;
+        this.dataR[idx] = r;
+        this.dataG[idx] = g;
+        this.dataB[idx] = b;
+        idx++;
       }
-      this.lineData.push(line);
     }
   }
 
@@ -114,6 +139,16 @@ export class RuttEtraModule extends Module {
     const opacity = this.getParam('opacity');
     const rotX = this.getParam('rotationX');
     const rotY = this.getParam('rotationY');
+    const alpha = opacity * 255;
+
+    const rows = this.rows;
+    const cols = this.cols;
+    const dataX = this.dataX;
+    const dataY = this.dataY;
+    const dataZ = this.dataZ;
+    const dataR = this.dataR;
+    const dataG = this.dataG;
+    const dataB = this.dataB;
 
     pg.clear();
     pg.background(0);
@@ -127,7 +162,6 @@ export class RuttEtraModule extends Module {
     pg.rotateX(rotX);
     pg.rotateY(rotY);
 
-
     // Set up additive blending
     pg.blendMode(pg.ADD);
 
@@ -135,12 +169,13 @@ export class RuttEtraModule extends Module {
     pg.strokeWeight(lineThickness);
     pg.noFill();
 
-    for (const line of this.lineData) {
+    for (let row = 0; row < rows; row++) {
       pg.beginShape();
-      for (const pt of line) {
-        const alpha = opacity * 255;
-        pg.stroke(pt.r, pt.g, pt.b, alpha);
-        pg.vertex(pt.x, pt.y, pt.z);
+      const rowStart = row * cols;
+      for (let col = 0; col < cols; col++) {
+        const idx = rowStart + col;
+        pg.stroke(dataR[idx], dataG[idx], dataB[idx], alpha);
+        pg.vertex(dataX[idx], dataY[idx], dataZ[idx]);
       }
       pg.endShape();
     }
@@ -151,7 +186,12 @@ export class RuttEtraModule extends Module {
 
   dispose() {
     if (this.pg) this.pg.remove();
-    if (this.snapshotImg) this.snapshotImg = null;
+    this.dataX = null;
+    this.dataY = null;
+    this.dataZ = null;
+    this.dataR = null;
+    this.dataG = null;
+    this.dataB = null;
     super.dispose();
   }
 }
