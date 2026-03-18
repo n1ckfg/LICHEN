@@ -127,8 +127,6 @@ export class RuttEtraModule extends Module {
     pg.rotateX(rotX);
     pg.rotateY(rotY);
 
-    // Flip Y to match coordinate system
-    pg.scale(1, -1, 1);
 
     // Set up additive blending
     pg.blendMode(pg.ADD);
