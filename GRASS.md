@@ -153,9 +153,6 @@ Similar to DO, but uses the system area of the disk and tries to find a compiled
 **CHANGE**<br>
 Changes the values of an endpoint in a picture prototype list. (16k extension ZGRASS)<br>
 
-**CIRCLE**<br>
-Draws an ellipse on the screen and has options for building picture prototype lists. (ZGRASS)<br>
-
 **CLEAR.CRT / CL.C**<br>
 Erases the terminal screen. (ZGRASS)<br>
 
@@ -218,9 +215,6 @@ Initializes a disk to accept a maximum number of names/files. (ZGRASS)<br>
 
 **DIRALL**<br>
 Gives the user the disk directories of everyone's areas. (GRASS)<br>
-
-**DISPLAY `name, x, y, displaymode`**<br>
-Causes a picture prototype (or snap) to be exclusive or'ed or placed onto the screen and updated when necessary. (ZGRASS)<br>
 
 **DLOAD**<br>
 Loads a disk module. (ZGRASS)<br>
@@ -296,9 +290,6 @@ Transfers control to named macros or labels for looping. (GRASS, ZGRASS)<br>
 
 **GROUP `pname1, pname2, gname`**<br>
 Collects picture prototypes into a group hierarchy so transformations can be applied collectively. (GRASS, ZGRASS)<br>
-
-**HELP `command-name`**<br>
-Prints command names and required argument types for assistance. (GRASS, ZGRASS)<br>
 
 **HIDE `pname`**<br>
 Hides the rear surfaces of specially prepared 3-D shaded pictures. (GRASS)<br>
@@ -467,3 +458,29 @@ Changes the PUTDSK device. (GRASS)<br>
 
 **ZAPPOINT `lname, n, x, y, z, k`**<br>
 Modifies or accesses individual vector endpoints. (GRASS)<br>
+
+### Implementations
+
+**CENTER `x, y`**<br>
+Set the drawing origin/center. (FakeGRASS)<br>
+
+**CIRCLE**<br>
+Draws an ellipse on the screen and has options for building picture prototype lists. (ZGRASS, FakeGRASS)<br>
+
+**DISPLAY `name, x, y, displaymode`**<br>
+Causes a picture prototype (or snap) to be exclusive or'ed or placed onto the screen and updated when necessary. (ZGRASS, FakeGRASS)<br>
+
+**HELP `command-name`**<br>
+Prints command names and required argument types for assistance. (GRASS, ZGRASS, FakeGRASS)<br>
+
+**KALIEDOSCOPE `n, x, y`**<br>
+Set up a kaleidoscope drawing modifier. (FakeGRASS)<br>
+
+**KILL**<br>
+Clear all drawing modifiers. (FakeGRASS)<br>
+
+**MIRROR `x, y, xc, yc`**<br>
+Set up a mirror drawing modifier. (FakeGRASS)<br>
+
+**MULTI `xs, ys, xc, yc`**<br>
+Set up a multi drawing modifier. (FakeGRASS)<br>
