@@ -172,7 +172,10 @@ export class NodeGraphUI {
     const paramSection = paramCount * PARAM_ROW_HEIGHT;
     const hasPreview = mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS';
     const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
-    const monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS') ? MONITOR_PREVIEW_H + 8 : 0;
+    let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS') ? MONITOR_PREVIEW_H + 8 : 0;
+    if (mod.type === 'Monitor') {
+      monitorSection += 16; // Extra space for FPS counter
+    }
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS';
     const fileBtnSection = hasFileBtn ? 24 : 0;
     return HEADER_HEIGHT + portSection + paramSection + previewSection + monitorSection + fileBtnSection + 12;
@@ -763,6 +766,12 @@ export class NodeGraphUI {
           mod._blitToExtWindow(this.pipeline.glCanvas);
         }
       }
+      // FPS display
+      p.noStroke();
+      p.fill(150);
+      p.textSize(10);
+      p.textAlign(p.LEFT, p.TOP);
+      p.text(`FPS: ${mod.fps || 0}`, mod.x + 8, py + MONITOR_PREVIEW_H + 4);
     }
 
     // GRASS preview (clean video output, same size as Monitor preview)

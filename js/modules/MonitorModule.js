@@ -14,11 +14,23 @@ export class MonitorModule extends Module {
     this.isFullscreen = false;
     this._extWindow = null;
     this._extCanvas = null;
+    this.lastFpsTime = performance.now();
+    this.frameCount = 0;
+    this.fps = 0;
   }
 
   process(graph, glCanvas) {
     const inputFBO = this.getInput(graph, 0);
     this.displayTexture = inputFBO;
+
+    // Calculate FPS
+    const now = performance.now();
+    this.frameCount++;
+    if (now - this.lastFpsTime >= 1000) {
+      this.fps = Math.round((this.frameCount * 1000) / (now - this.lastFpsTime));
+      this.frameCount = 0;
+      this.lastFpsTime = now;
+    }
   }
 
   toggleFullscreen() {
