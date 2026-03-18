@@ -12,7 +12,7 @@ void main() {
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'GRASS', 'NAPLPS', 'Oscillator', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['Delay', 'Film', 'GameBoy', 'Glitch', 'HyperCard', 'PixelVision', 'TimeTunnel', 'TV', 'VHSC'],
+  'Effects': ['Delay', 'Film', 'GameBoy', 'Glitch', 'HyperCard', 'PixelVision', 'RuttEtra', 'TimeTunnel', 'TV', 'VHSC'],
   'Output': ['Monitor'],
 };
 
@@ -33,6 +33,7 @@ const MODULE_COLORS = {
   Film: [85, 85, 119],
   VHSC: [85, 85, 119],
   PixelVision: [85, 85, 119],
+  RuttEtra: [85, 85, 119],
   TimeTunnel: [85, 85, 119],
   GameBoy: [85, 85, 119],
   HyperCard: [85, 85, 119],
