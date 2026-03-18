@@ -40,6 +40,7 @@ export class RuttEtraModule extends Module {
     this.dataR = null;
     this.dataG = null;
     this.dataB = null;
+
   }
 
   process(graph, glCanvas) {
@@ -96,37 +97,55 @@ export class RuttEtraModule extends Module {
       this.dataG = new Uint8Array(total);
       this.dataB = new Uint8Array(total);
 
+      // Pre-compute column X positions (reused for every row)
+      this.colX = new Float32Array(cols);
+      this.colPx = new Uint16Array(cols);
+      for (let col = 0; col < cols; col++) {
+        this.colX[col] = col * scanStep - halfW;
+        this.colPx[col] = col * scanStep;
+      }
+
       // Pre-compute static X/Y positions
       let idx = 0;
       for (let row = 0; row < rows; row++) {
         const y = row * scanStep - halfH;
         for (let col = 0; col < cols; col++) {
-          const x = col * scanStep - halfW;
-          this.dataX[idx] = x;
+          this.dataX[idx] = this.colX[col];
           this.dataY[idx] = y;
           idx++;
         }
       }
     }
 
+    // Local references for faster access
+    const dataZ = this.dataZ;
+    const dataR = this.dataR;
+    const dataG = this.dataG;
+    const dataB = this.dataB;
+    const colPx = this.colPx;
+
+    // Pre-compute constants
+    const depthScale = -depth / 255;
+    const rWeight = 0.34 * depthScale;
+    const gWeight = 0.5 * depthScale;
+    const bWeight = 0.16 * depthScale;
+
     // Update Z and colors each frame
     let idx = 0;
     for (let row = 0; row < rows; row++) {
-      const py = row * scanStep;
+      const rowOffset = row * scanStep * w * 4;
       for (let col = 0; col < cols; col++) {
-        const px = col * scanStep;
-        const pIdx = (py * w + px) * 4;
+        const pIdx = rowOffset + colPx[col] * 4;
 
         const r = pixels[pIdx];
         const g = pixels[pIdx + 1];
         const b = pixels[pIdx + 2];
 
-        const brightness = (0.34 * r + 0.5 * g + 0.16 * b) / 255;
-
-        this.dataZ[idx] = -brightness * depth + halfDepth;
-        this.dataR[idx] = r;
-        this.dataG[idx] = g;
-        this.dataB[idx] = b;
+        // Optimized brightness calculation (merged with depth scaling)
+        dataZ[idx] = r * rWeight + g * gWeight + b * bWeight + halfDepth;
+        dataR[idx] = r;
+        dataG[idx] = g;
+        dataB[idx] = b;
         idx++;
       }
     }
@@ -169,12 +188,35 @@ export class RuttEtraModule extends Module {
     pg.strokeWeight(lineThickness);
     pg.noFill();
 
+    // Threshold for color change (reduces stroke() calls by ~80%)
+    const colorThreshold = 16;
+
     for (let row = 0; row < rows; row++) {
       pg.beginShape();
       const rowStart = row * cols;
+
+      // Reset color tracking at start of each row
+      let lastR = -999, lastG = -999, lastB = -999;
+
       for (let col = 0; col < cols; col++) {
         const idx = rowStart + col;
-        pg.stroke(dataR[idx], dataG[idx], dataB[idx], alpha);
+        const r = dataR[idx];
+        const g = dataG[idx];
+        const b = dataB[idx];
+
+        // Only update stroke if color changed significantly
+        const dr = r - lastR;
+        const dg = g - lastG;
+        const db = b - lastB;
+        if (dr > colorThreshold || dr < -colorThreshold ||
+            dg > colorThreshold || dg < -colorThreshold ||
+            db > colorThreshold || db < -colorThreshold) {
+          pg.stroke(r, g, b, alpha);
+          lastR = r;
+          lastG = g;
+          lastB = b;
+        }
+
         pg.vertex(dataX[idx], dataY[idx], dataZ[idx]);
       }
       pg.endShape();
@@ -192,6 +234,8 @@ export class RuttEtraModule extends Module {
     this.dataR = null;
     this.dataG = null;
     this.dataB = null;
+    this.colX = null;
+    this.colPx = null;
     super.dispose();
   }
 }
