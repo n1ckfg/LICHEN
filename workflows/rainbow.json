@@ -1,0 +1,169 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "type": "Monitor",
+      "x": 1371,
+      "y": 652.5,
+      "params": {}
+    },
+    {
+      "id": 1,
+      "type": "Comparator",
+      "x": 861.4811776557497,
+      "y": 406.08489806978844,
+      "params": {
+        "threshold": 0.3343899988858413
+      }
+    },
+    {
+      "id": 2,
+      "type": "Glitch",
+      "x": 964.4694513184033,
+      "y": 612.9836352131804,
+      "params": {
+        "barsamount": 0.8799999999999999,
+        "distortion": 4.984084284981362,
+        "vsync": -0.21333333333333337,
+        "hsync": 0.31999999999999995
+      }
+    },
+    {
+      "id": 3,
+      "type": "Camera",
+      "x": 755.987647711866,
+      "y": 177.24080656586233,
+      "params": {}
+    },
+    {
+      "id": 4,
+      "type": "Delay",
+      "x": 1097.7979378216796,
+      "y": 359.9625667836193,
+      "params": {
+        "delaySpeed": 0.16000000000000003,
+        "lumaThreshold": 0.5,
+        "alphaMax": 0.6933333333333334,
+        "alphaMin": 0.1
+      }
+    },
+    {
+      "id": 5,
+      "type": "Oscillator",
+      "x": 982.465894198011,
+      "y": 77.34597126866572,
+      "params": {
+        "frequency": 2.096,
+        "waveform": 1.8399999999999996,
+        "direction": 0.25333333333333335
+      }
+    },
+    {
+      "id": 6,
+      "type": "ColorEncoder",
+      "x": 1423.7748059372489,
+      "y": 71.88088885719651,
+      "params": {
+        "phaseR": 2.63886,
+        "phaseG": 1.1306066666666665,
+        "phaseB": 6.283,
+        "frequency": 5.554
+      }
+    },
+    {
+      "id": 7,
+      "type": "VHSC",
+      "x": 1612.6916625012932,
+      "y": 474.1037197403979,
+      "params": {
+        "gamma": 1.2,
+        "posterizeLevels": 256,
+        "texelSize": 0.01388
+      }
+    },
+    {
+      "id": 8,
+      "type": "Differentiator",
+      "x": 1361.4636021242363,
+      "y": 351.37098873375817,
+      "params": {
+        "strength": 2.6999999999999997
+      }
+    },
+    {
+      "id": 9,
+      "type": "AdderMultiplier",
+      "x": 1630.3003504766543,
+      "y": 208.49642910453792,
+      "params": {
+        "mode": 0.6000000000000001,
+        "mixVal": 1,
+        "contrast": 1
+      }
+    }
+  ],
+  "connections": [
+    {
+      "fromId": 5,
+      "fromPort": 0,
+      "toId": 4,
+      "toPort": 0
+    },
+    {
+      "fromId": 4,
+      "fromPort": 0,
+      "toId": 2,
+      "toPort": 1
+    },
+    {
+      "fromId": 2,
+      "fromPort": 0,
+      "toId": 6,
+      "toPort": 0
+    },
+    {
+      "fromId": 7,
+      "fromPort": 0,
+      "toId": 0,
+      "toPort": 0
+    },
+    {
+      "fromId": 6,
+      "fromPort": 0,
+      "toId": 8,
+      "toPort": 0
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 9,
+      "toPort": 0
+    },
+    {
+      "fromId": 6,
+      "fromPort": 0,
+      "toId": 9,
+      "toPort": 1
+    },
+    {
+      "fromId": 9,
+      "fromPort": 0,
+      "toId": 7,
+      "toPort": 0
+    },
+    {
+      "fromId": 1,
+      "fromPort": 0,
+      "toId": 2,
+      "toPort": 0
+    },
+    {
+      "fromId": 3,
+      "fromPort": 0,
+      "toId": 1,
+      "toPort": 0
+    }
+  ],
+  "controlConnections": [],
+  "nextId": 14
+}
