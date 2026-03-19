@@ -11,6 +11,7 @@ import './modules/FunctionGeneratorModule.js';
 import './modules/GameBoyModule.js';
 import './modules/GlitchModule.js';
 import './modules/GRASSModule.js';
+import './modules/GridGuysModule.js';
 import './modules/HyperCardModule.js';
 import './modules/MonitorModule.js';
 import './modules/NAPLPSModule.js';
