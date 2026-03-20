@@ -12,12 +12,14 @@ void main() {
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['Delay', 'Film', 'GameBoy', 'Glitch', 'HyperCard', 'PixelVision', 'RuttEtra', 'TimeTunnel', 'TV', 'VHSC'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Delay', 'Film', 'GameBoy', 'Glitch', 'HyperCard', 'Mosaic', 'PixelVision', 'RuttEtra', 'SpatialSlice', 'TimeTunnel', 'TV', 'VHSC'],
   'Output': ['Monitor'],
 };
 
 const MODULE_COLORS = {
   AdderMultiplier: [102, 68, 136],
+  BooleanLogic: [136, 68, 136],
+  BufferSmear: [102, 119, 136],
   Camera: [34, 85, 170],
   ColorEncoder: [170, 68, 102],
   Comparator: [136, 85, 34],
@@ -31,10 +33,12 @@ const MODULE_COLORS = {
   GridGuys: [170, 85, 136],
   HyperCard: [85, 85, 119],
   Monitor: [170, 85, 34],
+  Mosaic: [119, 102, 85],
   NAPLPS: [170, 85, 136],
   Oscillator: [34, 136, 85],
   PixelVision: [85, 85, 119],
   RuttEtra: [85, 85, 119],
+  SpatialSlice: [119, 85, 102],
   SyncGenerator: [68, 136, 102],
   TimeTunnel: [85, 85, 119],
   TV: [85, 85, 119],
