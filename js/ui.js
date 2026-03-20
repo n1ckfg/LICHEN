@@ -103,6 +103,14 @@ export class NodeGraphUI {
   }
 
   _createPalette() {
+    // Configure which sections start open (true) or closed (false)
+    const sectionInitialState = {
+      'Sources': true,
+      'Core': true,
+      'Effects': true,
+      'Output': true,
+    };
+
     const palette = document.createElement('div');
     palette.id = 'module-palette';
 
@@ -113,17 +121,49 @@ export class NodeGraphUI {
     for (const [category, types] of Object.entries(MODULE_CATEGORIES)) {
       const section = document.createElement('div');
       section.className = 'palette-section';
+
+      // Set initial collapsed state
+      const isOpen = sectionInitialState[category] !== false;
+      if (!isOpen) {
+        section.classList.add('collapsed');
+      }
+
       const sectionTitle = document.createElement('div');
       sectionTitle.className = 'palette-section-title';
-      sectionTitle.textContent = category;
+
+      // Add triangle icon
+      const triangle = document.createElement('span');
+      triangle.className = 'triangle';
+      sectionTitle.appendChild(triangle);
+
+      const titleText = document.createElement('span');
+      titleText.textContent = category;
+      sectionTitle.appendChild(titleText);
+
       section.appendChild(sectionTitle);
+
+      // Wrap buttons in a content container
+      const content = document.createElement('div');
+      content.className = 'palette-section-content';
 
       for (const typeName of types) {
         const btn = document.createElement('button');
         btn.textContent = typeName;
         btn.addEventListener('click', () => this._addModule(typeName));
-        section.appendChild(btn);
+        content.appendChild(btn);
       }
+
+      // Set max-height for smooth animation
+      const expandedHeight = `${types.length * 28}px`;
+      content.style.maxHeight = isOpen ? expandedHeight : '0';
+
+      // Toggle on click
+      sectionTitle.addEventListener('click', () => {
+        const isCollapsed = section.classList.toggle('collapsed');
+        content.style.maxHeight = isCollapsed ? '0' : expandedHeight;
+      });
+
+      section.appendChild(content);
       palette.appendChild(section);
     }
 

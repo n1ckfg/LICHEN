@@ -17,7 +17,7 @@ const PATTERNS = [
 export class GridGuysModule extends Module {
   constructor(glCanvas, id) {
     super('GridGuys', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
+    this.inputs = [];
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
       blend: { value: 1.0, min: 0, max: 1, step: 0.01 },
@@ -103,8 +103,6 @@ export class GridGuysModule extends Module {
   }
 
   process(graph, glCanvas) {
-    const inputFBO = this.getInput(graph, 0);
-
     // Update target dimensions and run autonomous movement
     this.target.width = glCanvas.width;
     this.target.height = glCanvas.height;
@@ -151,9 +149,6 @@ export class GridGuysModule extends Module {
     glCanvas.clear();
     glCanvas.shader(this.renderShader);
     this.renderShader.setUniform('u_state', writeFBO);
-    if (inputFBO) {
-      this.renderShader.setUniform('tex0', inputFBO);
-    }
     this.renderShader.setUniform('u_resolution', [glCanvas.width, glCanvas.height]);
     this.renderShader.setUniform('u_time', time);
     this.renderShader.setUniform('u_blend', this.params.blend.value);

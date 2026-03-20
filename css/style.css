@@ -48,6 +48,42 @@ canvas {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  user-select: none;
+}
+
+#module-palette .palette-section-title:hover {
+  color: #aaa;
+}
+
+#module-palette .palette-section-title .triangle {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 6px solid #888;
+  transition: transform 0.15s ease;
+}
+
+#module-palette .palette-section-title:hover .triangle {
+  border-top-color: #aaa;
+}
+
+#module-palette .palette-section.collapsed .palette-section-title .triangle {
+  transform: rotate(-90deg);
+}
+
+#module-palette .palette-section-content {
+  overflow: hidden;
+  transition: max-height 0.15s ease;
+}
+
+#module-palette .palette-section.collapsed .palette-section-content {
+  max-height: 0 !important;
 }
 
 #module-palette button {
