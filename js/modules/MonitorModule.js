@@ -17,6 +17,11 @@ export class MonitorModule extends Module {
     this.lastFpsTime = performance.now();
     this.frameCount = 0;
     this.fps = 0;
+
+    // Recording state
+    this._recorder = null;
+    this._recordingChunks = [];
+    this._recordingMimeType = null;
   }
 
   process(graph, glCanvas) {
@@ -141,7 +146,138 @@ export class MonitorModule extends Module {
     return this._extWindow !== null && !this._extWindow.closed;
   }
 
+  /**
+   * Start recording the monitor output to video.
+   * @param {Object} glCanvas - The p5 WebGL canvas (used when no external window)
+   * @param {number} fps - Frame rate for recording (default 30)
+   * @returns {boolean} True if recording started successfully
+   */
+  startRecording(glCanvas, fps = 30) {
+    if (this._recorder && this._recorder.state === 'recording') {
+      console.warn('Already recording');
+      return false;
+    }
+
+    // Determine which canvas to capture from
+    const canvas = this._extCanvas || glCanvas?.elt;
+    if (!canvas) {
+      console.error('No canvas available for recording');
+      return false;
+    }
+
+    // Get the media stream from the canvas
+    const stream = canvas.captureStream(fps);
+
+    // Determine best available MIME type (prefer MP4, fallback to WebM)
+    const mimeTypes = [
+      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+      'video/mp4;codecs=avc1',
+      'video/mp4',
+      'video/webm;codecs=vp9',
+      'video/webm;codecs=vp8',
+      'video/webm'
+    ];
+
+    let selectedMimeType = null;
+    for (const mimeType of mimeTypes) {
+      if (MediaRecorder.isTypeSupported(mimeType)) {
+        selectedMimeType = mimeType;
+        break;
+      }
+    }
+
+    if (!selectedMimeType) {
+      console.error('No supported video MIME type found');
+      return false;
+    }
+
+    this._recordingMimeType = selectedMimeType;
+    this._recordingChunks = [];
+
+    try {
+      this._recorder = new MediaRecorder(stream, { mimeType: selectedMimeType });
+    } catch (e) {
+      console.error('Failed to create MediaRecorder:', e);
+      return false;
+    }
+
+    this._recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        this._recordingChunks.push(e.data);
+      }
+    };
+
+    this._recorder.onstop = () => {
+      this._downloadRecording();
+    };
+
+    this._recorder.onerror = (e) => {
+      console.error('MediaRecorder error:', e);
+      this._recorder = null;
+    };
+
+    this._recorder.start(1000); // Collect data every second
+    console.log(`Recording started (${selectedMimeType})`);
+    return true;
+  }
+
+  /**
+   * Stop recording and trigger download.
+   */
+  stopRecording() {
+    if (!this._recorder || this._recorder.state !== 'recording') {
+      console.warn('Not currently recording');
+      return;
+    }
+    this._recorder.stop();
+    console.log('Recording stopped');
+  }
+
+  /**
+   * Check if currently recording.
+   * @returns {boolean}
+   */
+  isRecording() {
+    return this._recorder && this._recorder.state === 'recording';
+  }
+
+  /**
+   * Download the recorded video.
+   * @private
+   */
+  _downloadRecording() {
+    if (this._recordingChunks.length === 0) {
+      console.warn('No recording data to download');
+      return;
+    }
+
+    const blob = new Blob(this._recordingChunks, { type: this._recordingMimeType });
+    const url = URL.createObjectURL(blob);
+
+    const extension = this._recordingMimeType.includes('mp4') ? 'mp4' : 'webm';
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const filename = `lichen-recording-${timestamp}.${extension}`;
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // Clean up
+    URL.revokeObjectURL(url);
+    this._recordingChunks = [];
+    this._recorder = null;
+    console.log(`Downloaded: ${filename}`);
+  }
+
   dispose() {
+    if (this.isRecording()) {
+      this._recorder.stop();
+      this._recorder = null;
+      this._recordingChunks = [];
+    }
     this.closeExtWindow();
     this.displayTexture = null;
     super.dispose();

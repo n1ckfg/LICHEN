@@ -219,7 +219,7 @@ export class NodeGraphUI {
     const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
     let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS') ? MONITOR_PREVIEW_H + 8 : 0;
     if (mod.type === 'Monitor') {
-      monitorSection += 16; // Extra space for FPS counter
+      monitorSection += 40; // Extra space for FPS counter + record button
     }
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS';
     const fileBtnSection = hasFileBtn ? 24 : 0;
@@ -600,6 +600,22 @@ export class NodeGraphUI {
     return null;
   }
 
+  hitTestRecordBtn(wx, wy) {
+    const graph = this.pipeline.graph;
+    for (const [id, mod] of graph.nodes) {
+      if (mod.type !== 'Monitor') continue;
+      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
+      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const py = mod.y + HEADER_HEIGHT + portSection;
+      const btnY = py + MONITOR_PREVIEW_H + 20; // Below FPS counter
+      if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
+          wy >= btnY && wy <= btnY + 20) {
+        return id;
+      }
+    }
+    return null;
+  }
+
   draw() {
     const p = this.p;
     const graph = this.pipeline.graph;
@@ -817,6 +833,19 @@ export class NodeGraphUI {
       p.textSize(10);
       p.textAlign(p.LEFT, p.TOP);
       p.text(`FPS: ${mod.fps || 0}`, mod.x + 8, py + MONITOR_PREVIEW_H + 4);
+
+      // Record button
+      const btnY = py + MONITOR_PREVIEW_H + 20;
+      const isRec = mod.isRecording && mod.isRecording();
+      p.fill(isRec ? [180, 40, 40] : [60, 60, 90]);
+      p.stroke(isRec ? [220, 80, 80] : 100);
+      p.strokeWeight(1);
+      p.rect(mod.x + 10, btnY, MODULE_WIDTH - 20, 20, 3);
+      p.noStroke();
+      p.fill(200);
+      p.textSize(9);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.text(isRec ? 'Stop Recording' : 'Record', mod.x + MODULE_WIDTH / 2, btnY + 10);
     }
 
     // GRASS preview (clean video output, same size as Monitor preview)
@@ -963,6 +992,20 @@ export class NodeGraphUI {
     if (vpHit !== null) {
       const mod = this.pipeline.graph.nodes.get(vpHit);
       if (mod && mod.pickFile) mod.pickFile();
+      return;
+    }
+
+    // Check Monitor record button
+    const recHit = this.hitTestRecordBtn(world.x, world.y);
+    if (recHit !== null) {
+      const mod = this.pipeline.graph.nodes.get(recHit);
+      if (mod) {
+        if (mod.isRecording && mod.isRecording()) {
+          mod.stopRecording();
+        } else if (mod.startRecording) {
+          mod.startRecording(this.pipeline.glCanvas);
+        }
+      }
       return;
     }
 
