@@ -1,0 +1,205 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "type": "Monitor",
+      "x": 1041.5,
+      "y": 528,
+      "params": {}
+    },
+    {
+      "id": 8,
+      "type": "VHSC",
+      "x": 710.2294439857957,
+      "y": 502.78817413550587,
+      "params": {
+        "gamma": 2.25,
+        "posterizeLevels": 156.04000000000002,
+        "texelSize": 0.008
+      }
+    },
+    {
+      "id": 10,
+      "type": "RuttEtra",
+      "x": 206.17848055291904,
+      "y": 160.93391024280635,
+      "params": {
+        "scale": 1.078,
+        "scanStep": 4.42,
+        "lineThickness": 2,
+        "opacity": 1,
+        "depth": 80,
+        "rotationX": -0.020000000000000056,
+        "rotationY": 0.020000000000000018
+      }
+    },
+    {
+      "id": 11,
+      "type": "GridGuys",
+      "x": 309.2371385676885,
+      "y": -82.83454145228268,
+      "params": {
+        "blend": 1,
+        "delay": 0.19999999999999996,
+        "life": 40,
+        "respawn": 111.08666666666667,
+        "chaos": 0.03
+      }
+    },
+    {
+      "id": 12,
+      "type": "AdderMultiplier",
+      "x": 432.279751584148,
+      "y": 489.53987000306483,
+      "params": {
+        "mode": 0.62,
+        "mixVal": 0.6599999999999999,
+        "contrast": 1.3399999999999999
+      }
+    },
+    {
+      "id": 14,
+      "type": "ColorEncoder",
+      "x": 1022.6708746204827,
+      "y": 144.450039616222,
+      "params": {
+        "phaseR": 0,
+        "phaseG": 2.094,
+        "phaseB": 4.189,
+        "frequency": 1
+      }
+    },
+    {
+      "id": 15,
+      "type": "BufferSmear",
+      "x": 452.4389143126605,
+      "y": 166.09423034903585,
+      "params": {
+        "smearAmount": 1,
+        "feedback": 0.05607624451066834,
+        "zoomSpeed": 1
+      }
+    },
+    {
+      "id": 16,
+      "type": "BufferSmear",
+      "x": 198.43891431266047,
+      "y": 472.09423034903585,
+      "params": {
+        "smearAmount": 0.2803812225533417,
+        "feedback": 0.8466666666666667,
+        "zoomSpeed": 1.6666666666666665
+      }
+    },
+    {
+      "id": 17,
+      "type": "TV",
+      "x": 643.3204973732584,
+      "y": 168.66537858183563,
+      "params": {
+        "lineThickness": 1.9293333333333336,
+        "lineDarkness": 0.1,
+        "flicker": 0
+      }
+    },
+    {
+      "id": 18,
+      "type": "Oscillator",
+      "x": 546.4142240903961,
+      "y": -94.02121447984297,
+      "params": {
+        "frequency": 0.1,
+        "waveform": 0,
+        "direction": 0
+      }
+    },
+    {
+      "id": 19,
+      "type": "PixelVision",
+      "x": 825.8826488628135,
+      "y": 164.55869438492925,
+      "params": {
+        "gamma": 1.2,
+        "posterizeLevels": 90,
+        "texelSize": 0.008
+      }
+    }
+  ],
+  "connections": [
+    {
+      "fromId": 14,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 1
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 0,
+      "toPort": 0
+    },
+    {
+      "fromId": 11,
+      "fromPort": 0,
+      "toId": 15,
+      "toPort": 0
+    },
+    {
+      "fromId": 15,
+      "fromPort": 0,
+      "toId": 10,
+      "toPort": 0
+    },
+    {
+      "fromId": 12,
+      "fromPort": 0,
+      "toId": 8,
+      "toPort": 0
+    },
+    {
+      "fromId": 10,
+      "fromPort": 0,
+      "toId": 16,
+      "toPort": 0
+    },
+    {
+      "fromId": 16,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 0
+    },
+    {
+      "fromId": 15,
+      "fromPort": 0,
+      "toId": 17,
+      "toPort": 0
+    },
+    {
+      "fromId": 17,
+      "fromPort": 0,
+      "toId": 19,
+      "toPort": 0
+    },
+    {
+      "fromId": 19,
+      "fromPort": 0,
+      "toId": 14,
+      "toPort": 0
+    }
+  ],
+  "controlConnections": [
+    {
+      "fromId": 18,
+      "fromPort": 1,
+      "toId": 15,
+      "paramName": "feedback"
+    },
+    {
+      "fromId": 18,
+      "fromPort": 1,
+      "toId": 16,
+      "paramName": "smearAmount"
+    }
+  ],
+  "nextId": 20
+}
