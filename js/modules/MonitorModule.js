@@ -22,6 +22,18 @@ export class MonitorModule extends Module {
     this._recorder = null;
     this._recordingChunks = [];
     this._recordingMimeType = null;
+
+    // Recording params (bitrate in bits/sec, default 5 Mbps)
+    const defaultBitrate = 10000000;
+    this.params = {
+      bitrate: {
+        value: defaultBitrate,
+        min: defaultBitrate / 2,   // 5 Mbps
+        max: defaultBitrate * 5,     // 50 Mbps
+        step: 1000000,
+        label: 'Bitrate'
+      }
+    };
   }
 
   process(graph, glCanvas) {
@@ -194,8 +206,14 @@ export class MonitorModule extends Module {
     this._recordingMimeType = selectedMimeType;
     this._recordingChunks = [];
 
+    // Get bitrate from params (allow any value set via direct input)
+    const bitrate = Math.max(100000, Math.round(this.params.bitrate.value));
+
     try {
-      this._recorder = new MediaRecorder(stream, { mimeType: selectedMimeType });
+      this._recorder = new MediaRecorder(stream, {
+        mimeType: selectedMimeType,
+        videoBitsPerSecond: bitrate
+      });
     } catch (e) {
       console.error('Failed to create MediaRecorder:', e);
       return false;
@@ -217,7 +235,7 @@ export class MonitorModule extends Module {
     };
 
     this._recorder.start(1000); // Collect data every second
-    console.log(`Recording started (${selectedMimeType})`);
+    console.log(`Recording started (${selectedMimeType}, ${(bitrate / 1000000).toFixed(2)} Mbps)`);
     return true;
   }
 

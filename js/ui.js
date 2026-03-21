@@ -219,7 +219,7 @@ export class NodeGraphUI {
     const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
     let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS') ? MONITOR_PREVIEW_H + 8 : 0;
     if (mod.type === 'Monitor') {
-      monitorSection += 40; // Extra space for FPS counter + record button
+      monitorSection += 52; // Extra space for param padding + FPS counter + record button
     }
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS';
     const fileBtnSection = hasFileBtn ? 24 : 0;
@@ -401,8 +401,11 @@ export class NodeGraphUI {
 
   _closeParamInput() {
     if (this._activeParamInput) {
-      this._activeParamInput.el.remove();
+      const el = this._activeParamInput.el;
       this._activeParamInput = null;
+      if (el.parentNode) {
+        el.remove();
+      }
     }
   }
 
@@ -558,10 +561,12 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const paramCount = Object.keys(mod.params).length;
+      const paramSection = paramCount * PARAM_ROW_HEIGHT;
 
       if (mod.type === 'Monitor' || mod.type === 'GRASS') {
-        // Large preview area
-        const py = mod.y + HEADER_HEIGHT + portSection;
+        // Large preview area (Monitor has params above preview, GRASS does not)
+        const py = mod.y + HEADER_HEIGHT + portSection + (mod.type === 'Monitor' ? paramSection + 12 : 0);
         if (wx >= mod.x + 4 && wx <= mod.x + 4 + MONITOR_PREVIEW_W &&
             wy >= py && wy <= py + MONITOR_PREVIEW_H) {
           return id;
@@ -606,7 +611,9 @@ export class NodeGraphUI {
       if (mod.type !== 'Monitor') continue;
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
-      const py = mod.y + HEADER_HEIGHT + portSection;
+      const paramCount = Object.keys(mod.params).length;
+      const paramSection = paramCount * PARAM_ROW_HEIGHT;
+      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12; // Match preview padding
       const btnY = py + MONITOR_PREVIEW_H + 20; // Below FPS counter
       if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
@@ -815,7 +822,8 @@ export class NodeGraphUI {
     if (mod.type === 'Monitor') {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
-      const py = mod.y + HEADER_HEIGHT + portSection;
+      const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
+      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12; // Extra padding below params
       p.fill(0);
       p.stroke(60);
       p.strokeWeight(1);
