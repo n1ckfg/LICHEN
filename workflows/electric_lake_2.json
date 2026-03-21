@@ -1,0 +1,240 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "type": "Monitor",
+      "x": 1463,
+      "y": 389,
+      "params": {
+        "bitrate": 10000000
+      }
+    },
+    {
+      "id": 1,
+      "type": "Delay",
+      "x": 497.0251444716847,
+      "y": 429.25059106079533,
+      "params": {
+        "delaySpeed": 0.2,
+        "lumaThreshold": 0.5,
+        "alphaMax": 1,
+        "alphaMin": 0.1
+      }
+    },
+    {
+      "id": 2,
+      "type": "BufferSmear",
+      "x": 670.1802772304068,
+      "y": 399.1626482930104,
+      "params": {
+        "smearAmount": 1,
+        "feedback": 0.96,
+        "zoomSpeed": 1
+      }
+    },
+    {
+      "id": 3,
+      "type": "PixelVision",
+      "x": 835.2262730685679,
+      "y": 109.14763488612039,
+      "params": {
+        "gamma": 1.2,
+        "posterizeLevels": 106.93333333333334,
+        "texelSize": 0.008
+      }
+    },
+    {
+      "id": 4,
+      "type": "Camera",
+      "x": 468.13270165472,
+      "y": 271.86828932301614,
+      "params": {}
+    },
+    {
+      "id": 5,
+      "type": "FunctionGenerator",
+      "x": 858.3205650426207,
+      "y": 383.21500693699716,
+      "params": {
+        "curve": 3.7666666666666666,
+        "gain": 1.4000000000000001
+      }
+    },
+    {
+      "id": 6,
+      "type": "HSFlow",
+      "x": 724.6380114391583,
+      "y": 710.3888178224797,
+      "params": {
+        "lambda": 0.01,
+        "flowScale": 1,
+        "offset": 1,
+        "distortAmt": 1,
+        "slide": 0.8,
+        "lumaThresh": 0.5,
+        "lumaTol": 0.2
+      }
+    },
+    {
+      "id": 7,
+      "type": "ColorEncoder",
+      "x": 936.5752386728153,
+      "y": 591.9114209228641,
+      "params": {
+        "phaseR": 0,
+        "phaseG": 2.094,
+        "phaseB": 2.8486266666666666,
+        "frequency": 0.372242864824877
+      }
+    },
+    {
+      "id": 8,
+      "type": "FilmGrain",
+      "x": 1154.5132402145473,
+      "y": 738.0058531394538,
+      "params": {}
+    },
+    {
+      "id": 9,
+      "type": "Oscillator",
+      "x": 417.1556747810937,
+      "y": 644.703181117733,
+      "params": {
+        "frequency": 0.1,
+        "waveform": 0,
+        "direction": 0
+      }
+    },
+    {
+      "id": 10,
+      "type": "ValueScrambler",
+      "x": 1117.0896634311134,
+      "y": 480.0711647528216,
+      "params": {
+        "levels": 10.6,
+        "scramble": 0.47333333333333333
+      }
+    },
+    {
+      "id": 11,
+      "type": "FunctionGenerator",
+      "x": 1339.7165929884677,
+      "y": 770.1286918537519,
+      "params": {
+        "curve": 0.5333333333333333,
+        "gain": 1.56
+      }
+    },
+    {
+      "id": 12,
+      "type": "AdderMultiplier",
+      "x": 1097.4584747906063,
+      "y": 246.89807644128598,
+      "params": {
+        "mode": 0.66,
+        "mixVal": 1,
+        "contrast": 0.98
+      }
+    },
+    {
+      "id": 13,
+      "type": "UnrealBloom",
+      "x": 1294.4799430862079,
+      "y": 250.58299013907754,
+      "params": {
+        "threshold": 0.5866666666666667,
+        "strength": 1.5,
+        "radius": 0.5
+      }
+    }
+  ],
+  "connections": [
+    {
+      "fromId": 4,
+      "fromPort": 0,
+      "toId": 1,
+      "toPort": 0
+    },
+    {
+      "fromId": 1,
+      "fromPort": 0,
+      "toId": 2,
+      "toPort": 0
+    },
+    {
+      "fromId": 2,
+      "fromPort": 0,
+      "toId": 3,
+      "toPort": 0
+    },
+    {
+      "fromId": 3,
+      "fromPort": 0,
+      "toId": 5,
+      "toPort": 0
+    },
+    {
+      "fromId": 5,
+      "fromPort": 0,
+      "toId": 7,
+      "toPort": 0
+    },
+    {
+      "fromId": 7,
+      "fromPort": 0,
+      "toId": 6,
+      "toPort": 0
+    },
+    {
+      "fromId": 6,
+      "fromPort": 0,
+      "toId": 8,
+      "toPort": 0
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 11,
+      "toPort": 0
+    },
+    {
+      "fromId": 10,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 1
+    },
+    {
+      "fromId": 11,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 0
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 10,
+      "toPort": 0
+    },
+    {
+      "fromId": 12,
+      "fromPort": 0,
+      "toId": 13,
+      "toPort": 0
+    },
+    {
+      "fromId": 13,
+      "fromPort": 0,
+      "toId": 0,
+      "toPort": 0
+    }
+  ],
+  "controlConnections": [
+    {
+      "fromId": 9,
+      "fromPort": 1,
+      "toId": 7,
+      "paramName": "frequency"
+    }
+  ],
+  "nextId": 14
+}
