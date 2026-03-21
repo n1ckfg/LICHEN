@@ -1,0 +1,179 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "type": "Monitor",
+      "x": 850.25,
+      "y": 679.75,
+      "params": {
+        "bitrate": 25000000
+      }
+    },
+    {
+      "id": 1,
+      "type": "ColorEncoder",
+      "x": 689.6682842451442,
+      "y": 60.88956612950949,
+      "params": {
+        "phaseR": 3.099613333333333,
+        "phaseG": 3.770822879115946,
+        "phaseB": 4.0214533333333335,
+        "frequency": 2.452
+      }
+    },
+    {
+      "id": 6,
+      "type": "Delay",
+      "x": 251.8922988796519,
+      "y": 289.7559313026764,
+      "params": {
+        "delaySpeed": 0.19333333333333336,
+        "lumaThreshold": 0.5,
+        "alphaMax": 1,
+        "alphaMin": 0.1
+      }
+    },
+    {
+      "id": 7,
+      "type": "BufferSmear",
+      "x": 454.2001183907096,
+      "y": 74.5343026687226,
+      "params": {
+        "smearAmount": 0.1,
+        "feedback": 0.96,
+        "zoomSpeed": 1
+      }
+    },
+    {
+      "id": 8,
+      "type": "AdderMultiplier",
+      "x": 629.4389877144491,
+      "y": 430.7798565199605,
+      "params": {
+        "mode": 2.24,
+        "mixVal": 0.58,
+        "contrast": 3
+      }
+    },
+    {
+      "id": 9,
+      "type": "Comparator",
+      "x": 450.98556509750665,
+      "y": 308.3864626534039,
+      "params": {
+        "threshold": 0.6001628010689075
+      }
+    },
+    {
+      "id": 12,
+      "type": "Delay",
+      "x": 419.8922988796519,
+      "y": 622.7559313026763,
+      "params": {
+        "delaySpeed": 0.44000000000000006,
+        "lumaThreshold": 0.5733333333333334,
+        "alphaMax": 1,
+        "alphaMin": 0.1
+      }
+    },
+    {
+      "id": 13,
+      "type": "AdderMultiplier",
+      "x": 852.4389877144491,
+      "y": 433.7798565199605,
+      "params": {
+        "mode": 0,
+        "mixVal": 0.74,
+        "contrast": 1.58
+      }
+    },
+    {
+      "id": 14,
+      "type": "PixelVision",
+      "x": 616.8814542441615,
+      "y": 692.8201641688654,
+      "params": {
+        "gamma": 1.2666666666666666,
+        "posterizeLevels": 115.4,
+        "texelSize": 0.008
+      }
+    },
+    {
+      "id": 15,
+      "type": "Camera",
+      "x": 261.5691293367429,
+      "y": 63.82312854419587,
+      "params": {}
+    }
+  ],
+  "connections": [
+    {
+      "fromId": 7,
+      "fromPort": 0,
+      "toId": 1,
+      "toPort": 0
+    },
+    {
+      "fromId": 1,
+      "fromPort": 0,
+      "toId": 6,
+      "toPort": 0
+    },
+    {
+      "fromId": 1,
+      "fromPort": 0,
+      "toId": 9,
+      "toPort": 0
+    },
+    {
+      "fromId": 6,
+      "fromPort": 0,
+      "toId": 8,
+      "toPort": 1
+    },
+    {
+      "fromId": 9,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 0
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 13,
+      "toPort": 0
+    },
+    {
+      "fromId": 13,
+      "fromPort": 0,
+      "toId": 0,
+      "toPort": 0
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 13,
+      "toPort": 1
+    },
+    {
+      "fromId": 12,
+      "fromPort": 0,
+      "toId": 14,
+      "toPort": 0
+    },
+    {
+      "fromId": 14,
+      "fromPort": 0,
+      "toId": 8,
+      "toPort": 0
+    },
+    {
+      "fromId": 15,
+      "fromPort": 0,
+      "toId": 7,
+      "toPort": 0
+    }
+  ],
+  "controlConnections": [],
+  "nextId": 16
+}

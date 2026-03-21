@@ -25,6 +25,7 @@ import './modules/SpatialSliceModule.js';
 import './modules/SyncGeneratorModule.js';
 import './modules/TimeTunnelModule.js';
 import './modules/TVModule.js';
+import './modules/UnrealBloomModule.js';
 import './modules/ValueScramblerModule.js';
 import './modules/VHSCModule.js';
 import './modules/VideoPlayerModule.js';

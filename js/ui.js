@@ -12,7 +12,7 @@ void main() {
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Delay', 'Film', 'GameBoy', 'Glitch', 'HyperCard', 'Mosaic', 'PixelVision', 'RuttEtra', 'SpatialSlice', 'TimeTunnel', 'TV', 'VHSC'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Delay', 'Film', 'GameBoy', 'Glitch', 'HyperCard', 'Mosaic', 'PixelVision', 'RuttEtra', 'SpatialSlice', 'TimeTunnel', 'TV', 'UnrealBloom', 'VHSC'],
   'Output': ['Monitor'],
 };
 
@@ -42,6 +42,7 @@ const MODULE_COLORS = {
   SyncGenerator: [68, 136, 102],
   TimeTunnel: [85, 85, 119],
   TV: [85, 85, 119],
+  UnrealBloom: [170, 136, 85],
   ValueScrambler: [102, 102, 68],
   VHSC: [85, 85, 119],
   VideoPlayer: [34, 85, 170],
