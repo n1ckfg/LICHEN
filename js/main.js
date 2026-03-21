@@ -14,6 +14,7 @@ import './modules/GameBoyModule.js';
 import './modules/GlitchModule.js';
 import './modules/GRASSModule.js';
 import './modules/GridGuysModule.js';
+import './modules/HSFlowModule.js';
 import './modules/HyperCardModule.js';
 import './modules/MonitorModule.js';
 import './modules/MosaicModule.js';
