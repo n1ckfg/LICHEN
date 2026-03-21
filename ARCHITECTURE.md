@@ -34,7 +34,7 @@ The UI renders each param in the `params` object: `{ paramName: { value, min, ma
 
 - **Sources**: Camera, VideoPlayer, Oscillator, GRASS
 - **Core**: Comparator, FunctionGenerator, AdderMultiplier, Differentiator, ColorEncoder, SyncGenerator, ValueScrambler
-- **Effects**: TV, Film, VHSC, PixelVision, GameBoy, HyperCard, Delay, Glitch
+- **Effects**: TVLines, FilmGrain, VHSC, PixelVision, GameBoy, HyperCard, Delay, Glitch, UnrealBloom
 - **Output**: Monitor
 
 ### Shaders (`shaders/`)

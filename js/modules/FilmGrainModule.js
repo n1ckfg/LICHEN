@@ -2,9 +2,9 @@ import { Module } from './Module.js';
 import { filmFrag } from '../shaders/film.js';
 import { registerModule } from '../moduleRegistry.js';
 
-export class FilmModule extends Module {
+export class FilmGrainModule extends Module {
   constructor(glCanvas, id) {
-    super('Film', glCanvas, id);
+    super('FilmGrain', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {};
@@ -26,4 +26,4 @@ export class FilmModule extends Module {
   }
 }
 
-registerModule('Film', FilmModule);
+registerModule('FilmGrain', FilmGrainModule);

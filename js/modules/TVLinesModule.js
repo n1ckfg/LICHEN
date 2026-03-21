@@ -2,9 +2,9 @@ import { Module } from './Module.js';
 import { tvFrag } from '../shaders/tv.js';
 import { registerModule } from '../moduleRegistry.js';
 
-export class TVModule extends Module {
+export class TVLinesModule extends Module {
   constructor(glCanvas, id) {
-    super('TV', glCanvas, id);
+    super('TVLines', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
@@ -33,4 +33,4 @@ export class TVModule extends Module {
   }
 }
 
-registerModule('TV', TVModule);
+registerModule('TVLines', TVLinesModule);

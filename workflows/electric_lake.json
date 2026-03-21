@@ -1,0 +1,162 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "type": "Monitor",
+      "x": 1034.5,
+      "y": 579.75,
+      "params": {
+        "bitrate": 10000000
+      }
+    },
+    {
+      "id": 1,
+      "type": "TVLines",
+      "x": 757.5495081504929,
+      "y": 384.90258795174464,
+      "params": {
+        "lineThickness": 1.2,
+        "lineDarkness": 0.013333333333333336,
+        "flicker": 0.01
+      }
+    },
+    {
+      "id": 2,
+      "type": "GridGuys",
+      "x": 306.37898965625595,
+      "y": 14.588706245305389,
+      "params": {
+        "blend": 1,
+        "delay": 1,
+        "life": 40,
+        "respawn": 50,
+        "chaos": 0.03
+      }
+    },
+    {
+      "id": 3,
+      "type": "FilmGrain",
+      "x": 534.923081698816,
+      "y": 542.0175554397016,
+      "params": {}
+    },
+    {
+      "id": 4,
+      "type": "BufferSmear",
+      "x": 549.5677776482331,
+      "y": 33.013376114218715,
+      "params": {
+        "smearAmount": 1,
+        "feedback": 0.96,
+        "zoomSpeed": 1
+      }
+    },
+    {
+      "id": 7,
+      "type": "ColorEncoder",
+      "x": 361.5933625141996,
+      "y": 296.5097575924027,
+      "params": {
+        "phaseR": 0,
+        "phaseG": 2.094,
+        "phaseB": 4.189,
+        "frequency": 1
+      }
+    },
+    {
+      "id": 8,
+      "type": "VHSC",
+      "x": 952.3634250039479,
+      "y": 353.0213005601139,
+      "params": {
+        "gamma": 1.2,
+        "posterizeLevels": 90,
+        "texelSize": 0.008
+      }
+    },
+    {
+      "id": 9,
+      "type": "RuttEtra",
+      "x": 784.7586793105232,
+      "y": 20.76524258794973,
+      "params": {
+        "scale": 1.208,
+        "scanStep": 3.62,
+        "lineThickness": 1.9366666666666668,
+        "opacity": 0.42666666666666664,
+        "depth": 80,
+        "rotationX": 0.3,
+        "rotationY": 0
+      }
+    },
+    {
+      "id": 10,
+      "type": "AdderMultiplier",
+      "x": 563.7136858476363,
+      "y": 273.5883785274607,
+      "params": {
+        "mode": 0,
+        "mixVal": 0.5,
+        "contrast": 0.86
+      }
+    }
+  ],
+  "connections": [
+    {
+      "fromId": 3,
+      "fromPort": 0,
+      "toId": 1,
+      "toPort": 0
+    },
+    {
+      "fromId": 1,
+      "fromPort": 0,
+      "toId": 8,
+      "toPort": 0
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 0,
+      "toPort": 0
+    },
+    {
+      "fromId": 4,
+      "fromPort": 0,
+      "toId": 9,
+      "toPort": 0
+    },
+    {
+      "fromId": 4,
+      "fromPort": 0,
+      "toId": 10,
+      "toPort": 0
+    },
+    {
+      "fromId": 9,
+      "fromPort": 0,
+      "toId": 10,
+      "toPort": 1
+    },
+    {
+      "fromId": 10,
+      "fromPort": 0,
+      "toId": 7,
+      "toPort": 0
+    },
+    {
+      "fromId": 7,
+      "fromPort": 0,
+      "toId": 3,
+      "toPort": 0
+    },
+    {
+      "fromId": 2,
+      "fromPort": 0,
+      "toId": 4,
+      "toPort": 0
+    }
+  ],
+  "controlConnections": [],
+  "nextId": 13
+}
