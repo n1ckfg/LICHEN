@@ -221,7 +221,7 @@ export class NodeGraphUI {
     const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
     let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS') ? MONITOR_PREVIEW_H + 8 : 0;
     if (mod.type === 'Monitor') {
-      monitorSection += 52; // Extra space for param padding + FPS counter + record button
+      monitorSection += 76; // Extra space for param padding + FPS counter + record button + fullscreen button
     }
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS';
     const fileBtnSection = hasFileBtn ? 24 : 0;
@@ -625,6 +625,24 @@ export class NodeGraphUI {
     return null;
   }
 
+  hitTestFullscreenBtn(wx, wy) {
+    const graph = this.pipeline.graph;
+    for (const [id, mod] of graph.nodes) {
+      if (mod.type !== 'Monitor') continue;
+      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
+      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const paramCount = Object.keys(mod.params).length;
+      const paramSection = paramCount * PARAM_ROW_HEIGHT;
+      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
+      const btnY = py + MONITOR_PREVIEW_H + 44; // Below record button
+      if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
+          wy >= btnY && wy <= btnY + 20) {
+        return id;
+      }
+    }
+    return null;
+  }
+
   draw() {
     const p = this.p;
     const graph = this.pipeline.graph;
@@ -856,6 +874,18 @@ export class NodeGraphUI {
       p.textSize(9);
       p.textAlign(p.CENTER, p.CENTER);
       p.text(isRec ? 'Stop Recording' : 'Record', mod.x + MODULE_WIDTH / 2, btnY + 10);
+
+      // Fullscreen button
+      const fsBtnY = py + MONITOR_PREVIEW_H + 44;
+      p.fill([60, 60, 90]);
+      p.stroke(100);
+      p.strokeWeight(1);
+      p.rect(mod.x + 10, fsBtnY, MODULE_WIDTH - 20, 20, 3);
+      p.noStroke();
+      p.fill(200);
+      p.textSize(9);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.text('Fullscreen', mod.x + MODULE_WIDTH / 2, fsBtnY + 10);
     }
 
     // GRASS preview (clean video output, same size as Monitor preview)
@@ -1015,6 +1045,20 @@ export class NodeGraphUI {
         } else if (mod.startRecording) {
           mod.startRecording(this.pipeline.glCanvas);
         }
+      }
+      return;
+    }
+
+    // Check Monitor fullscreen button
+    const fsHit = this.hitTestFullscreenBtn(world.x, world.y);
+    if (fsHit !== null) {
+      const mod = this.pipeline.graph.nodes.get(fsHit);
+      if (mod && mod.type === 'Monitor') {
+        mod.trySecondScreenFullscreen(this.pipeline.glCanvas).then(opened => {
+          if (!opened) {
+            this.fullscreenMonitor = fsHit;
+          }
+        });
       }
       return;
     }
