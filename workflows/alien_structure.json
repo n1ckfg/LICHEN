@@ -1,0 +1,174 @@
+{
+  "nodes": [
+    {
+      "id": 4,
+      "type": "GridGuys",
+      "x": 326,
+      "y": 69,
+      "params": {
+        "blend": 1,
+        "delay": 1,
+        "life": 40,
+        "respawn": 50,
+        "chaos": 0.03
+      }
+    },
+    {
+      "id": 5,
+      "type": "Delay",
+      "x": 333,
+      "y": 326,
+      "params": {
+        "delaySpeed": 0.2,
+        "lumaThreshold": 0.5,
+        "alphaMax": 1,
+        "alphaMin": 0.1
+      }
+    },
+    {
+      "id": 6,
+      "type": "BufferSmear",
+      "x": 537,
+      "y": 441,
+      "params": {
+        "smearAmount": 4.7666666666666675,
+        "feedback": 0.6533333333333344,
+        "zoomSpeed": 2.5666666666666678
+      }
+    },
+    {
+      "id": 7,
+      "type": "Delay",
+      "x": 728.4209325587085,
+      "y": 485.26279767612533,
+      "params": {
+        "delaySpeed": 0.2,
+        "lumaThreshold": 0.5,
+        "alphaMax": 1,
+        "alphaMin": 0.1
+      }
+    },
+    {
+      "id": 8,
+      "type": "HSFlow",
+      "x": 915,
+      "y": 347,
+      "params": {
+        "lambda": 0.01,
+        "flowScale": 1,
+        "offset": 1,
+        "distortAmt": 1,
+        "slide": 0.8,
+        "lumaThresh": 0.5,
+        "lumaTol": 0.2
+      }
+    },
+    {
+      "id": 9,
+      "type": "Monitor",
+      "x": 1441.2052662217918,
+      "y": 156.6149613216901,
+      "params": {
+        "bitrate": 10000000
+      }
+    },
+    {
+      "id": 10,
+      "type": "ColorEncoder",
+      "x": 716.3757196247495,
+      "y": 85.85740580549242,
+      "params": {
+        "phaseR": 1.298486666666667,
+        "phaseG": 2.094,
+        "phaseB": 4.189,
+        "frequency": 1
+      }
+    },
+    {
+      "id": 11,
+      "type": "FunctionGenerator",
+      "x": 943.1367651654868,
+      "y": 82.29543033133348,
+      "params": {
+        "curve": 0.7666666666666668,
+        "gain": 0.9800000000000004
+      }
+    },
+    {
+      "id": 12,
+      "type": "UnrealBloom",
+      "x": 1109.3929749159752,
+      "y": 398.11296890276,
+      "params": {
+        "threshold": 0.6799999999999998,
+        "strength": 2.833333333333333,
+        "radius": 0.5266666666666664
+      }
+    },
+    {
+      "id": 13,
+      "type": "FilmGrain",
+      "x": 1126.13017723985,
+      "y": 156.97029125599067,
+      "params": {}
+    }
+  ],
+  "connections": [
+    {
+      "fromId": 4,
+      "fromPort": 0,
+      "toId": 5,
+      "toPort": 0
+    },
+    {
+      "fromId": 5,
+      "fromPort": 0,
+      "toId": 6,
+      "toPort": 0
+    },
+    {
+      "fromId": 7,
+      "fromPort": 0,
+      "toId": 8,
+      "toPort": 0
+    },
+    {
+      "fromId": 6,
+      "fromPort": 0,
+      "toId": 10,
+      "toPort": 0
+    },
+    {
+      "fromId": 10,
+      "fromPort": 0,
+      "toId": 7,
+      "toPort": 0
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 11,
+      "toPort": 0
+    },
+    {
+      "fromId": 12,
+      "fromPort": 0,
+      "toId": 9,
+      "toPort": 0
+    },
+    {
+      "fromId": 11,
+      "fromPort": 0,
+      "toId": 13,
+      "toPort": 0
+    },
+    {
+      "fromId": 13,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 0
+    }
+  ],
+  "controlConnections": [],
+  "nextId": 14
+}
