@@ -110,6 +110,7 @@ export class NodeGraphUI {
     this._allModuleTypes = Object.values(MODULE_CATEGORIES).flat().sort();
     this._placingModule = null; // module currently following mouse, waiting to be placed
     this._dyingNodes = new Map(); // id -> { mod, startTime } for fade-out animation
+    this._selectionBox = null; // { startX, startY, endX, endY } in world coords
   }
 
   // Render a Framebuffer onto the P2D main canvas by blitting through glCanvas
@@ -774,6 +775,22 @@ export class NodeGraphUI {
       }
     }
 
+    // Draw selection box
+    if (this._selectionBox) {
+      const box = this._selectionBox;
+      const x = Math.min(box.startX, box.endX);
+      const y = Math.min(box.startY, box.endY);
+      const w = Math.abs(box.endX - box.startX);
+      const h = Math.abs(box.endY - box.startY);
+      p.noFill();
+      p.stroke(100, 150, 255, 200);
+      p.strokeWeight(1);
+      p.rect(x, y, w, h);
+      p.fill(100, 150, 255, 30);
+      p.noStroke();
+      p.rect(x, y, w, h);
+    }
+
     p.pop();
   }
 
@@ -1238,7 +1255,14 @@ export class NodeGraphUI {
       return;
     }
 
+    // Clicked on empty space - start selection box
     this.selectedNodes.clear();
+    this._selectionBox = {
+      startX: world.x,
+      startY: world.y,
+      endX: world.x,
+      endY: world.y
+    };
   }
 
   mouseDragged(mx, my) {
@@ -1279,6 +1303,13 @@ export class NodeGraphUI {
         const newVal = dk.startValue + delta * range;
         mod.setParam(dk.paramName, newVal);
       }
+      return;
+    }
+
+    // Update selection box
+    if (this._selectionBox) {
+      this._selectionBox.endX = world.x;
+      this._selectionBox.endY = world.y;
     }
   }
 
@@ -1359,6 +1390,29 @@ export class NodeGraphUI {
         this.draggingCable = null;
       }
       return;
+    }
+
+    // Finalize selection box
+    if (this._selectionBox) {
+      const box = this._selectionBox;
+      const minX = Math.min(box.startX, box.endX);
+      const maxX = Math.max(box.startX, box.endX);
+      const minY = Math.min(box.startY, box.endY);
+      const maxY = Math.max(box.startY, box.endY);
+
+      // Select all nodes that intersect with the box
+      for (const [id, mod] of this.pipeline.graph.nodes) {
+        const modH = this.getModuleHeight(mod);
+        const modRight = mod.x + MODULE_WIDTH;
+        const modBottom = mod.y + modH;
+
+        // Check if module intersects with selection box
+        if (mod.x < maxX && modRight > minX && mod.y < maxY && modBottom > minY) {
+          this.selectedNodes.add(id);
+        }
+      }
+
+      this._selectionBox = null;
     }
 
     this.draggingNode = null;
