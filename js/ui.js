@@ -85,6 +85,7 @@ export class NodeGraphUI {
     this.draggingNode = null;
     this.dragOffsetX = 0;
     this.dragOffsetY = 0;
+    this.dragOffsets = new Map(); // offsets for all selected nodes during multi-drag
     this.dragStartX = 0;      // screen coords at drag mousedown
     this.dragStartY = 0;
     this.dragActive = false;  // true only after mouse moves beyond dead zone
@@ -108,6 +109,7 @@ export class NodeGraphUI {
     this._searchPopup = null;
     this._allModuleTypes = Object.values(MODULE_CATEGORIES).flat().sort();
     this._placingModule = null; // module currently following mouse, waiting to be placed
+    this._dyingNodes = new Map(); // id -> { mod, startTime } for fade-out animation
   }
 
   // Render a Framebuffer onto the P2D main canvas by blitting through glCanvas
@@ -759,6 +761,19 @@ export class NodeGraphUI {
       this._drawModule(p, mod, id);
     }
 
+    // Draw dying nodes with fade-out
+    const FADE_DURATION = 300; // ms
+    const now = performance.now();
+    for (const [id, dying] of this._dyingNodes) {
+      const elapsed = now - dying.startTime;
+      if (elapsed >= FADE_DURATION) {
+        this._finalizeDyingNode(id);
+      } else {
+        const opacity = 1 - (elapsed / FADE_DURATION);
+        this._drawModule(p, dying.mod, id, opacity);
+      }
+    }
+
     p.pop();
   }
 
@@ -771,10 +786,14 @@ export class NodeGraphUI {
     p.bezier(x1, y1, x1, y1 + cpOffset, x2, y2 - cpOffset, x2, y2);
   }
 
-  _drawModule(p, mod, id) {
+  _drawModule(p, mod, id, opacity = 1) {
     const h = this.getModuleHeight(mod);
     const col = MODULE_COLORS[mod.type] || [80, 80, 80];
     const isSelected = this.selectedNodes.has(id);
+
+    // Apply opacity for dying nodes
+    const prevAlpha = p.drawingContext.globalAlpha;
+    p.drawingContext.globalAlpha = opacity;
 
     // Shadow
     p.noStroke();
@@ -975,6 +994,9 @@ export class NodeGraphUI {
       const btnLabel = mod.type === 'NAPLPS' ? 'Load .nap...' : 'Load Video...';
       p.text(btnLabel, mod.x + MODULE_WIDTH / 2, btnY + 10);
     }
+
+    // Restore opacity
+    p.drawingContext.globalAlpha = prevAlpha;
   }
 
   mousePressed(mx, my, button) {
@@ -1020,21 +1042,42 @@ export class NodeGraphUI {
       return;
     }
 
-    // Alt+click on a module: duplicate it
+    // Alt+click on a module: duplicate it (or all selected if part of selection)
     if (this.p.keyIsDown(this.p.ALT)) {
       const nodeHit = this.hitTestNode(world.x, world.y);
       if (nodeHit !== null) {
-        const dupId = this._duplicateNode(nodeHit);
-        if (dupId !== null) {
-          const mod = this.pipeline.graph.nodes.get(dupId);
-          this.draggingNode = dupId;
-          this.dragOffsetX = world.x - mod.x;
-          this.dragOffsetY = world.y - mod.y;
+        // Determine which nodes to duplicate
+        const nodesToDup = this.selectedNodes.has(nodeHit) && this.selectedNodes.size > 1
+          ? [...this.selectedNodes]
+          : [nodeHit];
+
+        // Duplicate all nodes
+        const newIds = [];
+        for (const srcId of nodesToDup) {
+          const dupId = this._duplicateNode(srcId);
+          if (dupId !== null) {
+            newIds.push(dupId);
+          }
+        }
+
+        if (newIds.length > 0) {
+          // Use the first duplicated node as the drag anchor
+          const anchorMod = this.pipeline.graph.nodes.get(newIds[0]);
+          this.draggingNode = newIds[0];
+          this.dragOffsetX = world.x - anchorMod.x;
+          this.dragOffsetY = world.y - anchorMod.y;
           this.dragStartX = mx;
           this.dragStartY = my;
           this.dragActive = true;
+
+          // Select all new nodes and set up drag offsets
           this.selectedNodes.clear();
-          this.selectedNodes.add(dupId);
+          this.dragOffsets.clear();
+          for (const id of newIds) {
+            const mod = this.pipeline.graph.nodes.get(id);
+            this.selectedNodes.add(id);
+            this.dragOffsets.set(id, { x: world.x - mod.x, y: world.y - mod.y });
+          }
         }
         return;
       }
@@ -1176,8 +1219,22 @@ export class NodeGraphUI {
       this.dragStartX = mx;
       this.dragStartY = my;
       this.dragActive = false;
-      this.selectedNodes.clear();
-      this.selectedNodes.add(nodeHit);
+
+      // If clicked node is already selected, keep multi-selection for group drag
+      // Otherwise, clear selection and select only this node
+      if (!this.selectedNodes.has(nodeHit)) {
+        this.selectedNodes.clear();
+        this.selectedNodes.add(nodeHit);
+      }
+
+      // Store offsets for all selected nodes for group dragging
+      this.dragOffsets.clear();
+      for (const id of this.selectedNodes) {
+        const m = this.pipeline.graph.nodes.get(id);
+        if (m) {
+          this.dragOffsets.set(id, { x: world.x - m.x, y: world.y - m.y });
+        }
+      }
       return;
     }
 
@@ -1200,10 +1257,14 @@ export class NodeGraphUI {
         if (Math.hypot(mx - this.dragStartX, my - this.dragStartY) < 4) return;
         this.dragActive = true;
       }
-      const mod = this.pipeline.graph.nodes.get(this.draggingNode);
-      if (mod) {
-        mod.x = world.x - this.dragOffsetX;
-        mod.y = world.y - this.dragOffsetY;
+      // Move all selected nodes together
+      for (const id of this.selectedNodes) {
+        const mod = this.pipeline.graph.nodes.get(id);
+        const offset = this.dragOffsets.get(id);
+        if (mod && offset) {
+          mod.x = world.x - offset.x;
+          mod.y = world.y - offset.y;
+        }
       }
       return;
     }
@@ -1432,10 +1493,19 @@ export class NodeGraphUI {
   _deleteNode(id) {
     const mod = this.pipeline.graph.nodes.get(id);
     if (mod) {
-      mod.dispose();
+      // Start fade-out animation
+      this._dyingNodes.set(id, { mod, startTime: performance.now() });
       this.pipeline.graph.removeNode(id); // also calls disconnectAllControl
       this.selectedNodes.delete(id);
       if (this.fullscreenMonitor === id) this.fullscreenMonitor = null;
+    }
+  }
+
+  _finalizeDyingNode(id) {
+    const dying = this._dyingNodes.get(id);
+    if (dying) {
+      dying.mod.dispose();
+      this._dyingNodes.delete(id);
     }
   }
 
