@@ -160,6 +160,10 @@ export class NodeGraphUI {
       for (const typeName of types) {
         const btn = document.createElement('button');
         btn.textContent = typeName;
+        const color = MODULE_COLORS[typeName];
+        if (color) {
+          btn.style.backgroundColor = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+        }
         btn.addEventListener('click', () => this._addModule(typeName));
         content.appendChild(btn);
       }
