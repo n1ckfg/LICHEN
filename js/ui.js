@@ -111,6 +111,7 @@ export class NodeGraphUI {
     this._placingModule = null; // module currently following mouse, waiting to be placed
     this._dyingNodes = new Map(); // id -> { mod, startTime } for fade-out animation
     this._selectionBox = null; // { startX, startY, endX, endY } in world coords
+    this._hoveredPort = null; // { nodeId, portType, portIndex } for hover highlight
   }
 
   // Render a Framebuffer onto the P2D main canvas by blitting through glCanvas
@@ -722,6 +723,10 @@ export class NodeGraphUI {
       }
     }
 
+    // Track hovered port for highlight
+    const mouseWorld = this.screenToWorld(p.mouseX, p.mouseY);
+    this._hoveredPort = this.hitTestPort(mouseWorld.x, mouseWorld.y);
+
     p.push();
     p.translate(this.panX, this.panY);
     p.scale(this.zoom);
@@ -844,9 +849,13 @@ export class NodeGraphUI {
     // Input ports
     for (let i = 0; i < mod.inputs.length; i++) {
       const pos = this.getInputPortPos(mod, i);
+      const isHovered = this._hoveredPort &&
+        this._hoveredPort.nodeId === id &&
+        this._hoveredPort.portType === 'input' &&
+        this._hoveredPort.portIndex === i;
       p.fill(68, 136, 255);
-      p.stroke(255);
-      p.strokeWeight(1.5);
+      p.stroke(isHovered ? [255, 255, 0] : 255);
+      p.strokeWeight(isHovered ? 2.5 : 1.5);
       p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
       p.noStroke();
       p.fill(180);
@@ -859,9 +868,13 @@ export class NodeGraphUI {
     for (let i = 0; i < mod.outputs.length; i++) {
       const pos = this.getOutputPortPos(mod, i);
       const isControlPort = mod.outputs[i].type === 'control';
+      const isHovered = this._hoveredPort &&
+        this._hoveredPort.nodeId === id &&
+        this._hoveredPort.portType === 'output' &&
+        this._hoveredPort.portIndex === i;
       p.fill(isControlPort ? [100, 255, 130] : [255, 136, 68]);
-      p.stroke(255);
-      p.strokeWeight(1.5);
+      p.stroke(isHovered ? [255, 255, 0] : 255);
+      p.strokeWeight(isHovered ? 2.5 : 1.5);
       p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
       p.noStroke();
       p.fill(180);
