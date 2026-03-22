@@ -7,7 +7,7 @@ export class OscillatorModule extends Module {
     super('Oscillator', glCanvas, id);
     this.outputs = [{ name: 'out', type: 'video' }, { name: 'out2', type: 'control' }];
     this.params = {
-      frequency: { value: 4, min: 0.1, max: 50, step: 0.1, label: 'Freq' },
+      frequency: { value: 4, min: 0.0001, max: 50, step: 0.1, label: 'Freq' },
       waveform: { value: 0, min: 0, max: 3, step: 1, label: 'Wave' },
       direction: { value: 0, min: 0, max: 2, step: 1, label: 'Dir' },
     };

@@ -13,6 +13,7 @@ const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Delay', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'Mosaic', 'PixelVision', 'RuttEtra', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
+  'Utility': ['Brcosa', 'VideoMixer'],
   'Output': ['Monitor'],
 };
 
@@ -24,6 +25,7 @@ const color_effect_noise = [68, 102, 136];
 const color_effect_tv = [95, 85, 129];
 const color_effect_flow = [136, 85, 34];
 const color_effect_op = [78, 112, 136];
+const color_utility = [85, 120, 100];
 const color_output = [170, 85, 34];
 
 const MODULE_COLORS = {
@@ -60,6 +62,9 @@ const MODULE_COLORS = {
   TVLines: color_effect_tv,
   UnrealBloom: color_effect_op,
   VHSC: color_effect_tv,
+  // - - - UTILITY - - -
+  Brcosa: color_utility,
+  VideoMixer: color_utility,
   // - - - OUTPUT - - -
   Monitor: color_output 
 };
@@ -134,6 +139,7 @@ export class NodeGraphUI {
       'Sources': true,
       'Core': true,
       'Effects': true,
+      'Utility': true,
       'Output': true,
     };
 

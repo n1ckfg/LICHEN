@@ -33,6 +33,9 @@ import './modules/TimeTunnelModule.js';
 import './modules/TVLinesModule.js';
 import './modules/UnrealBloomModule.js';
 import './modules/VHSCModule.js';
+// - - - UTILITY - - -
+import './modules/BrcosaModule.js';
+import './modules/VideoMixerModule.js';
 // - - - OUTPUT - - -
 import './modules/MonitorModule.js';
 
