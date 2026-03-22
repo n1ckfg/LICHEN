@@ -13,7 +13,7 @@ const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Delay', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'Mosaic', 'PixelVision', 'RuttEtra', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
-  'Utility': ['Brcosa', 'VideoMixer'],
+  'Utility': ['Brcosa', 'Levels', 'VideoMixer'],
   'Output': ['Monitor'],
 };
 
@@ -64,6 +64,7 @@ const MODULE_COLORS = {
   VHSC: color_effect_tv,
   // - - - UTILITY - - -
   Brcosa: color_utility,
+  Levels: color_utility,
   VideoMixer: color_utility,
   // - - - OUTPUT - - -
   Monitor: color_output 
