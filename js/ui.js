@@ -1461,11 +1461,54 @@ export class NodeGraphUI {
       return;
     }
 
-    // Double-click on empty canvas: open search popup
+    // Double-click on empty canvas: fit all nodes in view
     const nodeHit = this.hitTestNode(world.x, world.y);
     if (nodeHit === null) {
-      this._openSearchPopup(mx, my);
+      this._fitAllNodes();
     }
+  }
+
+  _fitAllNodes() {
+    const graph = this.pipeline.graph;
+    if (graph.nodes.size === 0) return;
+
+    // Account for left-hand module menu (160px width + 10px margin + 8px padding)
+    const menuWidth = 180;
+
+    // Calculate bounding box of all nodes
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const [id, mod] of graph.nodes) {
+      const h = this.getModuleHeight(mod);
+      minX = Math.min(minX, mod.x);
+      minY = Math.min(minY, mod.y);
+      maxX = Math.max(maxX, mod.x + MODULE_WIDTH);
+      maxY = Math.max(maxY, mod.y + h);
+    }
+
+    // Add padding
+    const padding = 50;
+    minX -= padding;
+    minY -= padding;
+    maxX += padding;
+    maxY += padding;
+
+    const boxW = maxX - minX;
+    const boxH = maxY - minY;
+
+    // Calculate available viewport (excluding menu)
+    const availableWidth = this.p.width - menuWidth;
+    const availableHeight = this.p.height;
+
+    // Calculate zoom to fit
+    const scaleX = availableWidth / boxW;
+    const scaleY = availableHeight / boxH;
+    this.zoom = Math.min(scaleX, scaleY, 1.5); // Cap zoom at 1.5x
+
+    // Center the bounding box in the available area (offset by menu)
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+    this.panX = menuWidth + availableWidth / 2 - centerX * this.zoom;
+    this.panY = availableHeight / 2 - centerY * this.zoom;
   }
 
   _handleRightClick(world) {
@@ -1500,6 +1543,13 @@ export class NodeGraphUI {
         graph.topologicalSort();
         return;
       }
+    }
+
+    // Right-click on empty space: open search popup
+    const nodeHit = this.hitTestNode(world.x, world.y);
+    if (nodeHit === null) {
+      const screen = this.worldToScreen(world.x, world.y);
+      this._openSearchPopup(screen.x, screen.y);
     }
   }
 
