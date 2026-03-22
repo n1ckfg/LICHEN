@@ -98,7 +98,7 @@ export class NodeGraphUI {
     this.panStartY = 0;
     this.panStartPanX = 0;
     this.panStartPanY = 0;
-    this.selectedNode = null;
+    this.selectedNodes = new Set();
     this.fullscreenMonitor = null;
     this._blitShader = null;
     this._activeParamInput = null; // currently active inline text input
@@ -217,7 +217,8 @@ export class NodeGraphUI {
     mod.y = world.y - h / 2;
     graph.addNode(mod);
     this._placingModule = mod.id;
-    this.selectedNode = mod.id;
+    this.selectedNodes.clear();
+    this.selectedNodes.add(mod.id);
     this._paletteEl.style.opacity = '0.5';
   }
 
@@ -773,7 +774,7 @@ export class NodeGraphUI {
   _drawModule(p, mod, id) {
     const h = this.getModuleHeight(mod);
     const col = MODULE_COLORS[mod.type] || [80, 80, 80];
-    const isSelected = this.selectedNode === id;
+    const isSelected = this.selectedNodes.has(id);
 
     // Shadow
     p.noStroke();
@@ -1032,7 +1033,8 @@ export class NodeGraphUI {
           this.dragStartX = mx;
           this.dragStartY = my;
           this.dragActive = true;
-          this.selectedNode = dupId;
+          this.selectedNodes.clear();
+          this.selectedNodes.add(dupId);
         }
         return;
       }
@@ -1174,11 +1176,12 @@ export class NodeGraphUI {
       this.dragStartX = mx;
       this.dragStartY = my;
       this.dragActive = false;
-      this.selectedNode = nodeHit;
+      this.selectedNodes.clear();
+      this.selectedNodes.add(nodeHit);
       return;
     }
 
-    this.selectedNode = null;
+    this.selectedNodes.clear();
   }
 
   mouseDragged(mx, my) {
@@ -1431,8 +1434,15 @@ export class NodeGraphUI {
     if (mod) {
       mod.dispose();
       this.pipeline.graph.removeNode(id); // also calls disconnectAllControl
-      if (this.selectedNode === id) this.selectedNode = null;
+      this.selectedNodes.delete(id);
       if (this.fullscreenMonitor === id) this.fullscreenMonitor = null;
+    }
+  }
+
+  selectAll() {
+    this.selectedNodes.clear();
+    for (const id of this.pipeline.graph.nodes.keys()) {
+      this.selectedNodes.add(id);
     }
   }
 

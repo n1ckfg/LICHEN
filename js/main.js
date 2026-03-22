@@ -101,10 +101,16 @@ const sketch = (p) => {
       return false;
     }
     if (p.key === 'Delete' || p.key === 'Backspace') {
-      if (ui.selectedNode !== null) {
-        ui._deleteNode(ui.selectedNode);
+      if (ui.selectedNodes.size > 0) {
+        for (const id of [...ui.selectedNodes]) {
+          ui._deleteNode(id);
+        }
         return false;
       }
+    }
+    if (p.key === 'a' && (p.keyIsDown(p.CONTROL) || p.keyIsDown(91))) {
+      ui.selectAll();
+      return false;
     }
     if (p.key === 's' && (p.keyIsDown(p.CONTROL) || p.keyIsDown(91))) {
       const data = ui.toJSON();
