@@ -71,6 +71,11 @@ const sketch = (p) => {
   };
 
   p.mouseWheel = (e) => {
+    // Let menu scroll naturally when mouse is over it
+    const palette = document.getElementById('module-palette');
+    if (palette && palette.matches(':hover')) {
+      return true; // Allow default scroll behavior
+    }
     ui.mouseWheel(e.delta);
     return false;
   };
