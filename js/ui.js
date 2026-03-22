@@ -16,42 +16,52 @@ const MODULE_CATEGORIES = {
   'Output': ['Monitor'],
 };
 
+const color_source_basic = [34, 85, 170];
+const color_source_grass = [34, 120, 68];
+const color_source_art = [170, 85, 136];
+const color_core_sandin = [102, 102, 68];
+const color_effect_noise = [68, 102, 136];
+const color_effect_tv = [95, 85, 129];
+const color_effect_flow = [136, 85, 34];
+const color_effect_op = [78, 112, 136];
+const color_output = [170, 85, 34];
+
 const MODULE_COLORS = {
   // - - - SOURCES - - -
-  Camera: [34, 85, 170],
-  GRASS: [34, 120, 68],
-  GridGuys: [170, 85, 136],
-  NAPLPS: [170, 85, 136],
-  Oscillator: [34, 136, 85],
-  VideoPlayer: [34, 85, 170],
+  Camera: color_source_basic,
+  GRASS: color_source_grass,
+  GridGuys: color_source_art,
+  NAPLPS: color_source_art,
+  Oscillator: color_core_sandin,
+  VideoPlayer: color_source_basic,
   // - - - CORE - - -
-  AdderMultiplier: [102, 68, 136],
-  ColorEncoder: [170, 68, 102],
-  Comparator: [136, 85, 34],
-  Differentiator: [136, 102, 68],
-  FunctionGenerator: [85, 136, 34],
-  SyncGenerator: [68, 136, 102],
-  ValueScrambler: [102, 102, 68],
+  AdderMultiplier: color_core_sandin,
+  ColorEncoder: color_core_sandin,
+  Comparator: color_core_sandin,
+  Differentiator: color_core_sandin,
+  FunctionGenerator: color_core_sandin,
+  SyncGenerator: color_core_sandin,
+  ValueScrambler: color_core_sandin,
   // - - - EFFECTS - - -
-  BooleanLogic: [136, 68, 136],
-  BufferSmear: [102, 119, 136],
-  DeeSeventySix: [68, 102, 136],
-  Delay: [68, 102, 136],
-  FilmGrain: [85, 85, 119],
-  GameBoy: [85, 85, 119],
-  Glitch: [102, 68, 85],
-  HSFlow: [102, 136, 170],
-  HyperCard: [85, 85, 119],
-  Mosaic: [119, 102, 85],
-  PixelVision: [85, 85, 119],
-  RuttEtra: [85, 85, 119],
-  SpatialSlice: [119, 85, 102],
-  TimeTunnel: [85, 85, 119],
-  TVLines: [85, 85, 119],
-  UnrealBloom: [170, 136, 85],
-  VHSC: [85, 85, 119],
+  BooleanLogic: color_effect_op,
+  BufferSmear: color_effect_flow,
+  DeeSeventySix: color_effect_noise,
+  Delay: color_effect_flow,
+  FilmGrain: color_effect_noise,
+  GameBoy: color_effect_noise,
+  Glitch: color_effect_tv,
+  HSFlow: color_effect_flow,
+  HyperCard: color_effect_noise,
+  Mosaic: color_effect_op,
+  PixelVision: color_effect_tv,
+  RuttEtra: color_effect_tv,
+  SpatialSlice: color_effect_op,
+  TimeTunnel: color_effect_tv,
+  TVLines: color_effect_tv,
+  UnrealBloom: color_effect_op,
+  VHSC: color_effect_tv,
   // - - - OUTPUT - - -
-  Monitor: [170, 85, 34]  
+  Monitor: color_output 
 };
 
 const MODULE_WIDTH = 160;
