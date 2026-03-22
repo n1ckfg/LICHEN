@@ -1,35 +1,40 @@
 import { ProcessingPipeline } from './pipeline.js';
 import { NodeGraphUI } from './ui.js';
-import './modules/AdderMultiplierModule.js';
-import './modules/BooleanLogicModule.js';
-import './modules/BufferSmearModule.js';
+// - - - SOURCES - - -
 import './modules/CameraModule.js';
-import './modules/ColorEncoderModule.js';
-import './modules/ComparatorModule.js';
-import './modules/DelayModule.js';
-import './modules/DifferentiatorModule.js';
-import './modules/FilmGrainModule.js';
-import './modules/FunctionGeneratorModule.js';
-import './modules/GameBoyModule.js';
-import './modules/GlitchModule.js';
 import './modules/GRASSModule.js';
 import './modules/GridGuysModule.js';
-import './modules/HSFlowModule.js';
-import './modules/HyperCardModule.js';
-import './modules/MonitorModule.js';
-import './modules/MosaicModule.js';
 import './modules/NAPLPSModule.js';
 import './modules/OscillatorModule.js';
+import './modules/VideoPlayerModule.js';
+// - - - CORE - - -
+import './modules/AdderMultiplierModule.js';
+import './modules/ColorEncoderModule.js';
+import './modules/ComparatorModule.js';
+import './modules/DifferentiatorModule.js';
+import './modules/FunctionGeneratorModule.js';
+import './modules/SyncGeneratorModule.js';
+import './modules/ValueScramblerModule.js';
+// - - - EFFECTS - - -
+import './modules/BooleanLogicModule.js';
+import './modules/BufferSmearModule.js';
+import './modules/DeeSeventySixModule.js';
+import './modules/DelayModule.js';
+import './modules/FilmGrainModule.js';
+import './modules/GameBoyModule.js';
+import './modules/GlitchModule.js';
+import './modules/HSFlowModule.js';
+import './modules/HyperCardModule.js';
+import './modules/MosaicModule.js';
 import './modules/PixelVisionModule.js';
 import './modules/RuttEtraModule.js';
 import './modules/SpatialSliceModule.js';
-import './modules/SyncGeneratorModule.js';
 import './modules/TimeTunnelModule.js';
 import './modules/TVLinesModule.js';
 import './modules/UnrealBloomModule.js';
-import './modules/ValueScramblerModule.js';
 import './modules/VHSCModule.js';
-import './modules/VideoPlayerModule.js';
+// - - - OUTPUT - - -
+import './modules/MonitorModule.js';
 
 let pipeline, ui, glCanvas;
 

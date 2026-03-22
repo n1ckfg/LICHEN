@@ -12,41 +12,46 @@ void main() {
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Delay', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'Mosaic', 'PixelVision', 'RuttEtra', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Delay', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'Mosaic', 'PixelVision', 'RuttEtra', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
   'Output': ['Monitor'],
 };
 
 const MODULE_COLORS = {
-  AdderMultiplier: [102, 68, 136],
-  BooleanLogic: [136, 68, 136],
-  BufferSmear: [102, 119, 136],
+  // - - - SOURCES - - -
   Camera: [34, 85, 170],
-  ColorEncoder: [170, 68, 102],
-  Comparator: [136, 85, 34],
-  Delay: [68, 102, 136],
-  Differentiator: [136, 102, 68],
-  FilmGrain: [85, 85, 119],
-  FunctionGenerator: [85, 136, 34],
-  GameBoy: [85, 85, 119],
-  Glitch: [102, 68, 85],
   GRASS: [34, 120, 68],
-  HSFlow: [102, 136, 170],
   GridGuys: [170, 85, 136],
-  HyperCard: [85, 85, 119],
-  Monitor: [170, 85, 34],
-  Mosaic: [119, 102, 85],
   NAPLPS: [170, 85, 136],
   Oscillator: [34, 136, 85],
+  VideoPlayer: [34, 85, 170],
+  // - - - CORE - - -
+  AdderMultiplier: [102, 68, 136],
+  ColorEncoder: [170, 68, 102],
+  Comparator: [136, 85, 34],
+  Differentiator: [136, 102, 68],
+  FunctionGenerator: [85, 136, 34],
+  SyncGenerator: [68, 136, 102],
+  ValueScrambler: [102, 102, 68],
+  // - - - EFFECTS - - -
+  BooleanLogic: [136, 68, 136],
+  BufferSmear: [102, 119, 136],
+  DeeSeventySix: [68, 102, 136],
+  Delay: [68, 102, 136],
+  FilmGrain: [85, 85, 119],
+  GameBoy: [85, 85, 119],
+  Glitch: [102, 68, 85],
+  HSFlow: [102, 136, 170],
+  HyperCard: [85, 85, 119],
+  Mosaic: [119, 102, 85],
   PixelVision: [85, 85, 119],
   RuttEtra: [85, 85, 119],
   SpatialSlice: [119, 85, 102],
-  SyncGenerator: [68, 136, 102],
   TimeTunnel: [85, 85, 119],
   TVLines: [85, 85, 119],
   UnrealBloom: [170, 136, 85],
-  ValueScrambler: [102, 102, 68],
   VHSC: [85, 85, 119],
-  VideoPlayer: [34, 85, 170],
+  // - - - OUTPUT - - -
+  Monitor: [170, 85, 34]  
 };
 
 const MODULE_WIDTH = 160;

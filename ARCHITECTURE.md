@@ -32,9 +32,9 @@ The UI renders each param in the `params` object: `{ paramName: { value, min, ma
 
 ### Module Categories
 
-- **Sources**: Camera, VideoPlayer, Oscillator, GRASS
-- **Core**: Comparator, FunctionGenerator, AdderMultiplier, Differentiator, ColorEncoder, SyncGenerator, ValueScrambler
-- **Effects**: TVLines, FilmGrain, VHSC, PixelVision, GameBoy, HyperCard, Delay, Glitch, UnrealBloom, HSFlow
+- **Sources**: Camera, GRASS, GridGuys, NAPLPS, Oscillator, VideoPlayer
+- **Core**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, SyncGenerator, ValueScrambler
+- **Effects**: BooleanLogic, BufferSmear, DeeSeventySix, Delay, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, Mosaic, PixelVision, RuttEtra, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
 - **Output**: Monitor
 
 ### Shaders (`shaders/`)
