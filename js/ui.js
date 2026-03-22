@@ -107,6 +107,7 @@ export class NodeGraphUI {
     this._addDefaultNodes();
     this._searchPopup = null;
     this._allModuleTypes = Object.values(MODULE_CATEGORIES).flat().sort();
+    this._placingModule = null; // module currently following mouse, waiting to be placed
   }
 
   // Render a Framebuffer onto the P2D main canvas by blitting through glCanvas
@@ -209,12 +210,15 @@ export class NodeGraphUI {
     const graph = this.pipeline.graph;
     const glCanvas = this.pipeline.glCanvas;
     const mod = createModule(typeName, glCanvas, graph.nextId);
-    // Place near center of viewport
-    const cx = (-this.panX + this.p.width / 2) / this.zoom;
-    const cy = (-this.panY + this.p.height / 2) / this.zoom;
-    mod.x = cx + (Math.random() - 0.5) * 100;
-    mod.y = cy + (Math.random() - 0.5) * 100;
+    // Start at current mouse position, module follows cursor until clicked
+    const world = this.screenToWorld(this.p.mouseX, this.p.mouseY);
+    const h = this.getModuleHeight(mod);
+    mod.x = world.x - MODULE_WIDTH / 2;
+    mod.y = world.y - h / 2;
     graph.addNode(mod);
+    this._placingModule = mod.id;
+    this.selectedNode = mod.id;
+    this._paletteEl.style.opacity = '0.5';
   }
 
   screenToWorld(sx, sy) {
@@ -703,6 +707,17 @@ export class NodeGraphUI {
       return;
     }
 
+    // Update placing module to follow mouse
+    if (this._placingModule !== null) {
+      const mod = graph.nodes.get(this._placingModule);
+      if (mod) {
+        const world = this.screenToWorld(p.mouseX, p.mouseY);
+        const h = this.getModuleHeight(mod);
+        mod.x = world.x - MODULE_WIDTH / 2;
+        mod.y = world.y - h / 2;
+      }
+    }
+
     p.push();
     p.translate(this.panX, this.panY);
     p.scale(this.zoom);
@@ -965,6 +980,16 @@ export class NodeGraphUI {
     if (this.fullscreenMonitor !== null) {
       this.fullscreenMonitor = null;
       this._fullscreenExitTime = performance.now();
+      return;
+    }
+
+    // Placing module: left-click to finalize, right-click to cancel
+    if (this._placingModule !== null) {
+      if (button === this.p.RIGHT) {
+        this._deleteNode(this._placingModule);
+      }
+      this._placingModule = null;
+      this._paletteEl.style.opacity = '1';
       return;
     }
 

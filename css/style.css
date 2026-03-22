@@ -26,6 +26,7 @@ canvas {
   max-height: calc(100vh - 20px);
   overflow-y: auto;
   width: 160px;
+  transition: opacity 0.15s ease;
 }
 
 #module-palette h3 {
