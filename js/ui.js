@@ -12,8 +12,8 @@ void main() {
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Delay', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'Mosaic', 'PixelVision', 'RuttEtra', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
-  'Utility': ['Brcosa', 'Levels', 'VideoMixer'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'Mosaic', 'PixelVision', 'RuttEtra', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
+  'Utility': ['Brcosa', 'Levels', 'Sharpen', 'VideoMixer'],
   'Output': ['Monitor'],
 };
 
@@ -22,9 +22,9 @@ const color_source_grass = [34, 120, 68];
 const color_source_art = [170, 85, 136];
 const color_core_sandin = [102, 102, 68];
 const color_effect_noise = [68, 102, 136];
-const color_effect_tv = [95, 85, 129];
+const color_effect_tv = [125, 85, 129];
 const color_effect_flow = [136, 85, 34];
-const color_effect_op = [78, 112, 136];
+const color_effect_op = [108, 102, 186];
 const color_utility = [85, 120, 100];
 const color_output = [170, 85, 34];
 
@@ -47,8 +47,10 @@ const MODULE_COLORS = {
   // - - - EFFECTS - - -
   BooleanLogic: color_effect_op,
   BufferSmear: color_effect_flow,
+  Cyberlace: color_effect_tv,
   DeeSeventySix: color_effect_noise,
   Delay: color_effect_flow,
+  Dither: color_effect_noise,
   FilmGrain: color_effect_noise,
   GameBoy: color_effect_noise,
   Glitch: color_effect_tv,
@@ -65,6 +67,7 @@ const MODULE_COLORS = {
   // - - - UTILITY - - -
   Brcosa: color_utility,
   Levels: color_utility,
+  Sharpen: color_utility,
   VideoMixer: color_utility,
   // - - - OUTPUT - - -
   Monitor: color_output 

@@ -1,0 +1,184 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "type": "Monitor",
+      "x": 854,
+      "y": 383.5,
+      "params": {
+        "bitrate": 10000000
+      }
+    },
+    {
+      "id": 1,
+      "type": "Dither",
+      "x": 380,
+      "y": 289,
+      "params": {
+        "mode": 2,
+        "levels": 3.853200130864729,
+        "ditherStrength": 1.6666666666666663,
+        "passes": 3.986666666666667
+      }
+    },
+    {
+      "id": 5,
+      "type": "HSFlow",
+      "x": 596,
+      "y": 172,
+      "params": {
+        "lambda": 0.01,
+        "flowScale": 1,
+        "offset": 1,
+        "distortAmt": 1,
+        "slide": 0.8,
+        "lumaThresh": 0.5,
+        "lumaTol": 0.2
+      }
+    },
+    {
+      "id": 6,
+      "type": "BufferSmear",
+      "x": 350,
+      "y": 519,
+      "params": {
+        "smearAmount": 0.000003659021206026125,
+        "feedback": 0.9933333333333333,
+        "zoomSpeed": 2.6666666666666665
+      }
+    },
+    {
+      "id": 8,
+      "type": "FunctionGenerator",
+      "x": 830,
+      "y": 77,
+      "params": {
+        "curve": 1.0333333333333332,
+        "gain": 1
+      }
+    },
+    {
+      "id": 9,
+      "type": "GridGuys",
+      "x": 421,
+      "y": 25,
+      "params": {
+        "blend": 0.11333333333333329,
+        "delay": 1.400000000000004,
+        "life": 17.786666666666665,
+        "respawn": 55.74,
+        "chaos": 0
+      }
+    },
+    {
+      "id": 10,
+      "type": "ColorEncoder",
+      "x": 192,
+      "y": 143,
+      "params": {
+        "phaseR": 3.8535733333333337,
+        "phaseG": 5.36116,
+        "phaseB": 6.283,
+        "frequency": 1.792
+      }
+    },
+    {
+      "id": 11,
+      "type": "Levels",
+      "x": 544,
+      "y": 520,
+      "params": {
+        "blackLevel": 0.3933333333333333,
+        "gamma": 0.30399999999999994,
+        "whiteLevel": 1
+      }
+    },
+    {
+      "id": 12,
+      "type": "AdderMultiplier",
+      "x": 698,
+      "y": 528,
+      "params": {
+        "mode": 3,
+        "mixVal": 0.9066666666666667,
+        "contrast": 1.2799999999999998
+      }
+    },
+    {
+      "id": 13,
+      "type": "Oscillator",
+      "x": 177,
+      "y": 486,
+      "params": {
+        "frequency": 0.001,
+        "waveform": 0,
+        "direction": 0
+      }
+    }
+  ],
+  "connections": [
+    {
+      "fromId": 5,
+      "fromPort": 0,
+      "toId": 8,
+      "toPort": 0
+    },
+    {
+      "fromId": 9,
+      "fromPort": 0,
+      "toId": 1,
+      "toPort": 0
+    },
+    {
+      "fromId": 1,
+      "fromPort": 0,
+      "toId": 10,
+      "toPort": 0
+    },
+    {
+      "fromId": 10,
+      "fromPort": 0,
+      "toId": 6,
+      "toPort": 0
+    },
+    {
+      "fromId": 6,
+      "fromPort": 0,
+      "toId": 5,
+      "toPort": 0
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 11,
+      "toPort": 0
+    },
+    {
+      "fromId": 11,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 0
+    },
+    {
+      "fromId": 10,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 1
+    },
+    {
+      "fromId": 12,
+      "fromPort": 0,
+      "toId": 0,
+      "toPort": 0
+    }
+  ],
+  "controlConnections": [
+    {
+      "fromId": 13,
+      "fromPort": 1,
+      "toId": 6,
+      "paramName": "smearAmount"
+    }
+  ],
+  "nextId": 14
+}

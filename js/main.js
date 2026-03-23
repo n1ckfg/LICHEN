@@ -20,6 +20,8 @@ import './modules/BooleanLogicModule.js';
 import './modules/BufferSmearModule.js';
 import './modules/DeeSeventySixModule.js';
 import './modules/DelayModule.js';
+import './modules/DitherModule.js';
+import './modules/CyberlaceModule.js';
 import './modules/FilmGrainModule.js';
 import './modules/GameBoyModule.js';
 import './modules/GlitchModule.js';
@@ -36,6 +38,7 @@ import './modules/VHSCModule.js';
 // - - - UTILITY - - -
 import './modules/BrcosaModule.js';
 import './modules/LevelsModule.js';
+import './modules/SharpenModule.js';
 import './modules/VideoMixerModule.js';
 // - - - OUTPUT - - -
 import './modules/MonitorModule.js';
