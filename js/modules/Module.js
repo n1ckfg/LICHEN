@@ -13,6 +13,7 @@ export class Module {
     this.shader = null;
     this.outputFBO = null;
     this.glCanvas = glCanvas;
+    this.collapsed = false;
   }
 
   createShader(fragSrc) {

@@ -164,7 +164,8 @@ export class ConnectionGraph {
         type: mod.type,
         x: mod.x,
         y: mod.y,
-        params
+        params,
+        collapsed: mod.collapsed || false
       });
     }
     return {
@@ -187,6 +188,7 @@ export class ConnectionGraph {
       mod.id = nodeData.id;
       mod.x = nodeData.x;
       mod.y = nodeData.y;
+      mod.collapsed = nodeData.collapsed || false;
       if (nodeData.params) {
         for (const [k, v] of Object.entries(nodeData.params)) {
           mod.setParam(k, v);

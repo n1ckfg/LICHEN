@@ -251,6 +251,9 @@ export class NodeGraphUI {
   }
 
   getModuleHeight(mod) {
+    if (mod.collapsed) {
+      return HEADER_HEIGHT;
+    }
     const portRows = Math.max(mod.inputs.length, mod.outputs.length);
     const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
     const paramCount = Object.keys(mod.params).length;
@@ -268,8 +271,13 @@ export class NodeGraphUI {
 
   getInputPortPos(mod, index) {
     const count = mod.inputs.length;
-    const totalWidth = (count - 1) * (MODULE_WIDTH / (count + 1));
-    const startX = mod.x + MODULE_WIDTH / (count + 1);
+    if (mod.collapsed) {
+      // Inputs along top edge when collapsed
+      return {
+        x: mod.x + (index + 1) * MODULE_WIDTH / (count + 1),
+        y: mod.y,
+      };
+    }
     return {
       x: mod.x + (index + 1) * MODULE_WIDTH / (count + 1),
       y: mod.y + HEADER_HEIGHT + 14,
@@ -278,10 +286,34 @@ export class NodeGraphUI {
 
   getOutputPortPos(mod, index) {
     const count = mod.outputs.length;
+    if (mod.collapsed) {
+      // Outputs along bottom edge when collapsed
+      return {
+        x: mod.x + (index + 1) * MODULE_WIDTH / (count + 1),
+        y: mod.y + HEADER_HEIGHT,
+      };
+    }
     const h = this.getModuleHeight(mod);
     return {
       x: mod.x + (index + 1) * MODULE_WIDTH / (count + 1),
       y: mod.y + h - 14,
+    };
+  }
+
+  getParamKnobPos(mod, paramIndex) {
+    const paramCount = Object.keys(mod.params).length;
+    if (mod.collapsed) {
+      // Params along left edge when collapsed
+      return {
+        x: mod.x,
+        y: mod.y + (paramIndex + 1) * HEADER_HEIGHT / (paramCount + 1),
+      };
+    }
+    const portRows = Math.max(mod.inputs.length, mod.outputs.length);
+    const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+    return {
+      x: mod.x + 18,
+      y: mod.y + HEADER_HEIGHT + portSection + paramIndex * PARAM_ROW_HEIGHT + 10,
     };
   }
 
@@ -802,8 +834,13 @@ export class NodeGraphUI {
       const paramNames = Object.keys(toMod.params);
       const paramIdx = paramNames.indexOf(cc.paramName);
       if (paramIdx < 0) continue;
-      const py = this.getParamY(toMod, paramIdx);
-      const to = { x: toMod.x + 16, y: py + 4 };
+      let to;
+      if (toMod.collapsed) {
+        to = this.getParamKnobPos(toMod, paramIdx);
+      } else {
+        const py = this.getParamY(toMod, paramIdx);
+        to = { x: toMod.x + 16, y: py + 4 };
+      }
       this._drawCable(p, from.x, from.y, to.x, to.y, [100, 255, 130]);
     }
 
@@ -880,25 +917,77 @@ export class NodeGraphUI {
     p.strokeWeight(isSelected ? 2 : 1);
     p.rect(mod.x, mod.y, MODULE_WIDTH, h, 6);
 
-    // Header
+    // When collapsed, draw ports first (underneath header)
+    if (mod.collapsed) {
+      // Input ports (top edge)
+      for (let i = 0; i < mod.inputs.length; i++) {
+        const pos = this.getInputPortPos(mod, i);
+        const isHovered = this._hoveredPort &&
+          this._hoveredPort.nodeId === id &&
+          this._hoveredPort.portType === 'input' &&
+          this._hoveredPort.portIndex === i;
+        p.fill(68, 136, 255);
+        p.stroke(isHovered ? [255, 255, 0] : 255);
+        p.strokeWeight(isHovered ? 2.5 : 1.5);
+        p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
+      }
+
+      // Output ports (bottom edge)
+      for (let i = 0; i < mod.outputs.length; i++) {
+        const pos = this.getOutputPortPos(mod, i);
+        const isControlPort = mod.outputs[i].type === 'control';
+        const isHovered = this._hoveredPort &&
+          this._hoveredPort.nodeId === id &&
+          this._hoveredPort.portType === 'output' &&
+          this._hoveredPort.portIndex === i;
+        p.fill(isControlPort ? [100, 255, 130] : [255, 136, 68]);
+        p.stroke(isHovered ? [255, 255, 0] : 255);
+        p.strokeWeight(isHovered ? 2.5 : 1.5);
+        p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
+      }
+
+      // Parameter control connection points (left edge)
+      const paramNames = Object.keys(mod.params);
+      for (let i = 0; i < paramNames.length; i++) {
+        const pos = this.getParamKnobPos(mod, i);
+        const name = paramNames[i];
+        const controlled = this._isControlled(id, name);
+        p.fill(controlled ? [100, 255, 130] : [100, 200, 255]);
+        p.stroke(255);
+        p.strokeWeight(1);
+        p.ellipse(pos.x, pos.y, 8, 8);
+      }
+    }
+
+    // Header (rounded bottom corners only when collapsed)
     p.noStroke();
     p.fill(col[0], col[1], col[2]);
-    p.rect(mod.x, mod.y, MODULE_WIDTH, HEADER_HEIGHT, 6, 6, 0, 0);
+    if (mod.collapsed) {
+      p.rect(mod.x, mod.y, MODULE_WIDTH, HEADER_HEIGHT, 6);
+    } else {
+      p.rect(mod.x, mod.y, MODULE_WIDTH, HEADER_HEIGHT, 6, 6, 0, 0);
+    }
 
-    // Title
+    // Title (centered)
     p.fill(255);
     p.noStroke();
     p.textSize(11);
-    p.textAlign(p.LEFT, p.CENTER);
-    p.text(mod.type, mod.x + 8, mod.y + HEADER_HEIGHT / 2);
+    p.textAlign(p.CENTER, p.CENTER);
+    p.text(mod.type, mod.x + MODULE_WIDTH / 2, mod.y + HEADER_HEIGHT / 2);
 
-    // Delete button
-    p.fill(200, 80, 80);
-    p.textAlign(p.RIGHT, p.CENTER);
-    p.textSize(14);
-    p.text('\u00d7', mod.x + MODULE_WIDTH - 6, mod.y + HEADER_HEIGHT / 2);
+    // Collapse toggle (light gray circle)
+    p.fill(180);
+    p.noStroke();
+    p.ellipse(mod.x + MODULE_WIDTH - 12, mod.y + HEADER_HEIGHT / 2, 12, 12);
 
-    // Input ports
+    // Skip remaining content if collapsed
+    if (mod.collapsed) {
+      // Restore opacity
+      p.drawingContext.globalAlpha = prevAlpha;
+      return;
+    }
+
+    // Input ports (normal mode)
     for (let i = 0; i < mod.inputs.length; i++) {
       const pos = this.getInputPortPos(mod, i);
       const isHovered = this._hoveredPort &&
@@ -916,7 +1005,7 @@ export class NodeGraphUI {
       p.text(mod.inputs[i].name, pos.x, pos.y + PORT_RADIUS + 2);
     }
 
-    // Output ports
+    // Output ports (normal mode)
     for (let i = 0; i < mod.outputs.length; i++) {
       const pos = this.getOutputPortPos(mod, i);
       const isControlPort = mod.outputs[i].type === 'control';
@@ -1226,10 +1315,11 @@ export class NodeGraphUI {
       return;
     }
 
-    // Check delete button hit (the x in header)
-    const deleteHit = this._hitTestDeleteBtn(world.x, world.y);
-    if (deleteHit !== null) {
-      this._deleteNode(deleteHit);
+    // Check collapse toggle hit (circle in header)
+    const collapseHit = this._hitTestCollapseBtn(world.x, world.y);
+    if (collapseHit !== null) {
+      const mod = this.pipeline.graph.nodes.get(collapseHit);
+      if (mod) mod.collapsed = !mod.collapsed;
       return;
     }
 
@@ -1664,8 +1754,13 @@ export class NodeGraphUI {
       const paramNames = Object.keys(toMod.params);
       const paramIdx = paramNames.indexOf(cc.paramName);
       if (paramIdx < 0) continue;
-      const py = this.getParamY(toMod, paramIdx);
-      const to = { x: toMod.x + 16, y: py + 4 };
+      let to;
+      if (toMod.collapsed) {
+        to = this.getParamKnobPos(toMod, paramIdx);
+      } else {
+        const py = this.getParamY(toMod, paramIdx);
+        to = { x: toMod.x + 16, y: py + 4 };
+      }
       if (this._distToCable(world.x, world.y, from.x, from.y, to.x, to.y) < 10) {
         graph.controlConnections.splice(i, 1);
         return;
@@ -1709,11 +1804,13 @@ export class NodeGraphUI {
     return minDist;
   }
 
-  _hitTestDeleteBtn(wx, wy) {
+  _hitTestCollapseBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (wx >= mod.x + MODULE_WIDTH - 20 && wx <= mod.x + MODULE_WIDTH &&
-          wy >= mod.y && wy <= mod.y + HEADER_HEIGHT) {
+      // Circle in upper right corner of header
+      const cx = mod.x + MODULE_WIDTH - 12;
+      const cy = mod.y + HEADER_HEIGHT / 2;
+      if (Math.hypot(wx - cx, wy - cy) <= 8) {
         return id;
       }
     }
