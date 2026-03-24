@@ -1460,20 +1460,30 @@ export class NodeGraphUI {
     // Check node body (drag)
     const nodeHit = this.hitTestNode(world.x, world.y);
     if (nodeHit !== null) {
-      this.draggingNode = nodeHit;
       const mod = this.pipeline.graph.nodes.get(nodeHit);
+
+      // Ctrl+click: deselect module
+      if (this.p.keyIsDown(this.p.CONTROL)) {
+        this.selectedNodes.delete(nodeHit);
+        return;
+      }
+
+      // Shift+click: add to selection
+      if (this.p.keyIsDown(this.p.SHIFT) && this.selectedNodes.size > 0) {
+        this.selectedNodes.add(nodeHit);
+      } else if (!this.selectedNodes.has(nodeHit)) {
+        // Regular click: clear selection and select only this node
+        this.selectedNodes.clear();
+        this.selectedNodes.add(nodeHit);
+      }
+
+      // Set up dragging
+      this.draggingNode = nodeHit;
       this.dragOffsetX = world.x - mod.x;
       this.dragOffsetY = world.y - mod.y;
       this.dragStartX = mx;
       this.dragStartY = my;
       this.dragActive = false;
-
-      // If clicked node is already selected, keep multi-selection for group drag
-      // Otherwise, clear selection and select only this node
-      if (!this.selectedNodes.has(nodeHit)) {
-        this.selectedNodes.clear();
-        this.selectedNodes.add(nodeHit);
-      }
 
       // Store offsets for all selected nodes for group dragging
       this.dragOffsets.clear();
