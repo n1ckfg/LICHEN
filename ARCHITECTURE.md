@@ -18,6 +18,7 @@ main.js (p5.js loop)
 - `ui.js` — `NodeGraphUI`: full node graph editor drawn on the p5.js P2D canvas, with a DOM sidebar palette; handles pan/zoom, node drag, cable wiring, parameter knobs, and monitor preview rendering
 - `modules/Module.js` — base class for all modules; defines common behavior for shaders, FBOs, and parameters
 - `shaders/vert.js` — the shared vertex shader used by all modules for screen-quad rendering
+- `workflows/` — contains JSON patches (connection graph state, module types, and parameter values) that can be loaded via Ctrl+O
 
 ### Module System (`modules/`)
 
@@ -34,8 +35,8 @@ The UI renders each param in the `params` object: `{ paramName: { value, min, ma
 
 - **Sources**: Camera, GRASS, GridGuys, NAPLPS, Oscillator, VideoPlayer
 - **Core**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, SyncGenerator, ValueScrambler
-- **Effects**: BooleanLogic, BufferSmear, DeeSeventySix, Delay, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, Mosaic, PixelVision, RuttEtra, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
-- **Utility**: Brcosa, Levels, VideoMixer
+- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, Mosaic, PixelVision, RuttEtra, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
+- **Utility**: Brcosa, Levels, Sharpen, VideoMixer
 - **Output**: Monitor
 
 ### Shaders (`shaders/`)
@@ -66,6 +67,20 @@ The GRASS module (`modules/GRASSModule.js`) is a complete embedded GRASS interpr
 - Clicking exits fullscreen (same as Monitor)
 
 **ui.js integration:** `getModuleHeight` and `_drawModule` treat GRASS like Monitor (large preview, `MONITOR_PREVIEW_W × MONITOR_PREVIEW_H`). `hitTestMonitorDblClick` checks for both `'Monitor'` and `'GRASS'` types.
+
+## NAPLPS Module
+
+The NAPLPS module (`modules/NAPLPSModule.js`) decodes North American Presentation Level Protocol Syntax (.nap) files containing vector graphics instructions.
+
+**Decoding:** Relies on the external `naplps/naplps.js` decoder logic. It accepts file drops through a hidden HTML file input, creating draw commands progressively with a configurable playback speed.
+**Rendering path:** Commands are executed into a 2D `p5.Graphics` buffer using p5 drawing commands (`pg.rect`, `pg.vertex`, etc.), tracking color and progressive drawing state, which is then mapped to the module's WebGL `outputFBO` via the passthrough shader.
+
+## GridGuys Module
+
+The GridGuys module (`modules/GridGuysModule.js`) provides an autonomous simulation using a ping-pong shader technique to evolve cellular-automata-like agents across the screen.
+
+**Simulation path:** It uses two internal framebuffers (`fboA` and `fboB`) to run a custom vertex/fragment simulation pass (`shaders/gridguys-simulation.js`) that tracks the odds of agent spread in 8 cardinal directions, guided by an autonomous target cursor (`gridguys/target.js`).
+**Rendering path:** The resulting buffer state is passed through a secondary render pass (`shaders/gridguys-render.js`) mapped to the module's main `outputFBO`.
 
 ## Development Conventions
 
