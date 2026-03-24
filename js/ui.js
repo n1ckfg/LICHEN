@@ -848,7 +848,13 @@ export class NodeGraphUI {
     const activeCable = this.draggingCable || this.pendingCable;
     if (activeCable) {
       const world = this.screenToWorld(p.mouseX, p.mouseY);
-      this._drawCable(p, activeCable.x, activeCable.y, world.x, world.y, [255, 255, 100]);
+      if (activeCable.isInlet) {
+        // Inlet cable: draw from mouse to inlet
+        this._drawCable(p, world.x, world.y, activeCable.x, activeCable.y, [255, 255, 100]);
+      } else {
+        // Outlet cable: draw from outlet to mouse
+        this._drawCable(p, activeCable.x, activeCable.y, world.x, world.y, [255, 255, 100]);
+      }
     }
 
     // Draw modules
@@ -1227,6 +1233,21 @@ export class NodeGraphUI {
     // Click-to-connect: pending cable is active
     if (this.pendingCable) {
       const portHit = this.hitTestPort(world.x, world.y);
+
+      // Handle pending inlet cable (looking for outlet)
+      if (this.pendingCable.isInlet) {
+        if (portHit && portHit.portType === 'output') {
+          // Clicked on an outlet — record target, wait for release to confirm
+          this._pendingTarget = portHit;
+          return;
+        }
+        // Clicked anywhere else — cancel
+        this.pendingCable = null;
+        this._pendingTarget = null;
+        return;
+      }
+
+      // Handle pending outlet cable (looking for inlet or knob)
       if (portHit && portHit.portType === 'input') {
         // Clicked on an inlet — record target, wait for release to confirm
         this._pendingTarget = portHit;
@@ -1438,7 +1459,7 @@ export class NodeGraphUI {
       return;
     }
 
-    // Check input port (disconnect existing cable)
+    // Check input port (disconnect existing cable, or start inlet cable)
     if (portHit && portHit.portType === 'input') {
       const conns = this.pipeline.graph.getInputConnections(portHit.nodeId);
       const existing = conns.find(c => c.toPort === portHit.portIndex);
@@ -1452,6 +1473,18 @@ export class NodeGraphUI {
           fromPort: existing.fromPort,
           x: pos.x,
           y: pos.y,
+        };
+        return;
+      } else {
+        // No existing connection - start cable from inlet
+        const mod = this.pipeline.graph.nodes.get(portHit.nodeId);
+        const pos = this.getInputPortPos(mod, portHit.portIndex);
+        this.draggingCable = {
+          toId: portHit.nodeId,
+          toPort: portHit.portIndex,
+          x: pos.x,
+          y: pos.y,
+          isInlet: true,
         };
         return;
       }
@@ -1560,9 +1593,29 @@ export class NodeGraphUI {
       return;
     }
 
-    // Click-to-connect: release on inlet or knob completes the connection
+    // Click-to-connect: release on target completes the connection
     if (this.pendingCable && this._pendingTarget) {
       const world = this.screenToWorld(mx, my);
+
+      // Handle pending inlet cable (target is an outlet)
+      if (this.pendingCable.isInlet) {
+        const portHit = this.hitTestPort(world.x, world.y);
+        if (portHit && portHit.portType === 'output' &&
+            portHit.nodeId === this._pendingTarget.nodeId &&
+            portHit.portIndex === this._pendingTarget.portIndex) {
+          this.pipeline.graph.connect(
+            portHit.nodeId,
+            portHit.portIndex,
+            this.pendingCable.toId,
+            this.pendingCable.toPort
+          );
+        }
+        this.pendingCable = null;
+        this._pendingTarget = null;
+        return;
+      }
+
+      // Handle pending outlet cable (target is inlet or knob)
       if (this._pendingTarget.paramName) {
         // Target is a knob
         const knobHit = this.hitTestKnobPort(world.x, world.y);
@@ -1596,6 +1649,31 @@ export class NodeGraphUI {
     if (this.draggingCable) {
       const world = this.screenToWorld(mx, my);
       const portHit = this.hitTestPort(world.x, world.y);
+
+      // Handle inlet cable (dragging from an input port)
+      if (this.draggingCable.isInlet) {
+        if (portHit && portHit.portType === 'output') {
+          // Dragged to an output port — connect
+          this.pipeline.graph.connect(
+            portHit.nodeId,
+            portHit.portIndex,
+            this.draggingCable.toId,
+            this.draggingCable.toPort
+          );
+          this.draggingCable = null;
+        } else if (portHit && portHit.portType === 'input' &&
+                   portHit.nodeId === this.draggingCable.toId &&
+                   portHit.portIndex === this.draggingCable.toPort) {
+          // Released on the same inlet — convert to click-to-connect pending cable
+          this.pendingCable = this.draggingCable;
+          this.draggingCable = null;
+        } else {
+          this.draggingCable = null;
+        }
+        return;
+      }
+
+      // Handle outlet cable (dragging from an output port)
       // Check if dropped on a knob (control connection)
       const srcMod = this.pipeline.graph.nodes.get(this.draggingCable.fromId);
       const isControl = srcMod && srcMod.outputs[this.draggingCable.fromPort]?.type === 'control';
