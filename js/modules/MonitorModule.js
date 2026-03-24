@@ -24,13 +24,26 @@ export class MonitorModule extends Module {
     this._recordingMimeType = null;
     this._recordingCanvas = null; // Offscreen canvas for single-monitor recording
 
-    // Recording params (bitrate in bits/sec, default 5 Mbps)
-    const defaultBitrate = 20;
+    // Recording params
     this.params = {
+      width: {
+        value: 1440,
+        min: 640,
+        max: 3840,
+        step: 160,
+        label: 'Width'
+      },
+      height: {
+        value: 1080,
+        min: 480,
+        max: 2160,
+        step: 120,
+        label: 'Height'
+      },
       bitrate: {
-        value: defaultBitrate,
-        min: defaultBitrate / 4,   // 5 Mbps
-        max: defaultBitrate * 4,     // 80 Mbps
+        value: 20,
+        min: 5,
+        max: 80,
         step: 5,
         label: 'Bitrate (M)'
       }
@@ -99,9 +112,9 @@ export class MonitorModule extends Module {
     extWin.document.body.style.cssText = 'margin:0;padding:0;background:#000;overflow:hidden;';
 
     const canvas = extWin.document.createElement('canvas');
-    // Fixed internal resolution for consistent recording output
-    canvas.width = 1440;
-    canvas.height = 1080;
+    // Use params for recording resolution
+    canvas.width = this.params.width.value;
+    canvas.height = this.params.height.value;
     canvas.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;';
     extWin.document.body.appendChild(canvas);
     this._extCanvas = canvas;
@@ -194,10 +207,10 @@ export class MonitorModule extends Module {
     // Determine which canvas to capture from
     let canvas = this._extCanvas;
     if (!canvas) {
-      // Create offscreen recording canvas at 1440x1080 for single-monitor mode
+      // Create offscreen recording canvas for single-monitor mode
       this._recordingCanvas = document.createElement('canvas');
-      this._recordingCanvas.width = 1440;
-      this._recordingCanvas.height = 1080;
+      this._recordingCanvas.width = this.params.width.value;
+      this._recordingCanvas.height = this.params.height.value;
       canvas = this._recordingCanvas;
     }
     if (!canvas) {
