@@ -259,7 +259,7 @@ export class NodeGraphUI {
     const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
     let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS') ? MONITOR_PREVIEW_H + 8 : 0;
     if (mod.type === 'Monitor') {
-      monitorSection += 76; // Extra space for param padding + FPS counter + record button + fullscreen button
+      monitorSection += 100; // Extra space for param padding + FPS counter + record/fullscreen/load+save buttons
     }
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS';
     const fileBtnSection = hasFileBtn ? 24 : 0;
@@ -681,6 +681,44 @@ export class NodeGraphUI {
     return null;
   }
 
+  hitTestLoadBtn(wx, wy) {
+    const graph = this.pipeline.graph;
+    const halfW = (MODULE_WIDTH - 24) / 2;
+    for (const [id, mod] of graph.nodes) {
+      if (mod.type !== 'Monitor') continue;
+      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
+      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const paramCount = Object.keys(mod.params).length;
+      const paramSection = paramCount * PARAM_ROW_HEIGHT;
+      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
+      const btnY = py + MONITOR_PREVIEW_H + 68; // Below fullscreen button
+      if (wx >= mod.x + 10 && wx <= mod.x + 10 + halfW &&
+          wy >= btnY && wy <= btnY + 20) {
+        return id;
+      }
+    }
+    return null;
+  }
+
+  hitTestSaveBtn(wx, wy) {
+    const graph = this.pipeline.graph;
+    const halfW = (MODULE_WIDTH - 24) / 2;
+    for (const [id, mod] of graph.nodes) {
+      if (mod.type !== 'Monitor') continue;
+      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
+      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const paramCount = Object.keys(mod.params).length;
+      const paramSection = paramCount * PARAM_ROW_HEIGHT;
+      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
+      const btnY = py + MONITOR_PREVIEW_H + 68; // Same row as load button
+      if (wx >= mod.x + 14 + halfW && wx <= mod.x + MODULE_WIDTH - 10 &&
+          wy >= btnY && wy <= btnY + 20) {
+        return id;
+      }
+    }
+    return null;
+  }
+
   draw() {
     const p = this.p;
     const graph = this.pipeline.graph;
@@ -714,6 +752,10 @@ export class NodeGraphUI {
         } else if (mod.type === 'Monitor') {
           if (mod.displayTexture) {
             this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
+            // Blit to recording canvas for single-monitor recording
+            if (mod._recordingCanvas && mod.isRecording && mod.isRecording()) {
+              mod._blitToRecordingCanvas(this.pipeline.glCanvas);
+            }
           }
         } else if (mod.outputFBO) {
           this._drawFBO(mod.outputFBO, dx, dy, dw, dh);
@@ -948,6 +990,10 @@ export class NodeGraphUI {
         if (mod.hasExtWindow && mod.hasExtWindow()) {
           mod._blitToExtWindow(this.pipeline.glCanvas);
         }
+        // Blit to recording canvas for single-monitor recording
+        if (mod._recordingCanvas && mod.isRecording && mod.isRecording()) {
+          mod._blitToRecordingCanvas(this.pipeline.glCanvas);
+        }
       }
       // FPS display
       p.noStroke();
@@ -980,6 +1026,32 @@ export class NodeGraphUI {
       p.textSize(9);
       p.textAlign(p.CENTER, p.CENTER);
       p.text('Fullscreen', mod.x + MODULE_WIDTH / 2, fsBtnY + 10);
+
+      // Load and Save buttons (side by side)
+      const lsBtnY = py + MONITOR_PREVIEW_H + 68;
+      const halfW = (MODULE_WIDTH - 24) / 2;
+
+      // Load button (left)
+      p.fill([60, 60, 90]);
+      p.stroke(100);
+      p.strokeWeight(1);
+      p.rect(mod.x + 10, lsBtnY, halfW, 20, 3);
+      p.noStroke();
+      p.fill(200);
+      p.textSize(9);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.text('Open', mod.x + 10 + halfW / 2, lsBtnY + 10);
+
+      // Save button (right)
+      p.fill([60, 60, 90]);
+      p.stroke(100);
+      p.strokeWeight(1);
+      p.rect(mod.x + 14 + halfW, lsBtnY, halfW, 20, 3);
+      p.noStroke();
+      p.fill(200);
+      p.textSize(9);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.text('Save', mod.x + 14 + halfW + halfW / 2, lsBtnY + 10);
     }
 
     // GRASS preview (clean video output, same size as Monitor preview)
@@ -1041,6 +1113,11 @@ export class NodeGraphUI {
 
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
+      // Stop recording if exiting fullscreen
+      const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
+      if (mod && mod.isRecording && mod.isRecording()) {
+        mod.stopRecording();
+      }
       this.fullscreenMonitor = null;
       this._fullscreenExitTime = performance.now();
       return;
@@ -1172,7 +1249,13 @@ export class NodeGraphUI {
         if (mod.isRecording && mod.isRecording()) {
           mod.stopRecording();
         } else if (mod.startRecording) {
-          mod.startRecording(this.pipeline.glCanvas);
+          // Try second screen; if unavailable, go fullscreen on current monitor
+          mod.trySecondScreenFullscreen(this.pipeline.glCanvas).then(opened => {
+            if (!opened) {
+              this.fullscreenMonitor = recHit;
+            }
+            mod.startRecording(this.pipeline.glCanvas);
+          });
         }
       }
       return;
@@ -1189,6 +1272,41 @@ export class NodeGraphUI {
           }
         });
       }
+      return;
+    }
+
+    // Check Monitor load button
+    const loadHit = this.hitTestLoadBtn(world.x, world.y);
+    if (loadHit !== null) {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const data = JSON.parse(ev.target.result);
+          this.fromJSON(data);
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+      return;
+    }
+
+    // Check Monitor save button
+    const saveHit = this.hitTestSaveBtn(world.x, world.y);
+    if (saveHit !== null) {
+      const data = this.toJSON();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      a.download = `lichen-patch_${timestamp}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
       return;
     }
 

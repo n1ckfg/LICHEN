@@ -5,7 +5,9 @@
       "type": "Monitor",
       "x": 1118.5,
       "y": 598.75,
-      "params": {}
+      "params": {
+        "bitrate": 20
+      }
     },
     {
       "id": 2,

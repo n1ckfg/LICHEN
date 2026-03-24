@@ -105,8 +105,11 @@ const sketch = (p) => {
         }
         return false;
       }
-      // Non-GRASS fullscreen: ESC exits
+      // Non-GRASS fullscreen: ESC exits and stops recording
       if (p.key === 'Escape') {
+        if (fsmod && fsmod.isRecording && fsmod.isRecording()) {
+          fsmod.stopRecording();
+        }
         ui.fullscreenMonitor = null;
         return false;
       }

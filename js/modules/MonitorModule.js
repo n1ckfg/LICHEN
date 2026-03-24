@@ -22,16 +22,17 @@ export class MonitorModule extends Module {
     this._recorder = null;
     this._recordingChunks = [];
     this._recordingMimeType = null;
+    this._recordingCanvas = null; // Offscreen canvas for single-monitor recording
 
     // Recording params (bitrate in bits/sec, default 5 Mbps)
-    const defaultBitrate = 10000000;
+    const defaultBitrate = 20;
     this.params = {
       bitrate: {
         value: defaultBitrate,
-        min: defaultBitrate / 2,   // 5 Mbps
-        max: defaultBitrate * 5,     // 50 Mbps
-        step: 1000000,
-        label: 'Bitrate'
+        min: defaultBitrate / 4,   // 5 Mbps
+        max: defaultBitrate * 4,     // 80 Mbps
+        step: 5,
+        label: 'Bitrate (M)'
       }
     };
   }
@@ -98,22 +99,26 @@ export class MonitorModule extends Module {
     extWin.document.body.style.cssText = 'margin:0;padding:0;background:#000;overflow:hidden;';
 
     const canvas = extWin.document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-    canvas.style.cssText = 'display:block;width:100%;height:100%;';
+    // Fixed internal resolution for consistent recording output
+    canvas.width = 1440;
+    canvas.height = 1080;
+    canvas.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;';
     extWin.document.body.appendChild(canvas);
     this._extCanvas = canvas;
 
     // Go fullscreen on the target screen
     canvas.requestFullscreen({ screen: targetScreen }).catch(() => {});
 
-    // Close on ESC
+    // Close on ESC (closeExtWindow handles stopping recording)
     extWin.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') this.closeExtWindow();
     });
 
     // Detect if user closes the popup
     extWin.addEventListener('beforeunload', () => {
+      if (this.isRecording()) {
+        this.stopRecording();
+      }
       this._extWindow = null;
       this._extCanvas = null;
     });
@@ -146,7 +151,23 @@ export class MonitorModule extends Module {
     ctx.drawImage(srcCanvas, dx, dy, dw, dh);
   }
 
+  _blitToRecordingCanvas(glCanvas) {
+    if (!this._recordingCanvas || !this.displayTexture) return;
+
+    const canvas = this._recordingCanvas;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const srcCanvas = glCanvas.elt;
+
+    // Draw to fill 1440x1080 (same 4:3 aspect as source)
+    ctx.drawImage(srcCanvas, 0, 0, canvas.width, canvas.height);
+  }
+
   closeExtWindow() {
+    if (this.isRecording()) {
+      this.stopRecording();
+    }
     if (this._extWindow && !this._extWindow.closed) {
       this._extWindow.close();
     }
@@ -171,7 +192,14 @@ export class MonitorModule extends Module {
     }
 
     // Determine which canvas to capture from
-    const canvas = this._extCanvas || glCanvas?.elt;
+    let canvas = this._extCanvas;
+    if (!canvas) {
+      // Create offscreen recording canvas at 1440x1080 for single-monitor mode
+      this._recordingCanvas = document.createElement('canvas');
+      this._recordingCanvas.width = 1440;
+      this._recordingCanvas.height = 1080;
+      canvas = this._recordingCanvas;
+    }
     if (!canvas) {
       console.error('No canvas available for recording');
       return false;
@@ -207,7 +235,7 @@ export class MonitorModule extends Module {
     this._recordingChunks = [];
 
     // Get bitrate from params (allow any value set via direct input)
-    const bitrate = Math.max(100000, Math.round(this.params.bitrate.value));
+    const bitrate = this.params.bitrate.value * 1000000;//Math.max(100000, Math.round(this.params.bitrate.value));
 
     try {
       this._recorder = new MediaRecorder(stream, {
@@ -287,6 +315,7 @@ export class MonitorModule extends Module {
     URL.revokeObjectURL(url);
     this._recordingChunks = [];
     this._recorder = null;
+    this._recordingCanvas = null;
     console.log(`Downloaded: ${filename}`);
   }
 
@@ -295,6 +324,7 @@ export class MonitorModule extends Module {
       this._recorder.stop();
       this._recorder = null;
       this._recordingChunks = [];
+      this._recordingCanvas = null;
     }
     this.closeExtWindow();
     this.displayTexture = null;
