@@ -45,6 +45,42 @@ import './modules/MonitorModule.js';
 
 let pipeline, ui, glCanvas;
 
+/**
+ * Parse and validate a shareable URL hash.
+ * Returns { success: true, data } or { success: false, error }.
+ */
+function parseShareableURL() {
+  const hash = window.location.hash;
+  if (!hash || hash.length <= 1) {
+    return { success: false, error: 'No hash in URL' };
+  }
+
+  const encoded = hash.slice(1); // Remove leading #
+  if (!encoded) {
+    return { success: false, error: 'Empty hash' };
+  }
+
+  try {
+    const jsonStr = decodeURIComponent(escape(atob(encoded)));
+    const data = JSON.parse(jsonStr);
+
+    // Validate basic structure
+    if (!data || typeof data !== 'object') {
+      return { success: false, error: 'Invalid patch data: not an object' };
+    }
+    if (!Array.isArray(data.nodes)) {
+      return { success: false, error: 'Invalid patch data: missing nodes array' };
+    }
+    if (!Array.isArray(data.connections)) {
+      return { success: false, error: 'Invalid patch data: missing connections array' };
+    }
+
+    return { success: true, data };
+  } catch (e) {
+    return { success: false, error: 'Failed to decode URL: ' + e.message };
+  }
+}
+
 const sketch = (p) => {
   p.setup = () => {
     const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
@@ -53,6 +89,22 @@ const sketch = (p) => {
     glCanvas = p.createGraphics(640, 480, p.WEBGL);
     pipeline = new ProcessingPipeline(glCanvas);
     ui = new NodeGraphUI(pipeline, p);
+
+    // Try to load patch from URL hash
+    const urlPatch = parseShareableURL();
+    if (urlPatch.success) {
+      try {
+        ui.fromJSON(urlPatch.data);
+        // Clear the hash after successful load to avoid reloading on refresh
+        history.replaceState(null, '', window.location.pathname);
+      } catch (e) {
+        console.error('Failed to load patch from URL:', e);
+        // Continue with empty patch - don't block normal operation
+      }
+    } else if (window.location.hash.length > 1) {
+      // Only log error if there was actually a hash (not just empty or missing)
+      console.error('Failed to parse URL patch:', urlPatch.error);
+    }
   };
 
   p.draw = () => {

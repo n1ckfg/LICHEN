@@ -262,7 +262,7 @@ export class NodeGraphUI {
     const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
     let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS') ? MONITOR_PREVIEW_H + 8 : 0;
     if (mod.type === 'Monitor') {
-      monitorSection += 100; // Extra space for param padding + FPS counter + record/fullscreen/load+save buttons
+      monitorSection += 124; // Extra space for param padding + FPS counter + record/fullscreen/load+save+link buttons
     }
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS';
     const fileBtnSection = hasFileBtn ? 24 : 0;
@@ -751,6 +751,76 @@ export class NodeGraphUI {
     return null;
   }
 
+  hitTestLinkBtn(wx, wy) {
+    const graph = this.pipeline.graph;
+    for (const [id, mod] of graph.nodes) {
+      if (mod.type !== 'Monitor') continue;
+      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
+      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const paramCount = Object.keys(mod.params).length;
+      const paramSection = paramCount * PARAM_ROW_HEIGHT;
+      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
+      const btnY = py + MONITOR_PREVIEW_H + 92; // Below load/save row
+      if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
+          wy >= btnY && wy <= btnY + 20) {
+        return id;
+      }
+    }
+    return null;
+  }
+
+  generateShareableURL() {
+    const data = this.toJSON();
+    const jsonStr = JSON.stringify(data);
+
+    // Use base64 encoding for URL-safe transport
+    let encoded;
+    try {
+      encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+    } catch (e) {
+      return { success: false, error: 'Failed to encode patch data: ' + e.message };
+    }
+
+    const url = 'https://fox-gieg.com/lichen/#' + encoded;
+
+    // Validate URL length (most browsers support at least 2000 chars, many support 8000+)
+    const MAX_URL_LENGTH = 8000;
+    if (url.length > MAX_URL_LENGTH) {
+      return {
+        success: false,
+        error: `URL too long (${url.length} chars). Maximum is ${MAX_URL_LENGTH}. Try removing some modules.`
+      };
+    }
+
+    // Validate that we can decode it back
+    try {
+      const decoded = decodeURIComponent(escape(atob(encoded)));
+      JSON.parse(decoded);
+    } catch (e) {
+      return { success: false, error: 'Validation failed: generated URL is corrupted' };
+    }
+
+    return { success: true, url };
+  }
+
+  async copyLinkToClipboard() {
+    const result = this.generateShareableURL();
+
+    if (!result.success) {
+      console.error('Error generating URL:', result.error);
+      alert('Error generating URL');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(result.url);
+      alert('Link copied to clipboard');
+    } catch (e) {
+      console.error('Failed to copy to clipboard:', e);
+      alert('Error generating URL');
+    }
+  }
+
   draw() {
     const p = this.p;
     const graph = this.pipeline.graph;
@@ -1147,6 +1217,18 @@ export class NodeGraphUI {
       p.textSize(9);
       p.textAlign(p.CENTER, p.CENTER);
       p.text('Save', mod.x + 14 + halfW + halfW / 2, lsBtnY + 10);
+
+      // Link button (full width below Open/Save)
+      const linkBtnY = py + MONITOR_PREVIEW_H + 92;
+      p.fill([60, 60, 90]);
+      p.stroke(100);
+      p.strokeWeight(1);
+      p.rect(mod.x + 10, linkBtnY, MODULE_WIDTH - 20, 20, 3);
+      p.noStroke();
+      p.fill(200);
+      p.textSize(9);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.text('Link', mod.x + MODULE_WIDTH / 2, linkBtnY + 10);
     }
 
     // GRASS preview (clean video output, same size as Monitor preview)
@@ -1418,6 +1500,13 @@ export class NodeGraphUI {
       a.download = `lichen-patch_${timestamp}.json`;
       a.click();
       URL.revokeObjectURL(url);
+      return;
+    }
+
+    // Check Monitor link button
+    const linkHit = this.hitTestLinkBtn(world.x, world.y);
+    if (linkHit !== null) {
+      this.copyLinkToClipboard();
       return;
     }
 
