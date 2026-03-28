@@ -11,11 +11,11 @@ main.js (p5.js loop)
 
 ### Key Files
 
-- `main.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen)
+- `main.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+A select all, Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen)
 - `pipeline.js` — `ProcessingPipeline`: holds the `ConnectionGraph`, drives per-frame processing
-- `graph.js` — `ConnectionGraph`: DAG of modules; re-runs topological sort on every structural change; serializes/deserializes the full patch as JSON. This is the source of truth for patch state.
+- `graph.js` — `ConnectionGraph`: DAG of modules; tracks video `connections` and parameter `controlConnections`; re-runs topological sort on every structural change; serializes/deserializes the full patch as JSON. This is the source of truth for patch state.
 - `moduleRegistry.js` — global module registry; `registerModule(typeName, class)` / `createModule(typeName, glCanvas, id)`
-- `ui.js` — `NodeGraphUI`: full node graph editor drawn on the p5.js P2D canvas, with a DOM sidebar palette; handles pan/zoom, node drag, cable wiring, parameter knobs, and monitor preview rendering
+- `ui.js` — `NodeGraphUI`: full node graph editor drawn on the p5.js P2D canvas, with a DOM sidebar palette and right-click search popup; handles pan/zoom, node drag, cable wiring, parameter knobs, and monitor preview rendering
 - `modules/Module.js` — base class for all modules; defines common behavior for shaders, FBOs, and parameters
 - `shaders/vert.js` — the shared vertex shader used by all modules for screen-quad rendering
 - `workflows/` — contains JSON patches (connection graph state, module types, and parameter values) that can be loaded via Ctrl+O
@@ -28,6 +28,8 @@ Every module that produces video output:
 1. Calls `this.createShader(fragSrc)` and `this.createOutputFBO()` in its constructor
 2. Overrides `process(graph, glCanvas)` to render into `this.outputFBO` using its GLSL shader
 3. Reads upstream video via `this.getInput(graph, portIndex)` which returns the upstream module's `outputFBO`
+
+Modules can also export control values by setting `this.controlValues['portName'] = value` during `process()`. These values are read via `this.getControlValue(portIndex)` and can be routed to downstream module parameters via parameter cables (`controlConnections`).
 
 The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob.
 
