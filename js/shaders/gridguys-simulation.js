@@ -93,15 +93,15 @@ void main() {
         float sClicked  = step(0.4, s.r)  * step(s.r, 0.6)  * (1.0 - isBottom);
         float seClicked = step(0.4, se.r) * step(se.r, 0.6) * (1.0 - isBottom) * (1.0 - isRight);
 
-        // Random rolls for each direction
-        float r0 = hash(gl_FragCoord.xy + vec2(u_time * 3.7, 0.1));
-        float r1 = hash(gl_FragCoord.xy + vec2(u_time * 5.3, 0.2));
-        float r2 = hash(gl_FragCoord.xy + vec2(u_time * 7.1, 0.3));
-        float r3 = hash(gl_FragCoord.xy + vec2(u_time * 11.3, 0.4));
-        float r4 = hash(gl_FragCoord.xy + vec2(u_time * 13.7, 0.5));
-        float r5 = hash(gl_FragCoord.xy + vec2(u_time * 17.1, 0.6));
-        float r6 = hash(gl_FragCoord.xy + vec2(u_time * 19.3, 0.7));
-        float r7 = hash(gl_FragCoord.xy + vec2(u_time * 23.7, 0.8));
+        // Random rolls for each direction (use fract to prevent precision loss over time)
+        float r0 = hash(gl_FragCoord.xy + vec2(fract(u_time * 3.7), 0.1));
+        float r1 = hash(gl_FragCoord.xy + vec2(fract(u_time * 5.3), 0.2));
+        float r2 = hash(gl_FragCoord.xy + vec2(fract(u_time * 7.1), 0.3));
+        float r3 = hash(gl_FragCoord.xy + vec2(fract(u_time * 11.3), 0.4));
+        float r4 = hash(gl_FragCoord.xy + vec2(fract(u_time * 13.7), 0.5));
+        float r5 = hash(gl_FragCoord.xy + vec2(fract(u_time * 17.1), 0.6));
+        float r6 = hash(gl_FragCoord.xy + vec2(fract(u_time * 19.3), 0.7));
+        float r7 = hash(gl_FragCoord.xy + vec2(fract(u_time * 23.7), 0.8));
 
         // Neighbors spread TO us based on their direction odds
         triggered += nwClicked * step(r0, u_oddsSE);
