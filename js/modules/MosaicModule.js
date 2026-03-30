@@ -8,7 +8,8 @@ export class MosaicModule extends Module {
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
-      pixels: { value: 50, min: 2, max: 200, step: 1, label: 'Pixels' },
+      pixelsW: { value: 252, min: 2, max: 4096, step: 1, label: 'Width' },
+      pixelsH: { value: 184, min: 2, max: 4096, step: 1, label: 'Height' },
     };
     this.createShader(mosaicFrag);
     this.createOutputFBO();
@@ -22,7 +23,8 @@ export class MosaicModule extends Module {
     glCanvas.clear();
     glCanvas.shader(this.shader);
     this.shader.setUniform('tex0', inputFBO);
-    this.shader.setUniform('pixels', this.params.pixels.value);
+    this.shader.setUniform('pixelsW', this.params.pixelsW.value);
+    this.shader.setUniform('pixelsH', this.params.pixelsH.value);
     this.renderQuad();
     this.outputFBO.end();
   }
