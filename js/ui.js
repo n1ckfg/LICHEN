@@ -10,7 +10,7 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'VideoPlayer'],
+  'Sources': ['Camera', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'Protozoa', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'Mosaic', 'PixelVision', 'RuttEtra', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
   'Utility': ['Brcosa', 'Levels', 'Sharpen', 'VideoMixer'],
@@ -35,6 +35,7 @@ const MODULE_COLORS = {
   GridGuys: color_source_art,
   NAPLPS: color_source_art,
   Oscillator: color_core_sandin,
+  Protozoa: color_source_art,
   VideoPlayer: color_source_basic,
   // - - - CORE - - -
   AdderMultiplier: color_core_sandin,

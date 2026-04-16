@@ -6,6 +6,7 @@ import './modules/GRASSModule.js';
 import './modules/GridGuysModule.js';
 import './modules/NAPLPSModule.js';
 import './modules/OscillatorModule.js';
+import './modules/ProtozoaModule.js';
 import './modules/VideoPlayerModule.js';
 // - - - CORE - - -
 import './modules/AdderMultiplierModule.js';

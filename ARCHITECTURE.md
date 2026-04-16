@@ -35,7 +35,7 @@ The UI renders each param in the `params` object: `{ paramName: { value, min, ma
 
 ### Module Categories
 
-- **Sources**: Camera, GRASS, GridGuys, NAPLPS, Oscillator, VideoPlayer
+- **Sources**: Camera, GRASS, GridGuys, NAPLPS, Oscillator, Protozoa, VideoPlayer
 - **Core**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, Mosaic, PixelVision, RuttEtra, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
 - **Utility**: Brcosa, Levels, Sharpen, VideoMixer
@@ -83,6 +83,20 @@ The GridGuys module (`modules/GridGuysModule.js`) provides an autonomous simulat
 
 **Simulation path:** It uses two internal framebuffers (`fboA` and `fboB`) to run a custom vertex/fragment simulation pass (`shaders/gridguys-simulation.js`) that tracks the odds of agent spread in 8 cardinal directions, guided by an autonomous target cursor (`gridguys/target.js`).
 **Rendering path:** The resulting buffer state is passed through a secondary render pass (`shaders/gridguys-render.js`) mapped to the module's main `outputFBO`.
+
+## Protozoa Module
+
+The Protozoa module (`modules/ProtozoaModule.js`) generates autonomous watercolor-like bleed effects using a multi-pass shader pipeline.
+
+**Simulation path:** Uses four framebuffers (`fb1`-`fb4`) in a circular feedback loop with four distinct shader passes:
+1. **Diffusion** (`shaders/protozoa.js:protozoaDiffuseFrag`) - Laplacian diffusion spreads color using heat equation approximation
+2. **Bleed** (`protozoaBleedFrag`) - Anisotropic bleeding simulates paper fiber absorption with FBM-based paper texture
+3. **Feedback** (`protozoaFeedbackFrag`) - Creates ripple effects based on intensity gradients with temporal persistence
+4. **Banding** (`protozoaBandingFrag`) - Chromatic separation and color banding to prevent whiteout
+
+**Color injection:** Auto-spawns HSV color blobs at random positions with configurable spawn rate and size. Blobs fade over time (life decay).
+
+**Rendering path:** Final display pass (`protozoaDisplayFrag`) combines the middle buffer state with tone mapping, gamma correction, and subtle vignette, output to the module's `outputFBO`.
 
 ## Development Conventions
 
