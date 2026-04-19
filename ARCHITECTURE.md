@@ -37,7 +37,7 @@ The UI renders each param in the `params` object: `{ paramName: { value, min, ma
 
 - **Sources**: Camera, GRASS, GridGuys, NAPLPS, Oscillator, Protozoa, VideoPlayer
 - **Core**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, SyncGenerator, ValueScrambler
-- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, Mosaic, PixelVision, RuttEtra, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
+- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
 - **Utility**: Brcosa, Levels, Sharpen, VideoMixer
 - **Output**: Monitor
 
@@ -97,6 +97,18 @@ The Protozoa module (`modules/ProtozoaModule.js`) generates autonomous watercolo
 **Color injection:** Auto-spawns HSV color blobs at random positions with configurable spawn rate and size. Blobs fade over time (life decay).
 
 **Rendering path:** Final display pass (`protozoaDisplayFrag`) combines the middle buffer state with tone mapping, gamma correction, and subtle vignette, output to the module's `outputFBO`.
+
+## LuminanceDelay and Slitscan Modules
+
+Both modules implement time-based effects that require random access to a ring buffer of past input frames. The original WebGL2 reference (ShaderPadTests `slitscan-slow-luminance.html` and `slitscan-wiggle-spatial.html`) stores history in a `sampler2DArray`, which isn't available in WebGL1. LICHEN emulates this with a 2D **tile atlas**: a single framebuffer holding an 8×8 grid of 64 downscaled history frames (tile size = `glCanvas / 4` per axis, so the atlas is `glCanvas.width × 2` by `glCanvas.height × 2`).
+
+**Ring buffer write:** Two atlases ping-pong each frame. The shared `shaders/atlas-write.js` shader reads the previous atlas into the new one, replacing only the pixels inside the current write tile with the upstream input. After the write pass the pointers are swapped so `atlasA` always holds the latest history.
+
+**Output pass:**
+- `LuminanceDelay` (`modules/LuminanceDelayModule.js`, `shaders/luminance-delay.js`) samples the current tile for luminance, maps it through `divisions` / `framesPerDivision` to a per-pixel frame delay, then samples the delayed tile. Negative `divisions` inverts so bright regions lag instead of dark ones.
+- `Slitscan` (`modules/SlitscanModule.js`, `shaders/slitscan.js`) partitions the output along `axis` (Y or X) into `strips` bands, each delayed proportionally to its index by `delay` frames per strip.
+
+Both modules clear their atlases on construction so the early frames show progressive fill rather than garbage memory.
 
 ## Development Conventions
 

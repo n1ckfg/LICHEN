@@ -12,7 +12,7 @@ void main() {
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'Protozoa', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'Mosaic', 'PixelVision', 'RuttEtra', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
   'Utility': ['Brcosa', 'Levels', 'Sharpen', 'VideoMixer'],
   'Output': ['Monitor'],
 };
