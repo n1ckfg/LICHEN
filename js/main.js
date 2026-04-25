@@ -29,6 +29,7 @@ import './modules/GlitchModule.js';
 import './modules/HSFlowModule.js';
 import './modules/HyperCardModule.js';
 import './modules/LuminanceDelayModule.js';
+import './modules/MaelstromModule.js';
 import './modules/MosaicModule.js';
 import './modules/PixelVisionModule.js';
 import './modules/RuttEtraModule.js';
