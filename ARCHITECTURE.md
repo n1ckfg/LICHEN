@@ -35,7 +35,7 @@ The UI renders each param in the `params` object: `{ paramName: { value, min, ma
 
 ### Module Categories
 
-- **Sources**: Camera, GRASS, GridGuys, NAPLPS, Oscillator, Protozoa, VideoPlayer
+- **Sources**: Camera, Conway, GRASS, GridGuys, NAPLPS, Oscillator, Protozoa, VideoPlayer
 - **Core**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
 - **Utility**: Brcosa, Levels, Sharpen, VideoMixer
@@ -83,6 +83,21 @@ The GridGuys module (`modules/GridGuysModule.js`) provides an autonomous simulat
 
 **Simulation path:** It uses two internal framebuffers (`fboA` and `fboB`) to run a custom vertex/fragment simulation pass (`shaders/gridguys-simulation.js`) that tracks the odds of agent spread in 8 cardinal directions, guided by an autonomous target cursor (`gridguys/target.js`).
 **Rendering path:** The resulting buffer state is passed through a secondary render pass (`shaders/gridguys-render.js`) mapped to the module's main `outputFBO`.
+
+## Conway Module
+
+The Conway module (`modules/ConwayModule.js`) implements Conway's Game of Life using GPU-based ping-pong simulation.
+
+**Simulation path:** Uses two framebuffers (`fboA` and `fboB`) for ping-pong state updates. The simulation shader (`shaders/conway.js:conwaySimulationFrag`) counts neighbors using toroidal (wrap-around) boundary conditions and applies standard B3/S23 rules.
+
+**Rendering path:** The render shader (`conwayRenderFrag`) pixelates the simulation state based on the `cellSize` parameter and maps dead/alive cells to configurable colors.
+
+**Fullscreen interaction:**
+- Double-click the node preview to enter fullscreen
+- Click/drag to draw cells, right-click to spawn patterns (glider, lwss, pulsar, etc.)
+- Scroll wheel adjusts cell size
+- Keyboard: SPACE pause/play, R randomize, C clear, P cycle patterns, +/- adjust speed
+- ESC exits fullscreen
 
 ## Protozoa Module
 

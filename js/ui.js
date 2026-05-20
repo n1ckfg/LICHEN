@@ -10,7 +10,7 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'Protozoa', 'VideoPlayer'],
+  'Sources': ['Camera', 'Conway', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'Protozoa', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
   'Utility': ['Brcosa', 'Levels', 'Sharpen', 'VideoMixer'],
@@ -31,6 +31,7 @@ const color_output = [170, 85, 34];
 const MODULE_COLORS = {
   // - - - SOURCES - - -
   Camera: color_source_basic,
+  Conway: color_source_art,
   GRASS: color_source_grass,
   GridGuys: color_source_art,
   NAPLPS: color_source_art,
@@ -260,9 +261,9 @@ export class NodeGraphUI {
     const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
     const paramCount = Object.keys(mod.params).length;
     const paramSection = paramCount * PARAM_ROW_HEIGHT;
-    const hasPreview = mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS';
+    const hasPreview = mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway';
     const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
-    let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS') ? MONITOR_PREVIEW_H + 8 : 0;
+    let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS' || mod.type === 'Conway') ? MONITOR_PREVIEW_H + 8 : 0;
     if (mod.type === 'Monitor') {
       monitorSection += 124; // Extra space for param padding + FPS counter + record/fullscreen/load+save+link buttons
     }
@@ -638,8 +639,8 @@ export class NodeGraphUI {
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
 
-      if (mod.type === 'Monitor' || mod.type === 'GRASS') {
-        // Large preview area (Monitor has params above preview, GRASS does not)
+      if (mod.type === 'Monitor' || mod.type === 'GRASS' || mod.type === 'Conway') {
+        // Large preview area (Monitor has params above preview, GRASS/Conway do not)
         const py = mod.y + HEADER_HEIGHT + portSection + (mod.type === 'Monitor' ? paramSection + 12 : 0);
         if (wx >= mod.x + 4 && wx <= mod.x + 4 + MONITOR_PREVIEW_W &&
             wy >= py && wy <= py + MONITOR_PREVIEW_H) {
@@ -853,6 +854,19 @@ export class NodeGraphUI {
           }
           // Render terminal/REPL overlays on top of the clean video
           mod.renderOverlays(p);
+        } else if (mod.type === 'Conway') {
+          if (mod.outputFBO) {
+            this._drawFBO(mod.outputFBO, dx, dy, dw, dh);
+          }
+          // Draw overlay with controls hint and current pattern
+          p.push();
+          p.fill(255, 255, 255, 180);
+          p.noStroke();
+          p.textSize(12);
+          p.textAlign(p.LEFT, p.BOTTOM);
+          const hint = `[SPACE] ${mod.params.running.value > 0.5 ? 'Pause' : 'Play'} | [R] Randomize | [C] Clear | [P] Pattern: ${mod.getCurrentPatternName()} | [+/-] Speed: ${Math.floor(mod.params.speed.value)}x | Scroll to resize`;
+          p.text(hint, 12, p.height - 12);
+          p.pop();
         } else if (mod.type === 'Monitor') {
           if (mod.displayTexture) {
             this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
@@ -1249,8 +1263,24 @@ export class NodeGraphUI {
       }
     }
 
-    // Module preview thumbnail (for non-Monitor, non-GRASS modules with FBO)
-    if (mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS') {
+    // Conway preview (same size as Monitor/GRASS preview)
+    if (mod.type === 'Conway') {
+      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
+      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const py = mod.y + HEADER_HEIGHT + portSection;
+      p.fill(0);
+      p.stroke(60);
+      p.strokeWeight(1);
+      p.rect(mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
+      if (mod.outputFBO) {
+        try {
+          this._drawFBO(mod.outputFBO, mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H);
+        } catch (e) { /* FBO may not be ready yet */ }
+      }
+    }
+
+    // Module preview thumbnail (for non-Monitor, non-GRASS, non-Conway modules with FBO)
+    if (mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway') {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
@@ -1292,8 +1322,14 @@ export class NodeGraphUI {
 
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
-      // Stop recording if exiting fullscreen
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
+      // Conway: handle mouse drawing instead of exiting fullscreen
+      if (mod && mod.type === 'Conway') {
+        const btnName = button === this.p.RIGHT ? 'right' : 'left';
+        mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
+        return;
+      }
+      // Stop recording if exiting fullscreen
       if (mod && mod.isRecording && mod.isRecording()) {
         mod.stopRecording();
       }
@@ -1631,6 +1667,15 @@ export class NodeGraphUI {
   }
 
   mouseDragged(mx, my) {
+    // Conway: handle mouse drawing in fullscreen
+    if (this.fullscreenMonitor !== null) {
+      const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
+      if (mod && mod.type === 'Conway') {
+        mod.handleMouseDrag(mx, my, this.p.width, this.p.height);
+        return;
+      }
+    }
+
     if (this.isPanning) {
       this.panX = this.panStartPanX + (mx - this.panStartX);
       this.panY = this.panStartPanY + (my - this.panStartY);
@@ -1679,6 +1724,15 @@ export class NodeGraphUI {
   }
 
   mouseReleased(mx, my) {
+    // Conway: handle mouse release in fullscreen
+    if (this.fullscreenMonitor !== null) {
+      const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
+      if (mod && mod.type === 'Conway') {
+        mod.handleMouseUp();
+        return;
+      }
+    }
+
     if (this.isPanning) {
       this.isPanning = false;
       return;
@@ -1831,6 +1885,15 @@ export class NodeGraphUI {
   }
 
   mouseWheel(delta) {
+    // Conway: handle scroll wheel for cell size in fullscreen
+    if (this.fullscreenMonitor !== null) {
+      const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
+      if (mod && mod.type === 'Conway') {
+        mod.handleWheel(delta);
+        return;
+      }
+    }
+
     const p = this.p;
     const wx = (p.mouseX - this.panX) / this.zoom;
     const wy = (p.mouseY - this.panY) / this.zoom;

@@ -2,6 +2,7 @@ import { ProcessingPipeline } from './pipeline.js';
 import { NodeGraphUI } from './ui.js';
 // - - - SOURCES - - -
 import './modules/CameraModule.js';
+import './modules/ConwayModule.js';
 import './modules/GRASSModule.js';
 import './modules/GridGuysModule.js';
 import './modules/NAPLPSModule.js';
@@ -148,7 +149,7 @@ const sketch = (p) => {
   };
 
   p.keyPressed = () => {
-    // When a GRASS module is fullscreened it owns all keyboard input
+    // When a GRASS or Conway module is fullscreened it owns all keyboard input
     if (ui.fullscreenMonitor !== null) {
       const fsmod = pipeline.graph.nodes.get(ui.fullscreenMonitor);
       if (fsmod && fsmod.type === 'GRASS') {
@@ -161,7 +162,16 @@ const sketch = (p) => {
         }
         return false;
       }
-      // Non-GRASS fullscreen: ESC exits and stops recording
+      if (fsmod && fsmod.type === 'Conway') {
+        // ESC exits fullscreen
+        if (p.key === 'Escape') {
+          ui.fullscreenMonitor = null;
+        } else {
+          fsmod.handleKey(p.key, p.keyCode, p);
+        }
+        return false;
+      }
+      // Non-GRASS/Conway fullscreen: ESC exits and stops recording
       if (p.key === 'Escape') {
         if (fsmod && fsmod.isRecording && fsmod.isRecording()) {
           fsmod.stopRecording();
