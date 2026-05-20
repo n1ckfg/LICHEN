@@ -858,15 +858,7 @@ export class NodeGraphUI {
           if (mod.outputFBO) {
             this._drawFBO(mod.outputFBO, dx, dy, dw, dh);
           }
-          // Draw overlay with controls hint and current pattern
-          p.push();
-          p.fill(255, 255, 255, 180);
-          p.noStroke();
-          p.textSize(12);
-          p.textAlign(p.LEFT, p.BOTTOM);
-          const hint = `[SPACE] ${mod.params.running.value > 0.5 ? 'Pause' : 'Play'} | [R] Randomize | [C] Clear | [P] Pattern: ${mod.getCurrentPatternName()} | [+/-] Speed: ${Math.floor(mod.params.speed.value)}x | Scroll to resize`;
-          p.text(hint, 12, p.height - 12);
-          p.pop();
+          mod.showFullscreenUI();
         } else if (mod.type === 'Monitor') {
           if (mod.displayTexture) {
             this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
@@ -2077,6 +2069,10 @@ export class NodeGraphUI {
   _deleteNode(id) {
     const mod = this.pipeline.graph.nodes.get(id);
     if (mod) {
+      // Hide Conway UI if deleting a fullscreened Conway
+      if (mod.type === 'Conway' && mod.hideFullscreenUI) {
+        mod.hideFullscreenUI();
+      }
       // Start fade-out animation
       this._dyingNodes.set(id, { mod, startTime: performance.now() });
       this.pipeline.graph.removeNode(id); // also calls disconnectAllControl

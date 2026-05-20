@@ -49,6 +49,107 @@ export class ConwayModule extends Module {
     this.deadColor = [0.06, 0.06, 0.08];
     this.aliveColor = [0.15, 0.85, 0.45];
     this.startTime = performance.now();
+
+    this._createFullscreenUI();
+  }
+
+  _createFullscreenUI() {
+    this._uiContainer = document.createElement('div');
+    this._uiContainer.id = `conway-ui-${this.id}`;
+    this._uiContainer.style.cssText = `
+      position: fixed;
+      top: 12px;
+      left: 170px;
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+    `;
+
+    const btnStyle = `
+      background: #222;
+      color: #eee;
+      border: 1px solid #444;
+      padding: 6px 14px;
+      font: 13px monospace;
+      cursor: pointer;
+      border-radius: 4px;
+    `;
+
+    const createBtn = (label, onClick) => {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      btn.style.cssText = btnStyle;
+      btn.onmouseenter = () => btn.style.background = '#333';
+      btn.onmouseleave = () => btn.style.background = '#222';
+      btn.onclick = (e) => { e.stopPropagation(); onClick(); };
+      return btn;
+    };
+
+    this._btnToggle = createBtn('Pause', () => {
+      this.params.running.value = this.params.running.value > 0.5 ? 0 : 1;
+      this._updateUILabels();
+    });
+
+    this._btnRandom = createBtn('Randomize', () => this.randomize());
+    this._btnClear = createBtn('Clear', () => this.clear());
+
+    this._btnSpeedUp = createBtn('Speed +', () => {
+      this.params.speed.value = Math.min(16, this.params.speed.value * 2);
+      this._updateUILabels();
+    });
+
+    this._btnSpeedDown = createBtn('Speed −', () => {
+      this.params.speed.value = Math.max(1, Math.floor(this.params.speed.value / 2));
+      this._updateUILabels();
+    });
+
+    this._btnPattern = createBtn(`Pattern: ${this.getCurrentPatternName()}`, () => {
+      this.currentPattern = (this.currentPattern + 1) % PATTERN_NAMES.length;
+      this._updateUILabels();
+    });
+
+    this._uiContainer.appendChild(this._btnToggle);
+    this._uiContainer.appendChild(this._btnRandom);
+    this._uiContainer.appendChild(this._btnClear);
+    this._uiContainer.appendChild(this._btnSpeedUp);
+    this._uiContainer.appendChild(this._btnSpeedDown);
+    this._uiContainer.appendChild(this._btnPattern);
+
+    this._infoEl = document.createElement('div');
+    this._infoEl.style.cssText = `
+      position: fixed;
+      bottom: 12px;
+      left: 170px;
+      z-index: 1000;
+      color: #888;
+      font: 12px monospace;
+      display: none;
+    `;
+    this._infoEl.textContent = 'Click/drag to draw · Right-click to spawn pattern · Scroll to resize cells · ESC to exit';
+
+    document.body.appendChild(this._uiContainer);
+    document.body.appendChild(this._infoEl);
+  }
+
+  _updateUILabels() {
+    if (this._btnToggle) {
+      this._btnToggle.textContent = this.params.running.value > 0.5 ? 'Pause' : 'Play';
+    }
+    if (this._btnPattern) {
+      this._btnPattern.textContent = `Pattern: ${this.getCurrentPatternName()}`;
+    }
+  }
+
+  showFullscreenUI() {
+    this._updateUILabels();
+    if (this._uiContainer) this._uiContainer.style.display = 'flex';
+    if (this._infoEl) this._infoEl.style.display = 'block';
+  }
+
+  hideFullscreenUI() {
+    if (this._uiContainer) this._uiContainer.style.display = 'none';
+    if (this._infoEl) this._infoEl.style.display = 'none';
   }
 
   _getVertSrc() {
@@ -237,6 +338,12 @@ export class ConwayModule extends Module {
   }
 
   dispose() {
+    if (this._uiContainer && this._uiContainer.parentNode) {
+      this._uiContainer.parentNode.removeChild(this._uiContainer);
+    }
+    if (this._infoEl && this._infoEl.parentNode) {
+      this._infoEl.parentNode.removeChild(this._infoEl);
+    }
     this.fboA = null;
     this.fboB = null;
     this.simulationShader = null;

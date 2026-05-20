@@ -165,6 +165,7 @@ const sketch = (p) => {
       if (fsmod && fsmod.type === 'Conway') {
         // ESC exits fullscreen
         if (p.key === 'Escape') {
+          fsmod.hideFullscreenUI();
           ui.fullscreenMonitor = null;
         } else {
           fsmod.handleKey(p.key, p.keyCode, p);
