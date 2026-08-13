@@ -3,7 +3,7 @@
 ### Data Flow
 
 ```
-main.js (p5.js loop)
+js/main.js (p5.js loop)
   → ProcessingPipeline.processFrame()
     → ConnectionGraph.sortedOrder (topological)
       → module.process(graph, glCanvas)  ← each module renders to its outputFBO
@@ -11,18 +11,18 @@ main.js (p5.js loop)
 
 ### Key Files
 
-- `main.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+A select all, Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen)
-- `pipeline.js` — `ProcessingPipeline`: holds the `ConnectionGraph`, drives per-frame processing
-- `graph.js` — `ConnectionGraph`: DAG of modules; tracks video `connections` and parameter `controlConnections`; re-runs topological sort on every structural change; serializes/deserializes the full patch as JSON. This is the source of truth for patch state.
-- `moduleRegistry.js` — global module registry; `registerModule(typeName, class)` / `createModule(typeName, glCanvas, id)`
-- `ui.js` — `NodeGraphUI`: full node graph editor drawn on the p5.js P2D canvas, with a DOM sidebar palette and right-click search popup; handles pan/zoom, node drag, cable wiring, parameter knobs, and monitor preview rendering
-- `modules/Module.js` — base class for all modules; defines common behavior for shaders, FBOs, and parameters
-- `shaders/vert.js` — the shared vertex shader used by all modules for screen-quad rendering
+- `js/main.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+A select all, Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen)
+- `js/pipeline.js` — `ProcessingPipeline`: holds the `ConnectionGraph`, drives per-frame processing
+- `js/graph.js` — `ConnectionGraph`: DAG of modules; tracks video `connections` and parameter `controlConnections`; re-runs topological sort on every structural change; serializes/deserializes the full patch as JSON. This is the source of truth for patch state.
+- `js/moduleRegistry.js` — global module registry; `registerModule(typeName, class)` / `createModule(typeName, glCanvas, id)`
+- `js/ui.js` — `NodeGraphUI`: full node graph editor drawn on the p5.js P2D canvas, with a DOM sidebar palette and right-click search popup; handles pan/zoom, node drag, cable wiring, parameter knobs, and monitor preview rendering
+- `js/modules/Module.js` — base class for all modules; defines common behavior for shaders, FBOs, and parameters
+- `js/shaders/vert.js` — the shared vertex shader used by all modules for screen-quad rendering
 - `workflows/` — contains JSON patches (connection graph state, module types, and parameter values) that can be loaded via Ctrl+O
 
-### Module System (`modules/`)
+### Module System (`js/modules/`)
 
-All modules extend `Module` (base class in `modules/Module.js`) and call `registerModule()` at the bottom of their file. Modules must be explicitly imported in `main.js` to be registered.
+All modules extend `Module` (base class in `js/modules/Module.js`) and call `registerModule()` at the bottom of their file. Modules must be explicitly imported in `js/main.js` to be registered.
 
 Every module that produces video output:
 1. Calls `this.createShader(fragSrc)` and `this.createOutputFBO()` in its constructor
@@ -41,54 +41,54 @@ The UI renders each param in the `params` object: `{ paramName: { value, min, ma
 - **Utility**: Brcosa, Levels, Sharpen, VideoMixer
 - **Output**: Monitor
 
-### Shaders (`shaders/`)
+### Shaders (`js/shaders/`)
 
-Fragment shaders are stored as JS template literal exports (e.g., `export const oscillatorFrag = \`...\``). `shaders/vert.js` exports the vertex shader `vertSrc` shared by all modules. Most modules import their own fragment shader from here.
+Fragment shaders are stored as JS template literal exports (e.g., `export const oscillatorFrag = \`...\``). `js/shaders/vert.js` exports the vertex shader `vertSrc` shared by all modules. Most modules import their own fragment shader from here.
 
 ## Adding a New Module
 
-1. Create `shaders/mymodule.js` exporting the fragment shader source
-2. Create `modules/MyModule.js` extending `Module`, defining `inputs`, `outputs`, `params`, and `process()`; call `registerModule('MyModule', MyModuleClass)` at the end
-3. Import `'./modules/MyModule.js'` in `main.js`
-4. Add the type name to the appropriate category in `MODULE_CATEGORIES` in `ui.js`
+1. Create `js/shaders/mymodule.js` exporting the fragment shader source
+2. Create `js/modules/MyModule.js` extending `Module`, defining `inputs`, `outputs`, `params`, and `process()`; call `registerModule('MyModule', MyModuleClass)` at the end
+3. Import `'./modules/MyModule.js'` in `js/main.js`
+4. Add the type name to the appropriate category in `MODULE_CATEGORIES` in `js/ui.js`
 
 ## GRASS Module
 
-The GRASS module (`modules/GRASSModule.js`) is a complete embedded GRASS interpreter — an emulation of the Datamax UV-1 / Sandin Image Processor's GRASS language (from the FakeGRASS project). It has no input ports and one video output.
+The GRASS module (`js/modules/GRASSModule.js`) is a complete embedded GRASS interpreter — an emulation of the Datamax UV-1 / Sandin Image Processor's GRASS language (from the FakeGRASS project). It has no input ports and one video output.
 
-**Embedded source:** All FakeGRASS subsystems live in `modules/grass/` (flattened from FakeGRASS's `lang/`, `graphics/`, and `ui/` directories). No import path changes were needed since the relative structure is preserved.
+**Embedded source:** All FakeGRASS subsystems live in `js/modules/grass/` (flattened from FakeGRASS's `lang/`, `graphics/`, and `ui/` directories). No import path changes were needed since the relative structure is preserved.
 
 **Rendering path:** The GRASS 2-bit framebuffer is converted to a `p5.Image` each frame via palette lookup (`_updateFBImage()`), then uploaded to the module's WebGL `outputFBO` as a texture via the passthrough shader. The terminal/REPL overlays are NOT in the video output — they are rendered directly on the main P2D canvas only when the module is fullscreened.
 
 **Fullscreen behavior:**
 - Double-click the node preview to enter fullscreen (same hit-test logic as Monitor)
-- When fullscreened, all keyboard input is captured and routed to `mod.handleKey()` via `main.js keyPressed`
+- When fullscreened, all keyboard input is captured and routed to `mod.handleKey()` via `js/main.js keyPressed`
 - Mouse position is converted to GRASS coordinates (`$X1`/`$Y1`) each frame via `updateMouseFromCanvas()`
 - ESC (with no editor open) exits fullscreen; ESC inside the GRASS EDIT macro editor saves the macro
 - Terminal + REPL overlays render over the video in fullscreen mode
 - Clicking exits fullscreen (same as Monitor)
 
-**ui.js integration:** `getModuleHeight` and `_drawModule` treat GRASS like Monitor (large preview, `MONITOR_PREVIEW_W × MONITOR_PREVIEW_H`). `hitTestMonitorDblClick` checks for both `'Monitor'` and `'GRASS'` types.
+**js/ui.js integration:** `getModuleHeight` and `_drawModule` treat GRASS like Monitor (large preview, `MONITOR_PREVIEW_W × MONITOR_PREVIEW_H`). `hitTestMonitorDblClick` checks for both `'Monitor'` and `'GRASS'` types.
 
 ## NAPLPS Module
 
-The NAPLPS module (`modules/NAPLPSModule.js`) decodes North American Presentation Level Protocol Syntax (.nap) files containing vector graphics instructions.
+The NAPLPS module (`js/modules/NAPLPSModule.js`) decodes North American Presentation Level Protocol Syntax (.nap) files containing vector graphics instructions.
 
-**Decoding:** Relies on the external `naplps/naplps.js` decoder logic. It accepts file drops through a hidden HTML file input, creating draw commands progressively with a configurable playback speed.
+**Decoding:** Relies on the external `js/modules/naplps/naplps.js` decoder logic. It accepts file drops through a hidden HTML file input, creating draw commands progressively with a configurable playback speed.
 **Rendering path:** Commands are executed into a 2D `p5.Graphics` buffer using p5 drawing commands (`pg.rect`, `pg.vertex`, etc.), tracking color and progressive drawing state, which is then mapped to the module's WebGL `outputFBO` via the passthrough shader.
 
 ## GridGuys Module
 
-The GridGuys module (`modules/GridGuysModule.js`) provides an autonomous simulation using a ping-pong shader technique to evolve cellular-automata-like agents across the screen.
+The GridGuys module (`js/modules/GridGuysModule.js`) provides an autonomous simulation using a ping-pong shader technique to evolve cellular-automata-like agents across the screen.
 
-**Simulation path:** It uses two internal framebuffers (`fboA` and `fboB`) to run a custom vertex/fragment simulation pass (`shaders/gridguys-simulation.js`) that tracks the odds of agent spread in 8 cardinal directions, guided by an autonomous target cursor (`gridguys/target.js`).
-**Rendering path:** The resulting buffer state is passed through a secondary render pass (`shaders/gridguys-render.js`) mapped to the module's main `outputFBO`.
+**Simulation path:** It uses two internal framebuffers (`fboA` and `fboB`) to run a custom vertex/fragment simulation pass (`js/shaders/gridguys-simulation.js`) that tracks the odds of agent spread in 8 cardinal directions, guided by an autonomous target cursor (`js/modules/gridguys/target.js`).
+**Rendering path:** The resulting buffer state is passed through a secondary render pass (`js/shaders/gridguys-render.js`) mapped to the module's main `outputFBO`.
 
 ## Conway Module
 
-The Conway module (`modules/ConwayModule.js`) implements Conway's Game of Life using GPU-based ping-pong simulation.
+The Conway module (`js/modules/ConwayModule.js`) implements Conway's Game of Life using GPU-based ping-pong simulation.
 
-**Simulation path:** Uses two framebuffers (`fboA` and `fboB`) for ping-pong state updates. The simulation shader (`shaders/conway.js:conwaySimulationFrag`) counts neighbors using toroidal (wrap-around) boundary conditions and applies standard B3/S23 rules.
+**Simulation path:** Uses two framebuffers (`fboA` and `fboB`) for ping-pong state updates. The simulation shader (`js/shaders/conway.js:conwaySimulationFrag`) counts neighbors using toroidal (wrap-around) boundary conditions and applies standard B3/S23 rules.
 
 **Rendering path:** The render shader (`conwayRenderFrag`) pixelates the simulation state based on the `cellSize` parameter and maps dead/alive cells to configurable colors.
 
@@ -101,10 +101,10 @@ The Conway module (`modules/ConwayModule.js`) implements Conway's Game of Life u
 
 ## Protozoa Module
 
-The Protozoa module (`modules/ProtozoaModule.js`) generates autonomous watercolor-like bleed effects using a multi-pass shader pipeline.
+The Protozoa module (`js/modules/ProtozoaModule.js`) generates autonomous watercolor-like bleed effects using a multi-pass shader pipeline.
 
 **Simulation path:** Uses four framebuffers (`fb1`-`fb4`) in a circular feedback loop with four distinct shader passes:
-1. **Diffusion** (`shaders/protozoa.js:protozoaDiffuseFrag`) - Laplacian diffusion spreads color using heat equation approximation
+1. **Diffusion** (`js/shaders/protozoa.js:protozoaDiffuseFrag`) - Laplacian diffusion spreads color using heat equation approximation
 2. **Bleed** (`protozoaBleedFrag`) - Anisotropic bleeding simulates paper fiber absorption with FBM-based paper texture
 3. **Feedback** (`protozoaFeedbackFrag`) - Creates ripple effects based on intensity gradients with temporal persistence
 4. **Banding** (`protozoaBandingFrag`) - Chromatic separation and color banding to prevent whiteout
@@ -117,18 +117,18 @@ The Protozoa module (`modules/ProtozoaModule.js`) generates autonomous watercolo
 
 Both modules implement time-based effects that require random access to a ring buffer of past input frames. The original WebGL2 reference (ShaderPadTests `slitscan-slow-luminance.html` and `slitscan-wiggle-spatial.html`) stores history in a `sampler2DArray`, which isn't available in WebGL1. LICHEN emulates this with a 2D **tile atlas**: a single framebuffer holding an 8×8 grid of 64 downscaled history frames (tile size = `glCanvas / 4` per axis, so the atlas is `glCanvas.width × 2` by `glCanvas.height × 2`).
 
-**Ring buffer write:** Two atlases ping-pong each frame. The shared `shaders/atlas-write.js` shader reads the previous atlas into the new one, replacing only the pixels inside the current write tile with the upstream input. After the write pass the pointers are swapped so `atlasA` always holds the latest history.
+**Ring buffer write:** Two atlases ping-pong each frame. The shared `js/shaders/atlas-write.js` shader reads the previous atlas into the new one, replacing only the pixels inside the current write tile with the upstream input. After the write pass the pointers are swapped so `atlasA` always holds the latest history.
 
 **Output pass:**
-- `LuminanceDelay` (`modules/LuminanceDelayModule.js`, `shaders/luminance-delay.js`) samples the current tile for luminance, maps it through `divisions` / `framesPerDivision` to a per-pixel frame delay, then samples the delayed tile. Negative `divisions` inverts so bright regions lag instead of dark ones.
-- `Slitscan` (`modules/SlitscanModule.js`, `shaders/slitscan.js`) partitions the output along `axis` (Y or X) into `strips` bands, each delayed proportionally to its index by `delay` frames per strip.
+- `LuminanceDelay` (`js/modules/LuminanceDelayModule.js`, `js/shaders/luminance-delay.js`) samples the current tile for luminance, maps it through `divisions` / `framesPerDivision` to a per-pixel frame delay, then samples the delayed tile. Negative `divisions` inverts so bright regions lag instead of dark ones.
+- `Slitscan` (`js/modules/SlitscanModule.js`, `js/shaders/slitscan.js`) partitions the output along `axis` (Y or X) into `strips` bands, each delayed proportionally to its index by `delay` frames per strip.
 
 Both modules clear their atlases on construction so the early frames show progressive fill rather than garbage memory.
 
 ## Development Conventions
 
 - **State Management**: The `ConnectionGraph` is the source of truth for the patch state.
-- **Rendering**: Modules should always render to their `outputFBO` during `process()`. The `Monitor` and `GRASS` modules provide previews by blitting their FBOs to the main P2D canvas in `ui.js`.
+- **Rendering**: Modules should always render to their `outputFBO` during `process()`. The `Monitor` and `GRASS` modules provide previews by blitting their FBOs to the main P2D canvas in `js/ui.js`.
 - **Parameters**: Module parameters are normalized or use specific ranges defined in the `params` object. The UI handles scaling these values for display.
 - **Coordinate System**: p5.js uses a 2D coordinate system for the UI (top-left 0,0), while the WebGL `glCanvas` uses standard GL coordinates (centered 0,0 or screen-space depending on usage).
 
