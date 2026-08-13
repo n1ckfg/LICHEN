@@ -1059,10 +1059,19 @@ export class NodeGraphUI {
     p.textAlign(p.CENTER, p.CENTER);
     p.text(mod.type, mod.x + MODULE_WIDTH / 2, mod.y + HEADER_HEIGHT / 2);
 
-    // Collapse toggle (light gray circle)
+    // Collapse toggle (light gray circle with "-" when expanded, "+" when collapsed)
+    const btnX = mod.x + MODULE_WIDTH - 12;
+    const btnY = mod.y + HEADER_HEIGHT / 2;
     p.fill(180);
     p.noStroke();
-    p.ellipse(mod.x + MODULE_WIDTH - 12, mod.y + HEADER_HEIGHT / 2, 12, 12);
+    p.ellipse(btnX, btnY, 12, 12);
+    p.stroke(50);
+    p.strokeWeight(1.5);
+    p.line(btnX - 3.5, btnY, btnX + 3.5, btnY);
+    if (mod.collapsed) {
+      p.line(btnX, btnY - 3.5, btnX, btnY + 3.5);
+    }
+    p.noStroke();
 
     // Skip remaining content if collapsed
     if (mod.collapsed) {
