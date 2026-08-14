@@ -7,6 +7,7 @@ export class HyperCardModule extends Module {
     super('HyperCard', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo = "Hypercard";
     this.params = {
       finalThreshold: { value: 0.4, min: 0, max: 1, step: 0.01, label: 'Thresh' },
     };

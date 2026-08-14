@@ -14,6 +14,7 @@ export class HSFlowModule extends Module {
     super('HSFlow', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo = "HSFlow";
     this.params = {
       lambda: { value: 0.01, min: 0.001, max: 0.5, step: 0.001, label: 'Lambda' },
       flowScale: { value: 1.0, min: 0.1, max: 5.0, step: 0.01, label: 'Flow' },

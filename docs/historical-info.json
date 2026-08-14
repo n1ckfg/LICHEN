@@ -5,7 +5,7 @@
 	},
 	{
 		"name": "Sandin",
-		"body": "<a href='https://en.wikipedia.org/wiki/Sandin_Image_Processor'>Sandin Image Processor</a>"
+		"body": "<a href='https://en.wikipedia.org/wiki/Sandin_Image_Processor'>Sandin Image Processor</a><br>Based on the <a href='https://github.com/amandalong/Sandin-Image-Processor'>Digital Sandin Image Processor</a> implementation by <a href='https://www.amandalong.org/'>Amanda Long</a>."
 	},
 	{
 		"name": "Conway",
@@ -18,5 +18,17 @@
 	{
 		"name": "Hypercard",
 		"body": "<a href='https://en.wikipedia.org/wiki/HyperCard'>Hypercard</a>"
+	},
+	{
+		"name": "Rutt-Etra",
+		"body": "<a href='https://en.wikipedia.org/wiki/Rutt/Etra_Video_Synthesizer'>Rutt-Etra Video Synthesizer</a><br>Based on the <a href='https://www.airtightinteractive.com/2011/06/rutt-etra-izer/'>Rutt-Etra-Izer</a> implementation by <a href='https://airtight.cc'>Felix Turner</a>"
+	},
+	{
+		"name": "Gameboy",
+		"body": "<a href='https://en.wikipedia.org/wiki/Game_Boy_Camera'>Game Boy Camera</a>"
+	},
+	{
+		"name": "HSFlow",
+		"body": "<a href='https://en.wikipedia.org/wiki/Horn%E2%80%93Schunck_method'>Horn-Schunck Optical Flow</a><br>Based on the <a href='https://cycling74.com/forums/sharing-new-distortions'>HSFlow</a> implementation by <a href='https://pixlpa.com'>Andrew Benson</a>."
 	}
 ]

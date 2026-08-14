@@ -7,6 +7,7 @@ export class GameBoyModule extends Module {
     super('GameBoy', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo = "Gameboy";
     this.params = {};
     this.createShader(gameboyFrag);
     this.createOutputFBO();

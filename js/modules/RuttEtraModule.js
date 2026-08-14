@@ -52,6 +52,7 @@ export class RuttEtraModule extends Module {
     super('RuttEtra', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo = "Rutt-Etra";
     this.params = {
       scale: { value: 1.0, min: 0.1, max: 4, step: 0.1, label: 'Scale' },
       scanStep: { value: 4, min: 1, max: 20, step: 1, label: 'Line Separation' },
