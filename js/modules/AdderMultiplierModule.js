@@ -10,6 +10,7 @@ export class AdderMultiplierModule extends Module {
       { name: 'in2', type: 'video' },
     ];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo="Sandin"
     this.params = {
       mode: { value: 0, min: 0, max: 3, step: 1, label: 'Mode' },
       mixVal: { value: 0.5, min: 0, max: 1, step: 0.01, label: 'Mix' },
@@ -17,7 +18,6 @@ export class AdderMultiplierModule extends Module {
     };
     this.createShader(adderMultiplierFrag);
     this.createOutputFBO();
-    this.historicalInfo="Sandin"
   }
 
   process(graph, glCanvas) {

@@ -18,6 +18,7 @@ export class ConwayModule extends Module {
     super('Conway', glCanvas, id);
     this.inputs = [];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo = "Conway";
     this.params = {
       cellSize: { value: 4, min: 1, max: 16, step: 1 },
       speed: { value: 1, min: 1, max: 16, step: 1 },

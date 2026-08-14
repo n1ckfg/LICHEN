@@ -7,6 +7,7 @@ export class FunctionGeneratorModule extends Module {
     super('FunctionGenerator', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo="Sandin"
     this.params = {
       curve: { value: 0, min: 0, max: 5, step: 1, label: 'Curve' },
       gain: { value: 1, min: 0, max: 3, step: 0.01, label: 'Gain' },

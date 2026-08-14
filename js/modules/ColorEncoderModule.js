@@ -7,6 +7,7 @@ export class ColorEncoderModule extends Module {
     super('ColorEncoder', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo="Sandin"
     this.params = {
       phaseR: { value: 0, min: 0, max: 6.283, step: 0.01, label: 'Phase R' },
       phaseG: { value: 2.094, min: 0, max: 6.283, step: 0.01, label: 'Phase G' },

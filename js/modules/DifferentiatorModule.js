@@ -7,6 +7,7 @@ export class DifferentiatorModule extends Module {
     super('Differentiator', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo="Sandin"
     this.params = {
       strength: { value: 1, min: 0, max: 5, step: 0.01, label: 'Strength' },
     };

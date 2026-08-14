@@ -7,6 +7,7 @@ export class ComparatorModule extends Module {
     super('Comparator', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo="Sandin"
     this.params = {
       threshold: { value: 0.5, min: 0, max: 1, step: 0.01, label: 'Thresh' },
     };

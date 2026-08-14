@@ -7,6 +7,7 @@ export class ValueScramblerModule extends Module {
     super('ValueScrambler', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo="Sandin"
     this.params = {
       levels: { value: 8, min: 2, max: 32, step: 1, label: 'Levels' },
       scramble: { value: 0.5, min: 0, max: 1, step: 0.01, label: 'Scramble' },

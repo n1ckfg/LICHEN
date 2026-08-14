@@ -7,6 +7,7 @@ export class NAPLPSModule extends Module {
   constructor(glCanvas, id) {
     super('NAPLPS', glCanvas, id);
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo = "NAPLPS";
     this.params = {
       speed: { value: 1, min: 0.1, max: 10, step: 0.1, label: 'Speed' },
     };
