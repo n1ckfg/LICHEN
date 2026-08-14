@@ -125,7 +125,9 @@ export class NodeGraphUI {
     this._selectionBox = null; // { startX, startY, endX, endY } in world coords
     this._hoveredPort = null; // { nodeId, portType, portIndex } for hover highlight
     this._infoPopup = null;   // node id whose historical-info popup is open
-    this._historicalInfo = new Map(); // name -> body text
+    this._historicalInfo = new Map(); // name -> body HTML
+    this._infoEl = null;      // DOM overlay for the open popup (created lazily)
+    this._infoElNode = null;  // node id the overlay's contents were filled from
     this._loadHistoricalInfo();
   }
 
@@ -849,6 +851,9 @@ export class NodeGraphUI {
     // Show/hide sidebar based on fullscreen state
     this._paletteEl.style.display = this.fullscreenMonitor !== null ? 'none' : '';
 
+    // Historical-info popup is a DOM overlay, so it updates outside the canvas passes
+    this._updateInfoPopup();
+
     // Draw fullscreen module if active
     if (this.fullscreenMonitor !== null) {
       const mod = graph.nodes.get(this.fullscreenMonitor);
@@ -971,9 +976,6 @@ export class NodeGraphUI {
       }
     }
 
-    // Draw historical-info popup over its node
-    this._drawInfoPopup(p);
-
     // Draw selection box
     if (this._selectionBox) {
       const box = this._selectionBox;
@@ -993,59 +995,94 @@ export class NodeGraphUI {
     p.pop();
   }
 
-  // Info box over the node: 2x the node's width and height, centered on it
-  _drawInfoPopup(p) {
-    if (this._infoPopup === null) return;
-    const mod = this.pipeline.graph.nodes.get(this._infoPopup);
+  // Info box over the node: 2x the node's width and height, centered on it.
+  // It is a DOM overlay rather than canvas text so the JSON body can be HTML
+  // (links, emphasis, images). Position/scale track the node's pan and zoom.
+  _updateInfoPopup() {
+    const mod = this._infoPopup !== null && this.fullscreenMonitor === null
+      ? this.pipeline.graph.nodes.get(this._infoPopup)
+      : null;
+
     if (!mod) {
-      this._infoPopup = null;
+      // Node deleted out from under the popup (fullscreen just hides it)
+      if (this._infoPopup !== null && this.fullscreenMonitor === null) {
+        this._infoPopup = null;
+      }
+      if (this._infoEl) this._infoEl.style.display = 'none';
+      this._infoElNode = null;
       return;
+    }
+
+    const el = this._infoEl ?? this._createInfoPopupEl();
+
+    // Refill only when the popup opens on a different node
+    if (this._infoElNode !== this._infoPopup) {
+      this._infoElNode = this._infoPopup;
+      el.querySelector('.info-popup-title').textContent = mod.historicalInfo;
+      const body = el.querySelector('.info-popup-body');
+      const html = this._historicalInfo.get(mod.historicalInfo);
+      if (html == null) {
+        body.textContent = `No entry for "${mod.historicalInfo}".`;
+      } else {
+        body.innerHTML = html;
+        // Follow links in a new tab so the patch isn't torn down
+        for (const a of body.querySelectorAll('a')) {
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+        }
+      }
+      el.scrollTop = 0;
     }
 
     const nodeH = this.getModuleHeight(mod);
     const w = MODULE_WIDTH * 2;
     const h = nodeH * 2;
-    const pad = 10;
+    const MARGIN = 8;
+
+    // Sized in world units, then scaled by zoom, so it matches the node the
+    // same way the old canvas-drawn box did.
+    el.style.display = '';
+    el.style.width = `${w}px`;
+    el.style.minHeight = `${h}px`;
+    el.style.maxHeight = `${Math.max(h, (this.p.height - MARGIN * 2) / this.zoom)}px`;
+    el.style.transform = `scale(${this.zoom})`;
 
     // Centered on the node, then nudged so the whole box stays on screen.
-    // Clamping happens in screen space (the box is drawn inside the pan/zoom
-    // transform, so its on-screen size depends on zoom).
-    const MARGIN = 8;
+    // Clamping happens in screen space (on-screen size depends on zoom).
     const screen = this.worldToScreen(
       mod.x + MODULE_WIDTH / 2 - w / 2,
       mod.y + nodeH / 2 - h / 2
     );
     const sw = w * this.zoom;
-    const sh = h * this.zoom;
+    const sh = el.offsetHeight * this.zoom; // actual height once content wraps
     // When the box is wider/taller than the viewport, this pins it to the
     // top-left margin rather than overshooting the opposite edge.
-    const sx = Math.max(MARGIN, Math.min(screen.x, this.p.width - MARGIN - sw));
-    const sy = Math.max(MARGIN, Math.min(screen.y, this.p.height - MARGIN - sh));
-    const clamped = this.screenToWorld(sx, sy);
-    const x = clamped.x;
-    const y = clamped.y;
+    el.style.left = `${Math.max(MARGIN, Math.min(screen.x, this.p.width - MARGIN - sw))}px`;
+    el.style.top = `${Math.max(MARGIN, Math.min(screen.y, this.p.height - MARGIN - sh))}px`;
+  }
 
-    p.fill(24, 24, 28, 245);
-    p.stroke(200);
-    p.strokeWeight(1.5);
-    p.rect(x, y, w, h, 6);
+  _createInfoPopupEl() {
+    const el = document.createElement('div');
+    el.className = 'info-popup';
+    el.style.display = 'none';
 
-    // Title
-    p.noStroke();
-    p.fill(255);
-    p.textSize(11);
-    p.textAlign(p.LEFT, p.TOP);
-    p.text(mod.historicalInfo, x + pad, y + pad);
+    const title = document.createElement('div');
+    title.className = 'info-popup-title';
+    const body = document.createElement('div');
+    body.className = 'info-popup-body';
+    el.appendChild(title);
+    el.appendChild(body);
 
-    // Body, wrapped inside the box
-    const bodyY = y + pad + 16;
-    p.fill(215);
-    p.textSize(9);
-    const body = this._historicalInfo.get(mod.historicalInfo);
-    p.text(body ?? `No entry for "${mod.historicalInfo}".`,
-      x + pad, bodyY, w - pad * 2, h - (bodyY - y) - pad);
+    // p5 binds its mouse handlers to window, so without this a click on the
+    // popup would dismiss it before a link could be followed (and the wheel
+    // would zoom the graph instead of scrolling the text).
+    for (const type of ['mousedown', 'mouseup', 'click', 'dblclick', 'wheel']) {
+      el.addEventListener(type, e => e.stopPropagation());
+    }
 
-    p.textAlign(p.LEFT, p.BASELINE);
+    document.body.appendChild(el);
+    this._infoEl = el;
+    return el;
   }
 
   _drawCable(p, x1, y1, x2, y2, color) {

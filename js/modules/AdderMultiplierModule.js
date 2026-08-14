@@ -17,6 +17,7 @@ export class AdderMultiplierModule extends Module {
     };
     this.createShader(adderMultiplierFrag);
     this.createOutputFBO();
+    this.historicalInfo="Sandin"
   }
 
   process(graph, glCanvas) {

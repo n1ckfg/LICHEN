@@ -33,7 +33,9 @@ Modules can also export control values by setting `this.controlValues['portName'
 
 The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob.
 
-Each node header has a collapse toggle in the upper right ("−" when expanded, "+" when collapsed). A module may also set `this.historicalInfo = 'Name'` in its constructor; this adds a "?" button to the left of the collapse toggle that opens an info popup (2× the node's size, centered on the node, dismissed by any click). The popup text comes from the entry with a matching `name` in `docs/historical-info.json`. Modules leaving `historicalInfo` at its default `null` show no button.
+Each node header has a collapse toggle in the upper right ("−" when expanded, "+" when collapsed). A module may also set `this.historicalInfo = 'Name'` in its constructor; this adds a "?" button to the left of the collapse toggle that opens an info popup (2× the node's size, centered on the node, dismissed by any click outside it). The popup content comes from the entry with a matching `name` in `docs/historical-info.json`. Modules leaving `historicalInfo` at its default `null` show no button.
+
+The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not canvas text, so an entry's `body` is rendered as HTML markup — links, emphasis, lists, images. `NodeGraphUI._updateInfoPopup()` runs each frame from `draw()`: it repositions and `scale()`s the element to track the node's pan/zoom, clamps it to the viewport, and hides it while a module is fullscreened. Mouse and wheel events inside the popup are stopped from reaching p5's window-level handlers so links stay clickable and long entries scroll instead of zooming the graph; anchors get `target="_blank"` so following one doesn't tear down the patch.
 
 ### Module Categories
 

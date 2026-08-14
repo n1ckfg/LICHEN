@@ -125,3 +125,49 @@ canvas {
   height: 100%;
   object-fit: contain;
 }
+
+/* Historical-info popup: DOM overlay so entry bodies can be HTML markup */
+.info-popup {
+  position: fixed;
+  transform-origin: 0 0;
+  background: rgba(24, 24, 28, 0.96);
+  border: 1px solid #c8c8c8;
+  border-radius: 6px;
+  padding: 10px;
+  z-index: 150;
+  overflow-y: auto;
+  color: #d7d7d7;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.info-popup .info-popup-title {
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.info-popup .info-popup-body a {
+  color: #6cf;
+}
+
+.info-popup .info-popup-body a:hover {
+  color: #9df;
+}
+
+.info-popup .info-popup-body p {
+  margin-bottom: 6px;
+}
+
+.info-popup .info-popup-body ul,
+.info-popup .info-popup-body ol {
+  margin: 0 0 6px 16px;
+}
+
+.info-popup .info-popup-body img {
+  max-width: 100%;
+  height: auto;
+}
