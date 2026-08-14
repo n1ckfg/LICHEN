@@ -17,6 +17,7 @@ export class GRASSModule extends Module {
     super('GRASS', glCanvas, id);
     this.inputs = [];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo = 'GRASS';
 
     // FakeGRASS subsystem
     this.framebuffer = new Framebuffer();

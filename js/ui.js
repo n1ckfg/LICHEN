@@ -124,6 +124,24 @@ export class NodeGraphUI {
     this._dyingNodes = new Map(); // id -> { mod, startTime } for fade-out animation
     this._selectionBox = null; // { startX, startY, endX, endY } in world coords
     this._hoveredPort = null; // { nodeId, portType, portIndex } for hover highlight
+    this._infoPopup = null;   // node id whose historical-info popup is open
+    this._historicalInfo = new Map(); // name -> body text
+    this._loadHistoricalInfo();
+  }
+
+  // Load docs/historical-info.json (name -> body) for the info button popups
+  async _loadHistoricalInfo() {
+    try {
+      const url = new URL('../docs/historical-info.json', import.meta.url);
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const entries = await res.json();
+      for (const entry of entries) {
+        if (entry && entry.name) this._historicalInfo.set(entry.name, entry.body ?? '');
+      }
+    } catch (e) {
+      console.warn('Could not load historical-info.json:', e);
+    }
   }
 
   // Render a Framebuffer onto the P2D main canvas by blitting through glCanvas
@@ -953,6 +971,9 @@ export class NodeGraphUI {
       }
     }
 
+    // Draw historical-info popup over its node
+    this._drawInfoPopup(p);
+
     // Draw selection box
     if (this._selectionBox) {
       const box = this._selectionBox;
@@ -970,6 +991,45 @@ export class NodeGraphUI {
     }
 
     p.pop();
+  }
+
+  // Info box over the node: 2x the node's width and height, centered on it
+  _drawInfoPopup(p) {
+    if (this._infoPopup === null) return;
+    const mod = this.pipeline.graph.nodes.get(this._infoPopup);
+    if (!mod) {
+      this._infoPopup = null;
+      return;
+    }
+
+    const nodeH = this.getModuleHeight(mod);
+    const w = MODULE_WIDTH * 2;
+    const h = nodeH * 2;
+    const x = mod.x + MODULE_WIDTH / 2 - w / 2;
+    const y = mod.y + nodeH / 2 - h / 2;
+    const pad = 10;
+
+    p.fill(24, 24, 28, 245);
+    p.stroke(200);
+    p.strokeWeight(1.5);
+    p.rect(x, y, w, h, 6);
+
+    // Title
+    p.noStroke();
+    p.fill(255);
+    p.textSize(11);
+    p.textAlign(p.LEFT, p.TOP);
+    p.text(mod.historicalInfo, x + pad, y + pad);
+
+    // Body, wrapped inside the box
+    const bodyY = y + pad + 16;
+    p.fill(215);
+    p.textSize(9);
+    const body = this._historicalInfo.get(mod.historicalInfo);
+    p.text(body ?? `No entry for "${mod.historicalInfo}".`,
+      x + pad, bodyY, w - pad * 2, h - (bodyY - y) - pad);
+
+    p.textAlign(p.LEFT, p.BASELINE);
   }
 
   _drawCable(p, x1, y1, x2, y2, color) {
@@ -1072,6 +1132,18 @@ export class NodeGraphUI {
       p.line(btnX, btnY - 3.5, btnX, btnY + 3.5);
     }
     p.noStroke();
+
+    // Historical-info toggle (only when the module declares a historicalInfo name)
+    if (mod.historicalInfo) {
+      const infoX = mod.x + MODULE_WIDTH - 28;
+      p.fill(180);
+      p.noStroke();
+      p.ellipse(infoX, btnY, 12, 12);
+      p.fill(50);
+      p.textSize(9);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.text('?', infoX, btnY - 0.5);
+    }
 
     // Skip remaining content if collapsed
     if (mod.collapsed) {
@@ -1339,6 +1411,12 @@ export class NodeGraphUI {
       return;
     }
 
+    // Any click dismisses an open historical-info popup
+    if (this._infoPopup !== null) {
+      this._infoPopup = null;
+      return;
+    }
+
     // Placing module: left-click to finalize, right-click to cancel
     if (this._placingModule !== null) {
       if (button === this.p.RIGHT) {
@@ -1454,6 +1532,13 @@ export class NodeGraphUI {
         return;
       }
       this._handleRightClick(world);
+      return;
+    }
+
+    // Check historical-info toggle hit (circle in header)
+    const infoHit = this._hitTestInfoBtn(world.x, world.y);
+    if (infoHit !== null) {
+      this._infoPopup = infoHit;
       return;
     }
 
@@ -2045,6 +2130,20 @@ export class NodeGraphUI {
       if (d < minDist) minDist = d;
     }
     return minDist;
+  }
+
+  _hitTestInfoBtn(wx, wy) {
+    const graph = this.pipeline.graph;
+    for (const [id, mod] of graph.nodes) {
+      if (!mod.historicalInfo) continue;
+      // Circle just left of the collapse toggle
+      const cx = mod.x + MODULE_WIDTH - 28;
+      const cy = mod.y + HEADER_HEIGHT / 2;
+      if (Math.hypot(wx - cx, wy - cy) <= 8) {
+        return id;
+      }
+    }
+    return null;
   }
 
   _hitTestCollapseBtn(wx, wy) {

@@ -14,6 +14,8 @@ export class Module {
     this.outputFBO = null;
     this.glCanvas = glCanvas;
     this.collapsed = false;
+    // Name key into docs/historical-info.json; null hides the info button
+    this.historicalInfo = null;
   }
 
   createShader(fragSrc) {

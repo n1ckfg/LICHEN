@@ -33,6 +33,8 @@ Modules can also export control values by setting `this.controlValues['portName'
 
 The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob.
 
+Each node header has a collapse toggle in the upper right ("−" when expanded, "+" when collapsed). A module may also set `this.historicalInfo = 'Name'` in its constructor; this adds a "?" button to the left of the collapse toggle that opens an info popup (2× the node's size, centered on the node, dismissed by any click). The popup text comes from the entry with a matching `name` in `docs/historical-info.json`. Modules leaving `historicalInfo` at its default `null` show no button.
+
 ### Module Categories
 
 - **Sources**: Camera, Conway, GRASS, GridGuys, NAPLPS, Oscillator, Protozoa, VideoPlayer
