@@ -1005,9 +1005,25 @@ export class NodeGraphUI {
     const nodeH = this.getModuleHeight(mod);
     const w = MODULE_WIDTH * 2;
     const h = nodeH * 2;
-    const x = mod.x + MODULE_WIDTH / 2 - w / 2;
-    const y = mod.y + nodeH / 2 - h / 2;
     const pad = 10;
+
+    // Centered on the node, then nudged so the whole box stays on screen.
+    // Clamping happens in screen space (the box is drawn inside the pan/zoom
+    // transform, so its on-screen size depends on zoom).
+    const MARGIN = 8;
+    const screen = this.worldToScreen(
+      mod.x + MODULE_WIDTH / 2 - w / 2,
+      mod.y + nodeH / 2 - h / 2
+    );
+    const sw = w * this.zoom;
+    const sh = h * this.zoom;
+    // When the box is wider/taller than the viewport, this pins it to the
+    // top-left margin rather than overshooting the opposite edge.
+    const sx = Math.max(MARGIN, Math.min(screen.x, this.p.width - MARGIN - sw));
+    const sy = Math.max(MARGIN, Math.min(screen.y, this.p.height - MARGIN - sh));
+    const clamped = this.screenToWorld(sx, sy);
+    const x = clamped.x;
+    const y = clamped.y;
 
     p.fill(24, 24, 28, 245);
     p.stroke(200);
