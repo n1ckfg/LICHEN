@@ -173,6 +173,12 @@ export class NodeGraphUI {
     const palette = document.createElement('div');
     palette.id = 'module-palette';
 
+    const banner = document.createElement('img');
+    banner.className = 'palette-banner';
+    banner.src = './images/lichen_banner_small.png';
+    banner.alt = 'LICHEN';
+    palette.appendChild(banner);
+
     const title = document.createElement('h3');
     title.textContent = 'Modules';
     palette.appendChild(title);

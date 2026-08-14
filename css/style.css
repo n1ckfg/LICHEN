@@ -29,6 +29,17 @@ canvas {
   transition: opacity 0.15s ease;
 }
 
+#module-palette .palette-banner {
+  display: block;
+  /* Full-bleed: cancel the palette's 8px padding so the banner meets its edges */
+  width: calc(100% + 16px);
+  height: auto;
+  margin: -8px -8px 8px -8px;
+  border-radius: 5px 5px 0 0;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 #module-palette h3 {
   color: #aaa;
   font-size: 11px;
