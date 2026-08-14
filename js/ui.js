@@ -175,7 +175,7 @@ export class NodeGraphUI {
 
     const bannerLink = document.createElement('a');
     bannerLink.className = 'palette-banner-link';
-    bannerLink.href = 'https://fox-gieg.com/pix2pixelvision.html';
+    bannerLink.href = 'https://github.com/n1ckfg/LICHEN';
     bannerLink.target = '_blank';
     bannerLink.rel = 'noopener noreferrer';
 
