@@ -173,11 +173,25 @@ export class NodeGraphUI {
     const palette = document.createElement('div');
     palette.id = 'module-palette';
 
+    const bannerLink = document.createElement('a');
+    bannerLink.className = 'palette-banner-link';
+    bannerLink.href = 'https://fox-gieg.com/pix2pixelvision.html';
+    bannerLink.target = '_blank';
+    bannerLink.rel = 'noopener noreferrer';
+
     const banner = document.createElement('img');
     banner.className = 'palette-banner';
     banner.src = './images/lichen_banner_small.png';
     banner.alt = 'LICHEN';
-    palette.appendChild(banner);
+    bannerLink.appendChild(banner);
+
+    // p5 binds its mouse handlers to window, so without this a click on the
+    // banner would also register as a click on the graph behind the palette.
+    for (const type of ['mousedown', 'mouseup', 'click', 'dblclick']) {
+      bannerLink.addEventListener(type, e => e.stopPropagation());
+    }
+
+    palette.appendChild(bannerLink);
 
     const title = document.createElement('h3');
     title.textContent = 'Modules';

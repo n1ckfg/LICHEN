@@ -29,13 +29,24 @@ canvas {
   transition: opacity 0.15s ease;
 }
 
-#module-palette .palette-banner {
+#module-palette .palette-banner-link {
   display: block;
   /* Full-bleed: cancel the palette's 8px padding so the banner meets its edges */
   width: calc(100% + 16px);
-  height: auto;
   margin: -8px -8px 8px -8px;
   border-radius: 5px 5px 0 0;
+  overflow: hidden;
+  transition: opacity 0.15s ease;
+}
+
+#module-palette .palette-banner-link:hover {
+  opacity: 0.75;
+}
+
+#module-palette .palette-banner {
+  display: block;
+  width: 100%;
+  height: auto;
   user-select: none;
   -webkit-user-drag: none;
 }
