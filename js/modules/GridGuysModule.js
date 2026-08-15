@@ -19,6 +19,7 @@ export class GridGuysModule extends Module {
     super('GridGuys', glCanvas, id);
     this.inputs = [];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo = "GridGuys";
     this.params = {
       blend: { value: 1.0, min: 0, max: 1, step: 0.01 },
       delay: { value: 1, min: 0, max: 60, step: 1 },

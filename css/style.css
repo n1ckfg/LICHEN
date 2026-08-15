@@ -172,10 +172,12 @@ canvas {
   margin-bottom: 6px;
 }
 
+.info-popup .info-popup-title a,
 .info-popup .info-popup-body a {
   color: #6cf;
 }
 
+.info-popup .info-popup-title a:hover,
 .info-popup .info-popup-body a:hover {
   color: #9df;
 }

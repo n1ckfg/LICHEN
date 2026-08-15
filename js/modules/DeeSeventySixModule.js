@@ -9,6 +9,7 @@ export class DeeSeventySixModule extends Module {
     super('DeeSeventySix', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo = "DeeSeventySix";
     this.params = {
       grainScale: { value: 100, min: 10, max: 500, step: 1, label: 'Grain' },
       solarizeLimit: { value: 90, min: 1, max: 200, step: 1, label: 'Solarize' },

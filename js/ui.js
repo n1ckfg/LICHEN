@@ -125,13 +125,13 @@ export class NodeGraphUI {
     this._selectionBox = null; // { startX, startY, endX, endY } in world coords
     this._hoveredPort = null; // { nodeId, portType, portIndex } for hover highlight
     this._infoPopup = null;   // node id whose historical-info popup is open
-    this._historicalInfo = new Map(); // name -> body HTML
+    this._historicalInfo = new Map(); // name -> { title, body } HTML
     this._infoEl = null;      // DOM overlay for the open popup (created lazily)
     this._infoElNode = null;  // node id the overlay's contents were filled from
     this._loadHistoricalInfo();
   }
 
-  // Load docs/historical-info.json (name -> body) for the info button popups
+  // Load docs/historical-info.json (name -> entry) for the info button popups
   async _loadHistoricalInfo() {
     try {
       const url = new URL('../docs/historical-info.json', import.meta.url);
@@ -139,7 +139,7 @@ export class NodeGraphUI {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const entries = await res.json();
       for (const entry of entries) {
-        if (entry && entry.name) this._historicalInfo.set(entry.name, entry.body ?? '');
+        if (entry && entry.name) this._historicalInfo.set(entry.name, entry);
       }
     } catch (e) {
       console.warn('Could not load historical-info.json:', e);
@@ -1015,6 +1015,14 @@ export class NodeGraphUI {
     p.pop();
   }
 
+  // Follow links in a new tab so the patch isn't torn down
+  _openLinksInNewTab(el) {
+    for (const a of el.querySelectorAll('a')) {
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+    }
+  }
+
   // Info box over the node: 2x the node's width and height, centered on it.
   // It is a DOM overlay rather than canvas text so the JSON body can be HTML
   // (links, emphasis, images). Position/scale track the node's pan and zoom.
@@ -1038,18 +1046,23 @@ export class NodeGraphUI {
     // Refill only when the popup opens on a different node
     if (this._infoElNode !== this._infoPopup) {
       this._infoElNode = this._infoPopup;
-      el.querySelector('.info-popup-title').textContent = mod.historicalInfo;
+      const entry = this._historicalInfo.get(mod.historicalInfo);
+      const title = el.querySelector('.info-popup-title');
       const body = el.querySelector('.info-popup-body');
-      const html = this._historicalInfo.get(mod.historicalInfo);
-      if (html == null) {
+      // The JSON title is HTML too (it usually links out), so render it as markup
+      if (entry?.title) {
+        title.innerHTML = entry.title;
+        this._openLinksInNewTab(title);
+      } else {
+        title.textContent = mod.historicalInfo;
+      }
+      // Year follows the title as plain text, outside any link: "Telidon (1978)"
+      if (entry?.year != null) title.append(` (${entry.year})`);
+      if (entry == null) {
         body.textContent = `No entry for "${mod.historicalInfo}".`;
       } else {
-        body.innerHTML = html;
-        // Follow links in a new tab so the patch isn't torn down
-        for (const a of body.querySelectorAll('a')) {
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-        }
+        body.innerHTML = entry.body ?? '';
+        this._openLinksInNewTab(body);
       }
       el.scrollTop = 0;
     }
