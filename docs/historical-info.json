@@ -50,13 +50,13 @@
 	{
 		"name": "DeeSeventySix",
 		"year": 2020,
-		"title": "DeeSeventySix",
-		"body": "TK"
+		"title": "<a href='https://github.com/n1ckfg/DeeSeventySix'>DeeSeventySix</a>",
+		"body": "Film chemistry simulation by <a href='https://fox-gieg.com'>Nick Fox-Gieg</a>."
 	},
 	{
 		"name": "GridGuys",
-		"year": 2016,
-		"title": "GridGuys",
-		"body": "TK"		
+		"year": 2011,
+		"title": "<a href='https://github.com/n1ckfg/GridGuys'>GridGuys</a>",
+		"body": "Cellular automata by <a href='https://fox-gieg.com'>Nick Fox-Gieg</a>."		
 	}
 ]
