@@ -1054,9 +1054,10 @@ export class NodeGraphUI {
       el.scrollTop = 0;
     }
 
+    // Dimensions of the popup window
     const nodeH = this.getModuleHeight(mod);
     const w = MODULE_WIDTH * 2;
-    const h = nodeH * 2;
+    const h = nodeH + 2;
     const MARGIN = 8;
 
     // Sized in world units, then scaled by zoom, so it matches the node the
