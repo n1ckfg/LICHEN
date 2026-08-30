@@ -9,8 +9,8 @@ export class CloudyModule extends Module {
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
       speed: { value: 0.4, min: 0, max: 2, step: 0.01, label: 'Speed' },
-      blobs: { value: 12, min: 1, max: 16, step: 1, label: 'Blobs' },
-      smoothness: { value: 0.5, min: 0.05, max: 2, step: 0.01, label: 'Smooth' },
+      depth: { value: -0.31, min: -2, max: 2, step: 0.01, label: 'Depth' },
+      wander: { value: 0.08, min: 0, max: 1, step: 0.01, label: 'Wander' },
       noiseScale: { value: 2.5, min: 0.1, max: 8, step: 0.1, label: 'Noise' },
       displace: { value: 0.12, min: 0, max: 0.5, step: 0.01, label: 'Displace' },
       colorShift: { value: 3.0, min: 0, max: 6.28, step: 0.01, label: 'Color' },
@@ -32,8 +32,8 @@ export class CloudyModule extends Module {
     this.shader.setUniform('uTime', elapsed);
     this.shader.setUniform('uResolution', [glCanvas.width, glCanvas.height]);
     this.shader.setUniform('speed', this.params.speed.value);
-    this.shader.setUniform('blobs', this.params.blobs.value);
-    this.shader.setUniform('smoothness', this.params.smoothness.value);
+    this.shader.setUniform('depth', this.params.depth.value);
+    this.shader.setUniform('wander', this.params.wander.value);
     this.shader.setUniform('noiseScale', this.params.noiseScale.value);
     this.shader.setUniform('displace', this.params.displace.value);
     this.shader.setUniform('colorShift', this.params.colorShift.value);

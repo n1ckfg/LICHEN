@@ -6,23 +6,13 @@ varying vec2 vTexCoord;
 uniform float uTime;
 uniform vec2 uResolution;
 uniform float speed;
-uniform float blobs;
-uniform float smoothness;
+uniform float depth;
+uniform float wander;
 uniform float noiseScale;
 uniform float displace;
 uniform float colorShift;
 uniform float glow;
 uniform float zoom;
-
-float sdSphere(vec3 p, float r) {
-  return length(p) - r;
-}
-
-// Polynomial smooth minimum: melts the spheres into one another
-float smin(float a, float b, float k) {
-  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
-  return mix(b, a, h) - k * h * (1.0 - h);
-}
 
 float hash(vec3 p) {
   return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453);
@@ -59,27 +49,12 @@ void main() {
 
   float t = uTime * speed;
 
-  // Orbiting spheres blended into a single morphing field
-  float d = 1e10;
-  for (int i = 0; i < 16; i++) {
-    float fi = float(i);
-    if (fi >= blobs) break;
-
-    float freq = 0.6 + 0.3 * sin(fi * 1.7 + t * 0.3);
-    float radius = 0.25 + 0.15 * sin(fi * 2.3 + t * 0.5);
-
-    float angle1 = fi * 0.9 + t * (0.15 + 0.05 * sin(fi * 0.5));
-    float angle2 = fi * 1.3 + t * (0.1 + 0.07 * cos(fi * 0.7));
-    float angle3 = fi * 0.7 + t * (0.08 + 0.04 * sin(fi * 1.1));
-
-    vec3 center = vec3(
-      sin(angle1) * freq * 0.8,
-      sin(angle2) * freq * 0.6,
-      cos(angle3) * freq * 0.5
-    );
-
-    d = smin(d, sdSphere(center, radius), smoothness);
-  }
+  // Depth of the noise slice the rays cut through, drifting slowly in time
+  float d = depth + wander * (
+    0.50 * sin(t * 0.31) +
+    0.35 * sin(t * 0.17 + 1.7) +
+    0.15 * sin(t * 0.53 + 3.1)
+  );
 
   // FBM displacement makes the field organic and view-dependent
   d += fbm(rd * d * noiseScale + t * 0.3) * displace;
