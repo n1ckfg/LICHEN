@@ -39,7 +39,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 
 ### Module Categories
 
-- **Sources**: Camera, Conway, GRASS, GridGuys, NAPLPS, Oscillator, Protozoa, VideoPlayer
+- **Sources**: Camera, Cloudy, Conway, GRASS, GridGuys, NAPLPS, Oscillator, Protozoa, VideoPlayer
 - **Core**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
 - **Utility**: Brcosa, Levels, Sharpen, VideoMixer

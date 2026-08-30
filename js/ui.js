@@ -10,7 +10,7 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'Conway', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'Protozoa', 'VideoPlayer'],
+  'Sources': ['Camera', 'Cloudy', 'Conway', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'Protozoa', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
   'Utility': ['Brcosa', 'Levels', 'Sharpen', 'VideoMixer'],
@@ -31,6 +31,7 @@ const color_output = [170, 85, 34];
 const MODULE_COLORS = {
   // - - - SOURCES - - -
   Camera: color_source_basic,
+  Cloudy: color_source_art,
   Conway: color_source_art,
   GRASS: color_source_grass,
   GridGuys: color_source_art,

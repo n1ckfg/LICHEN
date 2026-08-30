@@ -2,6 +2,7 @@ import { ProcessingPipeline } from './pipeline.js';
 import { NodeGraphUI } from './ui.js';
 // - - - SOURCES - - -
 import './modules/CameraModule.js';
+import './modules/CloudyModule.js';
 import './modules/ConwayModule.js';
 import './modules/GRASSModule.js';
 import './modules/GridGuysModule.js';
