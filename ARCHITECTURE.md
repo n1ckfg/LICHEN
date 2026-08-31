@@ -41,7 +41,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 
 - **Sources**: Camera, Cloudy, Conway, GRASS, GridGuys, InkDrops, NAPLPS, Oscillator, Protozoa, SpiralGalaxy, VideoPlayer
 - **Core**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, SyncGenerator, ValueScrambler
-- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TVLines, UnrealBloom, VHSC
+- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
 - **Utility**: Brcosa, Levels, Sharpen, VideoMixer
 - **Output**: Monitor
 

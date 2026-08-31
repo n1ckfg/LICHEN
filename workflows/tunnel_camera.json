@@ -69,15 +69,12 @@
     },
     {
       "id": 7,
-      "type": "SpiralGalaxy",
+      "type": "TimeTunnel",
       "x": 1130.1495552793422,
       "y": 75.88699241125374,
       "params": {
-        "loop": 60,
-        "speed": 0.5,
-        "trail": 0.92,
-        "swirl": 0.012,
-        "ripple": 0.4
+        "zoom": 9.562571520376595,
+        "speed": 2.9
       }
     },
     {
@@ -190,6 +187,12 @@
       "toPort": 0
     },
     {
+      "fromId": 2,
+      "fromPort": 0,
+      "toId": 7,
+      "toPort": 0
+    },
+    {
       "fromId": 5,
       "fromPort": 0,
       "toId": 10,
@@ -238,6 +241,12 @@
       "fromPort": 1,
       "toId": 3,
       "paramName": "threshold"
+    },
+    {
+      "fromId": 1,
+      "fromPort": 1,
+      "toId": 7,
+      "paramName": "zoom"
     },
     {
       "fromId": 1,

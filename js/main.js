@@ -39,6 +39,7 @@ import './modules/PixelVisionModule.js';
 import './modules/RuttEtraModule.js';
 import './modules/SlitscanModule.js';
 import './modules/SpatialSliceModule.js';
+import './modules/TimeTunnelModule.js';
 import './modules/TVLinesModule.js';
 import './modules/UnrealBloomModule.js';
 import './modules/VHSCModule.js';

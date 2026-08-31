@@ -12,7 +12,7 @@ void main() {
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Cloudy', 'Conway', 'GRASS', 'GridGuys', 'InkDrops', 'NAPLPS', 'Oscillator', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TVLines', 'UnrealBloom', 'VHSC'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
   'Utility': ['Brcosa', 'Levels', 'Sharpen', 'VideoMixer'],
   'Output': ['Monitor'],
 };
@@ -66,6 +66,7 @@ const MODULE_COLORS = {
   PixelVision: color_effect_tv,
   RuttEtra: color_effect_tv,
   SpatialSlice: color_effect_op,
+  TimeTunnel: color_effect_tv,
   TVLines: color_effect_tv,
   UnrealBloom: color_effect_op,
   VHSC: color_effect_tv,
