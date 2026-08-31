@@ -39,9 +39,9 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 
 ### Module Categories
 
-- **Sources**: Camera, Cloudy, Conway, GRASS, GridGuys, NAPLPS, Oscillator, Protozoa, VideoPlayer
+- **Sources**: Camera, Cloudy, Conway, GRASS, GridGuys, InkDrops, NAPLPS, Oscillator, Protozoa, TimeTunnel, VideoPlayer
 - **Core**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, SyncGenerator, ValueScrambler
-- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
+- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TVLines, UnrealBloom, VHSC
 - **Utility**: Brcosa, Levels, Sharpen, VideoMixer
 - **Output**: Monitor
 
@@ -116,6 +116,26 @@ The Protozoa module (`js/modules/ProtozoaModule.js`) generates autonomous waterc
 **Color injection:** Auto-spawns HSV color blobs at random positions with configurable spawn rate and size. Blobs fade over time (life decay).
 
 **Rendering path:** Final display pass (`protozoaDisplayFrag`) combines the middle buffer state with tone mapping, gamma correction, and subtle vignette, output to the module's `outputFBO`.
+
+## InkDrops Module
+
+The InkDrops module (`js/modules/InkDropsModule.js`) is a source: drops of ink blooming into wet paper. It is a single stateless fragment shader (`js/shaders/inkdrops.js`) with no framebuffer history — everything is a closed-form function of time, so it costs one full-screen pass per frame.
+
+**Drop model:** eight slots are compiled into the shader; `drops` gates how many are live. Each slot spawns on a jittered 4x2 grid, spreads as a decelerating bounded front (`R = spread * (1 - exp(-age*0.45))`, so a drop can never flood the frame), leaves four trailing rings behind the leading annulus, and fades to exactly zero at `life` seconds before respawning in a new cell. The cell rotates by 3 each generation (coprime with 8) so no slot camps a corner. Drops are alpha-composited with `over()`, keeping coverage in [0,1] however many overlap.
+
+**Fullscreen interaction:** double-click the node preview to enter fullscreen, then click to drop ink at the cursor; ESC exits. `js/ui.js mousePressed` routes the click to `handleMouseDown()` for `Conway` and `InkDrops` rather than exiting fullscreen.
+
+**Port note:** the WebGL2 original was GLSL ES 3.00; LICHEN is WebGL1, so the shader is downconverted (`out vec4 O` to `gl_FragColor`, `#version` dropped). Coordinates stay on `gl_FragCoord` exactly as the original and as `Conway` do, which is also what makes the click mapping match Conway's letterbox fit.
+
+## TimeTunnel Module
+
+The TimeTunnel module (`js/modules/TimeTunnelModule.js`) is a source: a rotating video-feedback tunnel whose whole animation repeats exactly every `loop` seconds.
+
+**Exact looping:** the tunnel is a feedback accumulation, so the loop can't be closed by rewinding the clock — the buffer would still hold the old state. Instead two independent feedback buffers ("worlds") run half a cycle out of phase. Each restarts from black once per cycle, at the moment its own blend weight is zero and flat, so the restart is invisible; the output is always dominated by the mid-life world. The cycle phase is accumulated per frame (`this.cycles += dt / loop`) rather than derived from an absolute clock, so turning the `loop` knob changes the rate without jumping the cycle.
+
+**Rendering path:** each world ping-pongs a pair of framebuffers through `js/shaders/timetunnel.js:timetunnelFrag`, which advects the previous frame along a twist that shears with radius (the inner turns faster than the outer, which is what winds the feedback into arms) and adds fbm-warped ripples and a bright core. `timetunnelBlendFrag` then cross-dissolves the two worlds into the module's `outputFBO`.
+
+**No Game of Life:** the WebGL sketch this was ported from drove `swirl`, `ripple`, `speed` and a dye injection from a Game of Life grid, but that grid never reached its shader — it was uploaded as raw 0/1 bytes in a `gl.ALPHA` texture, so a live cell arrived as `1/255`, `dye = smoothstep(0.6, 1.0, 0.0039)` was identically 0, and every GoL-driven term sat on a constant. The simulation is therefore not reproduced here; the three constants it was stuck on are exposed as the `swirl`, `ripple` and `speed` knobs instead, whose defaults match the original.
 
 ## LuminanceDelay and Slitscan Modules
 

@@ -10,9 +10,9 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'Cloudy', 'Conway', 'GRASS', 'GridGuys', 'NAPLPS', 'Oscillator', 'Protozoa', 'VideoPlayer'],
+  'Sources': ['Camera', 'Cloudy', 'Conway', 'GRASS', 'GridGuys', 'InkDrops', 'NAPLPS', 'Oscillator', 'Protozoa', 'TimeTunnel', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TVLines', 'UnrealBloom', 'VHSC'],
   'Utility': ['Brcosa', 'Levels', 'Sharpen', 'VideoMixer'],
   'Output': ['Monitor'],
 };
@@ -35,9 +35,11 @@ const MODULE_COLORS = {
   Conway: color_source_art,
   GRASS: color_source_grass,
   GridGuys: color_source_art,
+  InkDrops: color_source_art,
   NAPLPS: color_source_art,
   Oscillator: color_core_sandin,
   Protozoa: color_source_art,
+  TimeTunnel: color_source_art,
   VideoPlayer: color_source_basic,
   // - - - CORE - - -
   AdderMultiplier: color_core_sandin,
@@ -64,7 +66,6 @@ const MODULE_COLORS = {
   PixelVision: color_effect_tv,
   RuttEtra: color_effect_tv,
   SpatialSlice: color_effect_op,
-  TimeTunnel: color_effect_tv,
   TVLines: color_effect_tv,
   UnrealBloom: color_effect_op,
   VHSC: color_effect_tv,
@@ -1484,8 +1485,8 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      // Conway: handle mouse drawing instead of exiting fullscreen
-      if (mod && mod.type === 'Conway') {
+      // Conway / InkDrops: handle the click instead of exiting fullscreen
+      if (mod && (mod.type === 'Conway' || mod.type === 'InkDrops')) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
         return;
