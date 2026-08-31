@@ -1,5 +1,5 @@
 import { Module } from './Module.js';
-import { timetunnelFrag, timetunnelBlendFrag } from '../shaders/timetunnel.js';
+import { spiralgalaxyFrag, spiralgalaxyBlendFrag } from '../shaders/spiralgalaxy.js';
 import { vertSrc } from '../shaders/vert.js';
 import { registerModule } from '../moduleRegistry.js';
 
@@ -15,9 +15,9 @@ import { registerModule } from '../moduleRegistry.js';
 const MAX_DT = 0.1;   // clamp long stalls so a tab switch doesn't jump the phase
 const TAU = Math.PI * 2;
 
-export class TimeTunnelModule extends Module {
+export class SpiralGalaxyModule extends Module {
   constructor(glCanvas, id) {
-    super('TimeTunnel', glCanvas, id);
+    super('SpiralGalaxy', glCanvas, id);
     this.inputs = [];
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
@@ -28,8 +28,8 @@ export class TimeTunnelModule extends Module {
       ripple: { value: 0.4, min: 0, max: 1.5, step: 0.01, label: 'Ripple' },
     };
 
-    this.createShader(timetunnelFrag);
-    this.blendShader = glCanvas.createShader(vertSrc, timetunnelBlendFrag);
+    this.createShader(spiralgalaxyFrag);
+    this.blendShader = glCanvas.createShader(vertSrc, spiralgalaxyBlendFrag);
     this.createOutputFBO();
 
     // offset: where in the cycle this world restarts (0 = at phase 0, 0.5 = at phase 0.5)
@@ -126,4 +126,4 @@ export class TimeTunnelModule extends Module {
   }
 }
 
-registerModule('TimeTunnel', TimeTunnelModule);
+registerModule('SpiralGalaxy', SpiralGalaxyModule);

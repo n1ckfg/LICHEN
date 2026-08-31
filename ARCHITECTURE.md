@@ -39,7 +39,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 
 ### Module Categories
 
-- **Sources**: Camera, Cloudy, Conway, GRASS, GridGuys, InkDrops, NAPLPS, Oscillator, Protozoa, TimeTunnel, VideoPlayer
+- **Sources**: Camera, Cloudy, Conway, GRASS, GridGuys, InkDrops, NAPLPS, Oscillator, Protozoa, SpiralGalaxy, VideoPlayer
 - **Core**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TVLines, UnrealBloom, VHSC
 - **Utility**: Brcosa, Levels, Sharpen, VideoMixer
@@ -127,13 +127,13 @@ The InkDrops module (`js/modules/InkDropsModule.js`) is a source: drops of ink b
 
 **Port note:** the WebGL2 original was GLSL ES 3.00; LICHEN is WebGL1, so the shader is downconverted (`out vec4 O` to `gl_FragColor`, `#version` dropped). Coordinates stay on `gl_FragCoord` exactly as the original and as `Conway` do, which is also what makes the click mapping match Conway's letterbox fit.
 
-## TimeTunnel Module
+## SpiralGalaxy Module
 
-The TimeTunnel module (`js/modules/TimeTunnelModule.js`) is a source: a rotating video-feedback tunnel whose whole animation repeats exactly every `loop` seconds.
+The SpiralGalaxy module (`js/modules/SpiralGalaxyModule.js`) is a source: a rotating video-feedback tunnel whose whole animation repeats exactly every `loop` seconds.
 
 **Exact looping:** the tunnel is a feedback accumulation, so the loop can't be closed by rewinding the clock — the buffer would still hold the old state. Instead two independent feedback buffers ("worlds") run half a cycle out of phase. Each restarts from black once per cycle, at the moment its own blend weight is zero and flat, so the restart is invisible; the output is always dominated by the mid-life world. The cycle phase is accumulated per frame (`this.cycles += dt / loop`) rather than derived from an absolute clock, so turning the `loop` knob changes the rate without jumping the cycle.
 
-**Rendering path:** each world ping-pongs a pair of framebuffers through `js/shaders/timetunnel.js:timetunnelFrag`, which advects the previous frame along a twist that shears with radius (the inner turns faster than the outer, which is what winds the feedback into arms) and adds fbm-warped ripples and a bright core. `timetunnelBlendFrag` then cross-dissolves the two worlds into the module's `outputFBO`.
+**Rendering path:** each world ping-pongs a pair of framebuffers through `js/shaders/spiralgalaxy.js:spiralgalaxyFrag`, which advects the previous frame along a twist that shears with radius (the inner turns faster than the outer, which is what winds the feedback into arms) and adds fbm-warped ripples and a bright core. `spiralgalaxyBlendFrag` then cross-dissolves the two worlds into the module's `outputFBO`.
 
 **No Game of Life:** the WebGL sketch this was ported from drove `swirl`, `ripple`, `speed` and a dye injection from a Game of Life grid, but that grid never reached its shader — it was uploaded as raw 0/1 bytes in a `gl.ALPHA` texture, so a live cell arrived as `1/255`, `dye = smoothstep(0.6, 1.0, 0.0039)` was identically 0, and every GoL-driven term sat on a constant. The simulation is therefore not reproduced here; the three constants it was stuck on are exposed as the `swirl`, `ripple` and `speed` knobs instead, whose defaults match the original.
 

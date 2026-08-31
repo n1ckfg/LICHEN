@@ -69,7 +69,7 @@
     },
     {
       "id": 7,
-      "type": "TimeTunnel",
+      "type": "SpiralGalaxy",
       "x": 1130.1495552793422,
       "y": 75.88699241125374,
       "params": {

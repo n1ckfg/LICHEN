@@ -1,4 +1,4 @@
-// Time Tunnel — a rotating video-feedback tunnel.
+// Spiral Galaxy — a rotating video-feedback tunnel.
 //
 // Ported from a WebGL sketch that drove the tunnel from a Game of Life grid.
 // That grid never actually reached the shader: it was uploaded as raw 0/1 bytes
@@ -8,7 +8,7 @@
 // What the sketch actually rendered is what is left here, with the three
 // constants it was stuck on (swirl 0.012, ripple 0.4, speed 0.5) opened up as
 // uniforms. Their defaults reproduce the original exactly.
-export const timetunnelFrag = `
+export const spiralgalaxyFrag = `
 precision highp float;
 varying vec2 vTexCoord;
 
@@ -56,7 +56,12 @@ float fbm(vec2 p) {
 vec2 ring(float ang, float radius) { return vec2(cos(ang), sin(ang)) * radius; }
 
 void main() {
-  vec2 uv = vTexCoord;
+  // Derived from gl_FragCoord, not vTexCoord: the feedback tap has to address
+  // u_prev in the same orientation the previous frame wrote it, and texel t=v
+  // is by definition where gl_FragCoord.y = v*height wrote. Going through
+  // vTexCoord instead mirrors the buffer once per iteration, which averages the
+  // tunnel with its own reflection and smears it into a symmetric blob.
+  vec2 uv = gl_FragCoord.xy / uResolution;
   vec2 aspect = vec2(uResolution.x / uResolution.y, 1.0);
 
   // Spiral coordinates
@@ -103,7 +108,7 @@ void main() {
 `;
 
 // Cross-dissolves the two half-cycle-offset worlds onto the output.
-export const timetunnelBlendFrag = `
+export const spiralgalaxyBlendFrag = `
 precision highp float;
 varying vec2 vTexCoord;
 uniform sampler2D tex0;

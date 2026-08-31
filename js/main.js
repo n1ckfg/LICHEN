@@ -10,7 +10,7 @@ import './modules/GridGuysModule.js';
 import './modules/NAPLPSModule.js';
 import './modules/OscillatorModule.js';
 import './modules/ProtozoaModule.js';
-import './modules/TimeTunnelModule.js';
+import './modules/SpiralGalaxyModule.js';
 import './modules/VideoPlayerModule.js';
 // - - - CORE - - -
 import './modules/AdderMultiplierModule.js';
