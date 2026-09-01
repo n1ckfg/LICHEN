@@ -3,22 +3,26 @@
     {
       "id": 0,
       "type": "Monitor",
-      "x": 1041.5,
-      "y": 528,
+      "x": 1111.6453772622435,
+      "y": 518.3247755500354,
       "params": {
+        "width": 1440,
+        "height": 1080,
         "bitrate": 20
-      }
+      },
+      "collapsed": false
     },
     {
       "id": 8,
       "type": "VHSC",
-      "x": 710.2294439857957,
-      "y": 502.78817413550587,
+      "x": 644.9216789485345,
+      "y": 437.48040909824465,
       "params": {
         "gamma": 2.25,
         "posterizeLevels": 156.04000000000002,
         "texelSize": 0.008
-      }
+      },
+      "collapsed": false
     },
     {
       "id": 10,
@@ -33,7 +37,8 @@
         "depth": 80,
         "rotationX": -0.020000000000000056,
         "rotationY": 0.020000000000000018
-      }
+      },
+      "collapsed": false
     },
     {
       "id": 11,
@@ -46,7 +51,8 @@
         "life": 40,
         "respawn": 111.08666666666667,
         "chaos": 0.03
-      }
+      },
+      "collapsed": false
     },
     {
       "id": 12,
@@ -57,19 +63,21 @@
         "mode": 0.62,
         "mixVal": 0.6599999999999999,
         "contrast": 1.3399999999999999
-      }
+      },
+      "collapsed": false
     },
     {
       "id": 14,
       "type": "ColorEncoder",
-      "x": 1022.6708746204827,
-      "y": 144.450039616222,
+      "x": 1078.3034152077794,
+      "y": 38.022570666611216,
       "params": {
-        "phaseR": 0,
-        "phaseG": 2.094,
+        "phaseR": 6.283,
+        "phaseG": 5.026066666666667,
         "phaseB": 4.189,
         "frequency": 1
-      }
+      },
+      "collapsed": false
     },
     {
       "id": 15,
@@ -80,7 +88,8 @@
         "smearAmount": 1,
         "feedback": 0.05607624451066834,
         "zoomSpeed": 1
-      }
+      },
+      "collapsed": false
     },
     {
       "id": 16,
@@ -91,71 +100,67 @@
         "smearAmount": 0.2803812225533417,
         "feedback": 0.8466666666666667,
         "zoomSpeed": 1.6666666666666665
-      }
+      },
+      "collapsed": false
     },
     {
-      "id": 17,
-      "type": "TV",
-      "x": 643.3204973732584,
-      "y": 168.66537858183563,
+      "id": 20,
+      "type": "Sharpen",
+      "x": 660.484459540557,
+      "y": 741.8502913191967,
       "params": {
-        "lineThickness": 1.9293333333333336,
-        "lineDarkness": 0.1,
-        "flicker": 0
-      }
+        "sharpenAmount": 5,
+        "posterizeLevels": 16
+      },
+      "collapsed": false
     },
     {
-      "id": 18,
-      "type": "Oscillator",
-      "x": 546.4142240903961,
-      "y": -94.02121447984297,
+      "id": 21,
+      "type": "Edges",
+      "x": 722.1640154090815,
+      "y": 128.6829418026891,
       "params": {
-        "frequency": 0.1,
-        "waveform": 0,
-        "direction": 0
-      }
+        "mode": 0,
+        "threshold": 0.15999999999999992
+      },
+      "collapsed": false
     },
     {
-      "id": 19,
-      "type": "PixelVision",
-      "x": 825.8826488628135,
-      "y": 164.55869438492925,
+      "id": 22,
+      "type": "Brcosa",
+      "x": 855.1983515960949,
+      "y": 412.5678844703644,
       "params": {
-        "gamma": 1.2,
-        "posterizeLevels": 90,
-        "texelSize": 0.008
-      }
+        "brightness": 0,
+        "contrast": 1,
+        "saturation": 1.7800000000000002
+      },
+      "collapsed": false
+    },
+    {
+      "id": 23,
+      "type": "UnrealBloom",
+      "x": 878.1770096647609,
+      "y": 648.4014804382518,
+      "params": {
+        "threshold": 0.5266666666666666,
+        "strength": 1.5,
+        "radius": 0.5
+      },
+      "collapsed": false
     }
   ],
   "connections": [
     {
-      "fromId": 14,
+      "fromId": 11,
       "fromPort": 0,
-      "toId": 12,
-      "toPort": 1
-    },
-    {
-      "fromId": 8,
-      "fromPort": 0,
-      "toId": 0,
+      "toId": 10,
       "toPort": 0
     },
     {
       "fromId": 11,
       "fromPort": 0,
       "toId": 15,
-      "toPort": 0
-    },
-    {
-      "fromId": 15,
-      "fromPort": 0,
-      "toId": 10,
-      "toPort": 0
-    },
-    {
-      "fromId": 12,
-      "fromPort": 0,
-      "toId": 8,
       "toPort": 0
     },
     {
@@ -171,37 +176,54 @@
       "toPort": 0
     },
     {
+      "fromId": 12,
+      "fromPort": 0,
+      "toId": 8,
+      "toPort": 0
+    },
+    {
+      "fromId": 14,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 1
+    },
+    {
       "fromId": 15,
       "fromPort": 0,
-      "toId": 17,
+      "toId": 21,
       "toPort": 0
     },
     {
-      "fromId": 17,
-      "fromPort": 0,
-      "toId": 19,
-      "toPort": 0
-    },
-    {
-      "fromId": 19,
+      "fromId": 21,
       "fromPort": 0,
       "toId": 14,
       "toPort": 0
-    }
-  ],
-  "controlConnections": [
-    {
-      "fromId": 18,
-      "fromPort": 1,
-      "toId": 15,
-      "paramName": "feedback"
     },
     {
-      "fromId": 18,
-      "fromPort": 1,
-      "toId": 16,
-      "paramName": "smearAmount"
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 20,
+      "toPort": 0
+    },
+    {
+      "fromId": 23,
+      "fromPort": 0,
+      "toId": 0,
+      "toPort": 0
+    },
+    {
+      "fromId": 20,
+      "fromPort": 0,
+      "toId": 22,
+      "toPort": 0
+    },
+    {
+      "fromId": 22,
+      "fromPort": 0,
+      "toId": 23,
+      "toPort": 0
     }
   ],
-  "nextId": 20
+  "controlConnections": [],
+  "nextId": 24
 }
