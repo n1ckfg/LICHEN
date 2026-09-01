@@ -47,8 +47,8 @@ export class ConwayModule extends Module {
     this.pendingClear = false;
     this.pendingRandomize = true;
 
-    this.deadColor = [0.06, 0.06, 0.08];
-    this.aliveColor = [0.15, 0.85, 0.45];
+    this.deadColor = [0.06, 0.06, 0.06];
+    this.aliveColor = [0.85, 0.85, 0.85];
     this.startTime = performance.now();
 
     this._createFullscreenUI();

@@ -10,10 +10,10 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'Cloudy', 'Conway', 'GRASS', 'GridGuys', 'InkDrops', 'NAPLPS', 'Oscillator', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
-  'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
+  'Sources': ['Camera', 'Cloudy', 'Conway', 'GridGuys', 'InkDrops', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
   'Utility': ['Brcosa', 'Edges', 'Levels', 'Sharpen', 'VideoMixer'],
+  'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
   'Output': ['Monitor'],
 };
 
@@ -33,20 +33,20 @@ const MODULE_COLORS = {
   Camera: color_source_basic,
   Cloudy: color_source_art,
   Conway: color_source_art,
-  GRASS: color_source_grass,
   GridGuys: color_source_art,
   InkDrops: color_source_art,
   NAPLPS: color_source_art,
-  Oscillator: color_core_sandin,
   Protozoa: color_source_art,
   SpiralGalaxy: color_source_art,
   VideoPlayer: color_source_basic,
-  // - - - CORE - - -
+  // - - - SANDIN - - -
   AdderMultiplier: color_core_sandin,
   ColorEncoder: color_core_sandin,
   Comparator: color_core_sandin,
   Differentiator: color_core_sandin,
   FunctionGenerator: color_core_sandin,
+  GRASS: color_source_grass,
+  Oscillator: color_core_sandin,
   SyncGenerator: color_core_sandin,
   ValueScrambler: color_core_sandin,
   // - - - EFFECTS - - -
@@ -168,9 +168,9 @@ export class NodeGraphUI {
     // Configure which sections start open (true) or closed (false)
     const sectionInitialState = {
       'Sources': true,
-      'Core': true,
-      'Effects': true,
       'Utility': true,
+      'Sandin': true,
+      'Effects': true,
       'Output': true,
     };
 
