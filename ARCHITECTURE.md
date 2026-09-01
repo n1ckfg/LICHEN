@@ -119,13 +119,28 @@ The Protozoa module (`js/modules/ProtozoaModule.js`) generates autonomous waterc
 
 ## InkDrops Module
 
-The InkDrops module (`js/modules/InkDropsModule.js`) is a source: drops of ink blooming into wet paper. It is a single stateless fragment shader (`js/shaders/inkdrops.js`) with no framebuffer history — everything is a closed-form function of time, so it costs one full-screen pass per frame.
+The InkDrops module (`js/modules/InkDropsModule.js`, `js/shaders/inkdrops.js`) is a source: a sheet of cold-press paper worked in watercolour. Splashes bloom and shatter, fat drops fall in from off-screen and soak out huge, and a wet rag is dragged across the sheet, lifting pigment back off. Ported from the WebGL2 sketch `splottissimo.html`.
 
-**Drop model:** eight slots are compiled into the shader; `drops` gates how many are live. Each slot spawns on a jittered 4x2 grid, spreads as a decelerating bounded front (`R = spread * (1 - exp(-age*0.45))`, so a drop can never flood the frame), leaves four trailing rings behind the leading annulus, and fades to exactly zero at `life` seconds before respawning in a new cell. The cell rotates by 3 each generation (coprime with 8) so no slot camps a corner. Drops are alpha-composited with `over()`, keeping coverage in [0,1] however many overlap.
+**Three passes over a persistent sheet.** Unlike the stateless first version, the module keeps an accumulation buffer (the "sheet") that two framebuffers ping-pong, because every pass reads the whole sheet to write the next one:
 
-**Fullscreen interaction:** double-click the node preview to enter fullscreen, then click to drop ink at the cursor; ESC exits. `js/ui.js mousePressed` routes the click to `handleMouseDown()` for `Conway` and `InkDrops` rather than exiting fullscreen.
+| Pass | Shader | What it does |
+| --- | --- | --- |
+| bake | `inkDropsBakeFrag` | Drops that have finished settling are stamped permanently into the sheet: previous sheet x their transmittance |
+| lift | `inkDropsLiftFrag` | Evaporation plus the solvent wipe, both walking the sheet back toward paper white. The wipe's coverage is parked in the sheet's alpha, which nothing else uses |
+| main | `inkDropsMainFrag` | Paper + baked stains + the drops still wet on the surface, composited into `outputFBO` |
 
-**Port note:** the WebGL2 original was GLSL ES 3.00; LICHEN is WebGL1, so the shader is downconverted (`out vec4 O` to `gl_FragColor`, `#version` dropped). Coordinates stay on `gl_FragCoord` exactly as the original and as `Conway` do, which is also what makes the click mapping match Conway's letterbox fit.
+Bake runs only on frames where a drop settles; lift runs whenever a wipe is live or enough evaporation has banked up. Colour is Beer-Lambert transmittance (`pigment()`), so overlapping washes multiply rather than add.
+
+**CPU-side simulation** (`InkDropsModule.js`): drops carry a radius, settle curve, squash, tendril and fragmentation animation, and are packed into `uA`/`uB`/`uC` uniform arrays (up to `INK_MAXD` = 32 wet at a time) each frame. A splash schedules a shattered core plus 8-16 flung shards; a cluster schedules a knot of drops; `bigStain()` drops a fat one in from above that falls, lands and soaks. Wipes (`uRing`, up to `INK_MAXR` = 12) retire oldest-first into spare slots so a live one is never yanked mid-fade. The two palettes are re-cast into one hue family by `harmonize()`, which keeps each palette's internal spacing but squeezes its widest deviation down to the `hue`/`hueVar`/`sat` knobs; it is recomputed only when those knobs move.
+
+**Port notes:**
+- The sketch is GLSL ES 3.00 and LICHEN is ES 1.00: `texture` becomes `texture2D`, `fragColor` becomes `gl_FragColor`, and the `continue` skips are written as plain conditionals.
+- The bake pass multiplied into its target with `blendFunc(ZERO, SRC_COLOR)`. Here it ping-pongs and multiplies the previous sheet in the shader instead, which keeps the pass independent of p5's blend state. The passes still run under `blendMode(REPLACE)`, because they write meaningful alpha that p5's default blend would otherwise fold into the colour; `framebuffer.end()` pops the blend mode back.
+- **Two uv spaces, and they must not be confused.** `texUV()` addresses the framebuffer itself (`v = y / H` is exactly the row being written) and is the only uv that may read the sheet back — reading through the flipped one mirrors the whole sheet on every ping-pong, which shows up as violent frame-to-frame flicker. `sheetUV()` flips y for the composition, because the UI blits the output with v flipped, and that flip is what keeps the falling stains falling downward.
+- `uRes` carries the framebuffer's pixel density (`target.width * target.density`). Everything here is in `gl_FragCoord` space, which runs over *physical* pixels; on a retina display that is twice the graphics' logical size, and passing the logical size squeezes the sheet into one quadrant and makes the feedback passes read off the edge.
+- The sheet starts as bare paper, which takes a GL pass (`p5`'s `clear()` premultiplies, so clearing to white with zero alpha is not available): the lift shader with a full step of evaporation and no wipes resolves to white with zero coverage, so `clear()` just runs that twice.
+
+**Fullscreen interaction:** double-click the node preview to enter fullscreen; click to throw a cluster, a splash and (at most every 0.7 s) a wipe; C clears the sheet back to bare paper; ESC exits. `js/ui.js mousePressed` routes the click to `handleMouseDown()` for `Conway` and `InkDrops` rather than exiting fullscreen, and `js/main.js keyPressed` routes keys the same way it does for `GRASS` and `Conway`.
 
 ## SpiralGalaxy Module
 
