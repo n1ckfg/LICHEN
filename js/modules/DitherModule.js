@@ -59,7 +59,7 @@ export class DitherModule extends Module {
       this.shader.setUniform('levels', this.params.levels.value);
       this.shader.setUniform('ditherStrength', this.params.ditherStrength.value);
       this.shader.setUniform('mode', this.params.mode.value);
-      this.shader.setUniform('uResolution', [glCanvas.width, glCanvas.height]);
+      this.shader.setUniform('uResolution', this.fragResolution());
       this.renderQuad();
       this.outputFBO.end();
     } else {
@@ -83,7 +83,7 @@ export class DitherModule extends Module {
     glCanvas.shader(this.errorInitShader);
     this.errorInitShader.setUniform('tex0', inputFBO);
     this.errorInitShader.setUniform('levels', this.params.levels.value);
-    this.errorInitShader.setUniform('uResolution', [glCanvas.width, glCanvas.height]);
+    this.errorInitShader.setUniform('uResolution', this.fragResolution());
     this.renderQuad();
     this.fboA.end();
 
@@ -99,7 +99,7 @@ export class DitherModule extends Module {
       this.errorDiffuseShader.setUniform('texOriginal', this.originalFBO);
       this.errorDiffuseShader.setUniform('levels', this.params.levels.value);
       this.errorDiffuseShader.setUniform('ditherStrength', this.params.ditherStrength.value);
-      this.errorDiffuseShader.setUniform('uResolution', [glCanvas.width, glCanvas.height]);
+      this.errorDiffuseShader.setUniform('uResolution', this.fragResolution());
       this.errorDiffuseShader.setUniform('passIndex', i);
       this.renderQuad();
       writeFBO.end();

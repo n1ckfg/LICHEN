@@ -123,8 +123,11 @@ export class GridGuysModule extends Module {
     glCanvas.clear();
     glCanvas.shader(this.simulationShader);
     this.simulationShader.setUniform('u_state', readFBO);
-    this.simulationShader.setUniform('u_resolution', [glCanvas.width, glCanvas.height]);
-    this.simulationShader.setUniform('u_target', [this.target.posX, -this.target.posY]);
+    // The neighbour taps are texel steps off u_resolution and the target is in
+    // the same pixel space, so both follow the framebuffer's physical size
+    const density = this.pixelDensity;
+    this.simulationShader.setUniform('u_resolution', this.fragResolution());
+    this.simulationShader.setUniform('u_target', [this.target.posX * density, -this.target.posY * density]);
     this.simulationShader.setUniform('u_targetClicked', this.target.clicked ? 1.0 : 0.0);
     this.simulationShader.setUniform('u_time', time);
     this.simulationShader.setUniform('u_oddsNW', this.odds[0]);
@@ -150,7 +153,7 @@ export class GridGuysModule extends Module {
     glCanvas.clear();
     glCanvas.shader(this.renderShader);
     this.renderShader.setUniform('u_state', writeFBO);
-    this.renderShader.setUniform('u_resolution', [glCanvas.width, glCanvas.height]);
+    this.renderShader.setUniform('u_resolution', this.fragResolution());
     this.renderShader.setUniform('u_time', time);
     this.renderShader.setUniform('u_blend', this.params.blend.value);
     this.renderQuad();

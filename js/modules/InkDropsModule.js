@@ -454,11 +454,11 @@ export class InkDropsModule extends Module {
     g.clear();
     g.blendMode(g.REPLACE);
     g.shader(shader);
-    // Every pass works in gl_FragCoord space, which runs over the framebuffer's
-    // *physical* pixels -- on a retina display that is twice the graphics'
-    // logical size, so uRes has to carry the density or the whole sheet is
-    // squeezed into one quadrant and the feedback passes read off the edge.
-    shader.setUniform('uRes', [target.width * target.density, target.height * target.density]);
+    // Every pass works in gl_FragCoord space, so uRes carries the framebuffer's
+    // pixel density (see Module.fragResolution) -- with the logical size the
+    // whole sheet is squeezed into one quadrant and the feedback passes read
+    // off the edge.
+    shader.setUniform('uRes', this.fragResolution());
     setup(shader);
     this.renderQuad();
     target.end();

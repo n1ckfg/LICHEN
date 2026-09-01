@@ -35,6 +35,19 @@ export class Module {
     return srcModule.outputFBO;
   }
 
+  // Framebuffers are allocated at the graphics' pixel density, so on a retina
+  // display gl_FragCoord runs over twice as many pixels as glCanvas.width and
+  // glCanvas.height report. Any shader working in gl_FragCoord space -- and any
+  // texel step derived from a resolution -- needs these, not the logical size.
+  get pixelDensity() {
+    return this.outputFBO ? this.outputFBO.density : 1;
+  }
+
+  fragResolution() {
+    const d = this.pixelDensity;
+    return [this.glCanvas.width * d, this.glCanvas.height * d];
+  }
+
   renderQuad() {
     const g = this.glCanvas;
     g.noStroke();

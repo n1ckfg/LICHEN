@@ -68,7 +68,7 @@ export class SpiralGalaxyModule extends Module {
     this.shader.setUniform('u_prev', w.read);
     // World-local time: resets with the world, so it loops too
     this.shader.setUniform('u_time', w.age);
-    this.shader.setUniform('uResolution', [glCanvas.width, glCanvas.height]);
+    this.shader.setUniform('uResolution', this.fragResolution());
     this.shader.setUniform('u_speed', this.params.speed.value);
     this.shader.setUniform('u_trail', this.params.trail.value);
     this.shader.setUniform('u_swirl', this.params.swirl.value);

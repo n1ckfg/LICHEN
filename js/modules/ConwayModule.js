@@ -281,6 +281,10 @@ export class ConwayModule extends Module {
     const speed = Math.floor(this.params.speed.value);
     const time = (performance.now() - this.startTime) / 1000.0;
 
+    // gl_FragCoord runs over physical pixels, so the spawn position and radius
+    // (which the shader compares against it) and the cell size scale with density
+    const density = this.pixelDensity;
+
     const doSimStep = (spawn, spawnPos, spawnRadius, spawnValue, clear, randomize) => {
       const readFBO = this.currentBuffer === 0 ? this.fboA : this.fboB;
       const writeFBO = this.currentBuffer === 0 ? this.fboB : this.fboA;
@@ -289,10 +293,10 @@ export class ConwayModule extends Module {
       glCanvas.clear();
       glCanvas.shader(this.simulationShader);
       this.simulationShader.setUniform('u_state', readFBO);
-      this.simulationShader.setUniform('u_resolution', [glCanvas.width, glCanvas.height]);
+      this.simulationShader.setUniform('u_resolution', this.fragResolution());
       this.simulationShader.setUniform('u_spawn', spawn ? 1.0 : 0.0);
-      this.simulationShader.setUniform('u_spawnPos', spawnPos);
-      this.simulationShader.setUniform('u_spawnRadius', spawnRadius);
+      this.simulationShader.setUniform('u_spawnPos', [spawnPos[0] * density, spawnPos[1] * density]);
+      this.simulationShader.setUniform('u_spawnRadius', spawnRadius * density);
       this.simulationShader.setUniform('u_spawnValue', spawnValue);
       this.simulationShader.setUniform('u_clear', clear ? 1.0 : 0.0);
       this.simulationShader.setUniform('u_randomize', randomize ? 1.0 : 0.0);
@@ -330,8 +334,8 @@ export class ConwayModule extends Module {
     glCanvas.clear();
     glCanvas.shader(this.renderShader);
     this.renderShader.setUniform('u_state', stateFBO);
-    this.renderShader.setUniform('u_resolution', [glCanvas.width, glCanvas.height]);
-    this.renderShader.setUniform('u_cellSize', this.params.cellSize.value);
+    this.renderShader.setUniform('u_resolution', this.fragResolution());
+    this.renderShader.setUniform('u_cellSize', this.params.cellSize.value * density);
     this.renderShader.setUniform('u_deadColor', this.deadColor);
     this.renderShader.setUniform('u_aliveColor', this.aliveColor);
     this.renderQuad();
