@@ -31,7 +31,7 @@ Every module that produces video output:
 
 Modules can also export control values by setting `this.controlValues['portName'] = value` during `process()`. These values are read via `this.getControlValue(portIndex)` and can be routed to downstream module parameters via parameter cables (`controlConnections`).
 
-The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob.
+The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number (used by `Edges` for its `mode` selector).
 
 Each node header has a collapse toggle in the upper right ("−" when expanded, "+" when collapsed). A module may also set `this.historicalInfo = 'Name'` in its constructor; this adds a "?" button to the left of the collapse toggle that opens an info popup (2× the node's size, centered on the node, dismissed by any click outside it). The popup content comes from the entry with a matching `name` in `docs/historical-info.json`: the popup's heading is that entry's `title` followed by its `year` in parentheses (the title falls back to the `historicalInfo` name when the entry or its title is missing; the year is omitted when absent), and its text is the entry's `body`. Modules leaving `historicalInfo` at its default `null` show no button.
 
@@ -42,7 +42,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 - **Sources**: Camera, Cloudy, Conway, GRASS, GridGuys, InkDrops, NAPLPS, Oscillator, Protozoa, SpiralGalaxy, VideoPlayer
 - **Core**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
-- **Utility**: Brcosa, Levels, Sharpen, VideoMixer
+- **Utility**: Brcosa, Edges, Levels, Sharpen, VideoMixer
 - **Output**: Monitor
 
 ### Shaders (`js/shaders/`)
@@ -136,6 +136,21 @@ The SpiralGalaxy module (`js/modules/SpiralGalaxyModule.js`) is a source: a rota
 **Rendering path:** each world ping-pongs a pair of framebuffers through `js/shaders/spiralgalaxy.js:spiralgalaxyFrag`, which advects the previous frame along a twist that shears with radius (the inner turns faster than the outer, which is what winds the feedback into arms) and adds fbm-warped ripples and a bright core. `spiralgalaxyBlendFrag` then cross-dissolves the two worlds into the module's `outputFBO`.
 
 **No Game of Life:** the WebGL sketch this was ported from drove `swirl`, `ripple`, `speed` and a dye injection from a Game of Life grid, but that grid never reached its shader — it was uploaded as raw 0/1 bytes in a `gl.ALPHA` texture, so a live cell arrived as `1/255`, `dye = smoothstep(0.6, 1.0, 0.0039)` was identically 0, and every GoL-driven term sat on a constant. The simulation is therefore not reproduced here; the three constants it was stuck on are exposed as the `swirl`, `ripple` and `speed` knobs instead, whose defaults match the original.
+
+## Edges Module
+
+The Edges module (`js/modules/EdgesModule.js`, `js/shaders/edges.js`) is a utility filter porting the four operators from the edge-detection-research project into one shader, selected by the `mode` knob:
+
+| mode | Label | Operator |
+| --- | --- | --- |
+| 0 (default) | Refine Contour | Sobel magnitude through a sigmoid `1/(1+exp(-10*(mag - threshold)))`, giving continuous anti-aliased contour lines rather than a binary mask |
+| 1 | Scharr | 3x3 Scharr gradient magnitude, hard-thresholded; better rotational symmetry than Sobel on diagonals |
+| 2 | Quantum Walk | 5-tap discrete Laplacian (from arXiv 1411.3958), hard-thresholded on absolute response |
+| 3 | Grayscale (debug) | Passes through the luminance the other three operate on, for checking the input signal |
+
+`threshold` is normalized 0-1 (the original's 0-255 slider divided by 255) and means something different per mode, so it is left to the user rather than reset on a mode change - resetting it would also fight any parameter cable patched into the knob.
+
+**Port note:** the reference shaders sampled the red channel (`.r`) for every gradient operator, which is harmless for a webcam feed but wrong downstream of LICHEN's saturated color sources. All four operators here run on luminance instead, using the same `(0.299, 0.587, 0.114)` weights the original grayscale shader defines.
 
 ## LuminanceDelay and Slitscan Modules
 

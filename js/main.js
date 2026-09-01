@@ -45,6 +45,7 @@ import './modules/UnrealBloomModule.js';
 import './modules/VHSCModule.js';
 // - - - UTILITY - - -
 import './modules/BrcosaModule.js';
+import './modules/EdgesModule.js';
 import './modules/LevelsModule.js';
 import './modules/SharpenModule.js';
 import './modules/VideoMixerModule.js';

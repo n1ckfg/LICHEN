@@ -13,7 +13,7 @@ const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Cloudy', 'Conway', 'GRASS', 'GridGuys', 'InkDrops', 'NAPLPS', 'Oscillator', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
   'Core': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
-  'Utility': ['Brcosa', 'Levels', 'Sharpen', 'VideoMixer'],
+  'Utility': ['Brcosa', 'Edges', 'Levels', 'Sharpen', 'VideoMixer'],
   'Output': ['Monitor'],
 };
 
@@ -72,6 +72,7 @@ const MODULE_COLORS = {
   VHSC: color_effect_tv,
   // - - - UTILITY - - -
   Brcosa: color_utility,
+  Edges: color_utility,
   Levels: color_utility,
   Sharpen: color_utility,
   VideoMixer: color_utility,
@@ -1311,11 +1312,18 @@ export class NodeGraphUI {
       p.textAlign(p.LEFT, p.CENTER);
       p.text(param.label || name, kx + KNOB_RADIUS + 6, ky);
 
-      // Value
+      // Value — a param may name its discrete settings via valueLabels
       p.fill(130);
       p.textAlign(p.RIGHT, p.CENTER);
-      const displayVal = param.step >= 1 ? param.value.toFixed(0) : param.value.toFixed(2);
-      p.text(displayVal, mod.x + MODULE_WIDTH - 8, ky);
+      const optLabel = param.valueLabels && param.valueLabels[Math.round(param.value)];
+      if (optLabel) {
+        p.textSize(8);
+        p.text(optLabel, mod.x + MODULE_WIDTH - 8, ky);
+        p.textSize(9);
+      } else {
+        const displayVal = param.step >= 1 ? param.value.toFixed(0) : param.value.toFixed(2);
+        p.text(displayVal, mod.x + MODULE_WIDTH - 8, ky);
+      }
     }
 
     // Monitor preview
