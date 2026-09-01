@@ -1,0 +1,369 @@
+{
+  "nodes": [
+    {
+      "id": 0,
+      "type": "Monitor",
+      "x": 977.5657283773711,
+      "y": 485.75,
+      "params": {
+        "width": 1440,
+        "height": 1080,
+        "bitrate": 20
+      },
+      "collapsed": false
+    },
+    {
+      "id": 1,
+      "type": "InkDrops",
+      "x": 142.13054209655843,
+      "y": -287.4925936383286,
+      "params": {
+        "speed": 2.48,
+        "rate": 1.9880000000000004,
+        "size": 1,
+        "stains": 3,
+        "wipes": 1,
+        "fade": 40,
+        "hue": 0.08666666666666661,
+        "hueVar": 0.085,
+        "sat": 0.08666666666666667,
+        "grain": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 3,
+      "type": "ColorEncoder",
+      "x": 161.0277413018864,
+      "y": 71.05309113397507,
+      "params": {
+        "phaseR": 0.054284441539959025,
+        "phaseG": 2.094,
+        "phaseB": 4.19,
+        "frequency": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 4,
+      "type": "HSFlow",
+      "x": 614.883957293231,
+      "y": -98.93463672613254,
+      "params": {
+        "lambda": 0.01,
+        "flowScale": 1,
+        "offset": 1,
+        "distortAmt": 1,
+        "slide": 0.8,
+        "lumaThresh": 0.5,
+        "lumaTol": 0.2
+      },
+      "collapsed": false
+    },
+    {
+      "id": 5,
+      "type": "GameBoy",
+      "x": 572.1567805281549,
+      "y": 270.74719767676066,
+      "params": {},
+      "collapsed": false
+    },
+    {
+      "id": 7,
+      "type": "VideoMixer",
+      "x": 748.3813579689959,
+      "y": 275.59524889483674,
+      "params": {
+        "mix": 0.5
+      },
+      "collapsed": false
+    },
+    {
+      "id": 8,
+      "type": "Brcosa",
+      "x": 264.25911561629107,
+      "y": 731.8474818709899,
+      "params": {
+        "brightness": 0,
+        "contrast": 1.3,
+        "saturation": 3
+      },
+      "collapsed": false
+    },
+    {
+      "id": 9,
+      "type": "ValueScrambler",
+      "x": 155.94781075426636,
+      "y": 442.5685700884151,
+      "params": {
+        "levels": 10.199999999999996,
+        "scramble": 0.7000000000000002
+      },
+      "collapsed": false
+    },
+    {
+      "id": 10,
+      "type": "AdderMultiplier",
+      "x": 34.69425483724717,
+      "y": 683.8052442227257,
+      "params": {
+        "mode": 0.6399999999999993,
+        "mixVal": 0.5,
+        "contrast": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 11,
+      "type": "GridGuys",
+      "x": 357.6045908640468,
+      "y": -233.23568183171318,
+      "params": {
+        "blend": 0.45973700750398955,
+        "delay": 1,
+        "life": 2.0281471499689836,
+        "respawn": 50,
+        "chaos": 0.03
+      },
+      "collapsed": false
+    },
+    {
+      "id": 12,
+      "type": "VideoMixer",
+      "x": 398.98094367451034,
+      "y": 64.69276342515676,
+      "params": {
+        "mix": 0.5
+      },
+      "collapsed": false
+    },
+    {
+      "id": 13,
+      "type": "Oscillator",
+      "x": -69.43638771970694,
+      "y": 45.6495952295625,
+      "params": {
+        "frequency": 0.1,
+        "waveform": 0.5799999999999998,
+        "direction": 0.3999999999999997
+      },
+      "collapsed": false
+    },
+    {
+      "id": 14,
+      "type": "Oscillator",
+      "x": -65.19982728431721,
+      "y": 287.40847746568215,
+      "params": {
+        "frequency": 0.1,
+        "waveform": 0.5799999999999998,
+        "direction": 0.3999999999999997
+      },
+      "collapsed": false
+    },
+    {
+      "id": 19,
+      "type": "AdderMultiplier",
+      "x": 95.25219510344311,
+      "y": 960.2360923573843,
+      "params": {
+        "mode": 0.6999999999999976,
+        "mixVal": 0.8466666666666667,
+        "contrast": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 22,
+      "type": "AdderMultiplier",
+      "x": 403.0827389280597,
+      "y": 995.9359402023634,
+      "params": {
+        "mode": 0.01999999999999813,
+        "mixVal": 0.8466666666666667,
+        "contrast": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 23,
+      "type": "Edges",
+      "x": 594.8005667884446,
+      "y": 917.0914983125876,
+      "params": {
+        "mode": 0,
+        "threshold": 0.5
+      },
+      "collapsed": false
+    },
+    {
+      "id": 25,
+      "type": "FilmGrain",
+      "x": 566.0175124059831,
+      "y": 477.87094884694915,
+      "params": {},
+      "collapsed": false
+    },
+    {
+      "id": 26,
+      "type": "UnrealBloom",
+      "x": 825.0650018481379,
+      "y": 946.3411179250353,
+      "params": {
+        "threshold": 0.2733333333333331,
+        "strength": 1.5,
+        "radius": 0.5
+      },
+      "collapsed": false
+    },
+    {
+      "id": 27,
+      "type": "Brcosa",
+      "x": 738.2463824669363,
+      "y": 706.0562589898008,
+      "params": {
+        "brightness": -0.053333333333333774,
+        "contrast": 1.3,
+        "saturation": 3
+      },
+      "collapsed": false
+    }
+  ],
+  "connections": [
+    {
+      "fromId": 1,
+      "fromPort": 0,
+      "toId": 3,
+      "toPort": 0
+    },
+    {
+      "fromId": 4,
+      "fromPort": 0,
+      "toId": 5,
+      "toPort": 0
+    },
+    {
+      "fromId": 4,
+      "fromPort": 0,
+      "toId": 7,
+      "toPort": 0
+    },
+    {
+      "fromId": 7,
+      "fromPort": 0,
+      "toId": 9,
+      "toPort": 0
+    },
+    {
+      "fromId": 9,
+      "fromPort": 0,
+      "toId": 10,
+      "toPort": 1
+    },
+    {
+      "fromId": 4,
+      "fromPort": 0,
+      "toId": 10,
+      "toPort": 0
+    },
+    {
+      "fromId": 3,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 0
+    },
+    {
+      "fromId": 11,
+      "fromPort": 0,
+      "toId": 12,
+      "toPort": 1
+    },
+    {
+      "fromId": 5,
+      "fromPort": 0,
+      "toId": 7,
+      "toPort": 1
+    },
+    {
+      "fromId": 12,
+      "fromPort": 0,
+      "toId": 4,
+      "toPort": 0
+    },
+    {
+      "fromId": 10,
+      "fromPort": 0,
+      "toId": 19,
+      "toPort": 1
+    },
+    {
+      "fromId": 19,
+      "fromPort": 0,
+      "toId": 23,
+      "toPort": 0
+    },
+    {
+      "fromId": 19,
+      "fromPort": 0,
+      "toId": 22,
+      "toPort": 0
+    },
+    {
+      "fromId": 23,
+      "fromPort": 0,
+      "toId": 22,
+      "toPort": 1
+    },
+    {
+      "fromId": 22,
+      "fromPort": 0,
+      "toId": 8,
+      "toPort": 0
+    },
+    {
+      "fromId": 8,
+      "fromPort": 0,
+      "toId": 25,
+      "toPort": 0
+    },
+    {
+      "fromId": 26,
+      "fromPort": 0,
+      "toId": 0,
+      "toPort": 0
+    },
+    {
+      "fromId": 5,
+      "fromPort": 0,
+      "toId": 19,
+      "toPort": 0
+    },
+    {
+      "fromId": 27,
+      "fromPort": 0,
+      "toId": 26,
+      "toPort": 0
+    },
+    {
+      "fromId": 25,
+      "fromPort": 0,
+      "toId": 27,
+      "toPort": 0
+    }
+  ],
+  "controlConnections": [
+    {
+      "fromId": 13,
+      "fromPort": 1,
+      "toId": 3,
+      "paramName": "phaseR"
+    },
+    {
+      "fromId": 14,
+      "fromPort": 1,
+      "toId": 11,
+      "paramName": "life"
+    }
+  ],
+  "nextId": 29
+}
