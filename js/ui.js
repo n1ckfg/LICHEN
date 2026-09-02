@@ -10,7 +10,7 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'Cloudy', 'Conway', 'GridGuys', 'InkDrops', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
+  'Sources': ['Camera', 'Cloudy', 'Conway', 'Crystalline', 'GridGuys', 'InkDrops', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
   'Utility': ['Brcosa', 'Edges', 'Levels', 'Sharpen', 'VideoMixer'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
@@ -33,6 +33,7 @@ const MODULE_COLORS = {
   Camera: color_source_basic,
   Cloudy: color_source_art,
   Conway: color_source_art,
+  Crystalline: color_source_art,
   GridGuys: color_source_art,
   InkDrops: color_source_art,
   NAPLPS: color_source_art,

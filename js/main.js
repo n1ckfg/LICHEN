@@ -4,6 +4,7 @@ import { NodeGraphUI } from './ui.js';
 import './modules/CameraModule.js';
 import './modules/CloudyModule.js';
 import './modules/ConwayModule.js';
+import './modules/CrystallineModule.js';
 import './modules/GRASSModule.js';
 import './modules/InkDropsModule.js';
 import './modules/GridGuysModule.js';
