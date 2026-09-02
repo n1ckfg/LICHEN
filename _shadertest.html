@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>shadertest</title>
+<script src="./js/libraries/p5.min.js"></script>
+<style>body{margin:0;background:#000}</style>
+</head><body>
+<script type="module">
+import './js/modules/CrystallineModule.js';
+import './js/modules/ProtozoaModule.js';
+import { createModule } from './js/moduleRegistry.js';
+import { vertSrc } from './js/shaders/vert.js';
+
+const blitFrag = `
+precision highp float;
+varying vec2 vTexCoord;
+uniform sampler2D tex0;
+void main() { gl_FragColor = texture2D(tex0, vec2(vTexCoord.x, 1.0 - vTexCoord.y)); }
+`;
+
+const params = new URLSearchParams(location.search);
+const ONLY = params.get('only');          // 'Crystalline' | 'Protozoa'
+const WALL = params.get('wall') === '1';  // drive module clocks from wall time
+
+const errors = [];
+window.__errors = errors;
+const origError = console.error;
+console.error = (...a) => { errors.push('console.error: ' + a.map(String).join(' ')); origError(...a); };
+window.addEventListener('error', e => errors.push('window.error: ' + e.message));
+
+let blit = null;
+const t0 = performance.now();
+
+new p5((p) => {
+  p.setup = () => {
+    p.createCanvas(ONLY ? 640 : 1280, 480);
+    p.pixelDensity(1);
+    const g = p.createGraphics(640, 480, p.WEBGL);
+    window.__g = g;
+    window.__gl = g.drawingContext;
+    window.__graph = { getInputConnections: () => [], nodes: new Map() };
+    const mods = [];
+    for (const t of (ONLY ? [ONLY] : ['Crystalline', 'Protozoa'])) {
+      try { mods.push(createModule(t, g, mods.length + 1)); }
+      catch (e) { errors.push('ctor ' + t + ': ' + (e && e.message ? e.message : e)); }
+    }
+    window.__mods = mods;
+    window.__info = mods.map(m => ({ type: m.type, sim: m.simW ? [m.simW, m.simH] : null, float: !!m.hasFloat }));
+    blit = g.createShader(vertSrc, blitFrag);
+  };
+  p.draw = () => {
+    const g = window.__g;
+    const el = (performance.now() - t0) / 1000;
+    p.background(0);
+    (window.__mods || []).forEach((m, i) => {
+      if (WALL) {
+        m.lastTime = performance.now() / 1000;   // makes dt ~ 0
+        m.time = el;
+        if (m.type === 'Protozoa') m.ftime = el * m.params.motion.value;
+        if (m.type === 'Crystalline') m.cycles = el / m.params.cycle.value;
+      }
+      try { m.process(window.__graph, g); }
+      catch (e) { errors.push('process ' + m.type + ': ' + (e && e.message ? e.message : e)); }
+      g.shader(blit);
+      blit.setUniform('tex0', m.outputFBO);
+      g.noStroke();
+      g.rect(-g.width / 2, -g.height / 2, g.width, g.height);
+      p.image(g, i * 640, 0, 640, 480);
+    });
+    const gl = window.__gl;
+    let err;
+    while (gl && (err = gl.getError()) !== gl.NO_ERROR) errors.push('glError: 0x' + err.toString(16));
+    window.__frames = (window.__frames || 0) + 1;
+  };
+});
+
+window.__meanDens = () => {
+  const m = (window.__mods || []).find(x => x.type === 'Protozoa');
+  if (!m) return null;
+  const gl = window.__gl;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, m.meanB.framebuffer);
+  const out = new Float32Array(4);
+  try { gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.FLOAT, out); }
+  catch (e) { return 'read failed: ' + e; }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  return Array.from(out);
+};
+
+window.__setPhase = (ph) => {
+  const m = (window.__mods || []).find(x => x.type === 'Crystalline');
+  if (m) m.cycles = ph;
+};
+
+</script>
+</body></html>

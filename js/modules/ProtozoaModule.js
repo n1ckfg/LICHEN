@@ -1,13 +1,45 @@
 import { Module } from './Module.js';
+import { vertSrc } from '../shaders/vert.js';
 import {
-  protozoaColorFrag,
+  protozoaInjectFrag,
   protozoaDiffuseFrag,
   protozoaBleedFrag,
   protozoaFeedbackFrag,
   protozoaBandingFrag,
-  protozoaDisplayFrag
+  protozoaDisplayFrag,
+  protozoaMeanFrag,
+  protozoaSceneFrag,
+  PROTO_MAX_CELLS,
+  PROTO_SIM_SHORT,
+  PROTO_SIM_LONG_MAX,
+  PROTO_SEG_LAG,
+  PROTO_SEG_LEN,
 } from '../shaders/protozoa.js';
 import { registerModule } from '../moduleRegistry.js';
+
+const MAX_DT = 1 / 30;    // clamp long stalls so a tab switch doesn't jump the clocks
+const MEAN_CELLS = 8;     // first reduction stage: MEAN_CELLS x MEAN_CELLS texels
+
+// Held constant rather than exposed. The gamma has one safe side (see the
+// diffuse pass), the fibre frequency is tied to the sim resolution, and the
+// wash is the colour the swamp itself is built from.
+const PIGMENT_GAMMA = 1.0;
+const PAPER_FREQ = 0.32;                 // fibre cycles per texel (~3 texels per cycle)
+const WASH = [0.015, 0.022, 0.012];      // colour the field decays into
+
+// Colony palette: algae, chartreuse rot, ochre, rust, stagnant teal, duckweed
+const PALETTE = [
+  [0.16, 0.42, 0.10],
+  [0.34, 0.46, 0.06],
+  [0.42, 0.26, 0.05],
+  [0.30, 0.11, 0.04],
+  [0.06, 0.34, 0.28],
+  [0.24, 0.40, 0.16],
+];
+
+const AMBIENT = 14;                  // free-drifting colonies
+const TRAIL_SEGS = [0, 3, 6, 9];     // which body segments emit
+const SNAKE_SEEDS = [0.0, 1.0];
 
 export class ProtozoaModule extends Module {
   constructor(glCanvas, id) {
@@ -15,229 +47,300 @@ export class ProtozoaModule extends Module {
     this.inputs = [];
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
-      diffusion: { value: 0.08, min: 0, max: 0.5, step: 0.01, label: 'Diffusion' },
-      bleed: { value: 0.12, min: 0, max: 0.5, step: 0.01, label: 'Bleed' },
-      feedback: { value: 0.85, min: 0, max: 0.99, step: 0.01, label: 'Feedback' },
-      banding: { value: 0.15, min: 0, max: 1, step: 0.01, label: 'Banding' },
-      spawnRate: { value: 0.02, min: 0, max: 0.1, step: 0.005, label: 'Spawn' },
-      spawnSize: { value: 0.1, min: 0.01, max: 0.3, step: 0.01, label: 'Size' }
+      speed: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed' },
+      motion: { value: 0.34, min: 0, max: 2, step: 0.01, label: 'Motion' },
+      deposit: { value: 5.0, min: 0, max: 15, step: 0.1, label: 'Deposit' },
+      diffusion: { value: 0.10, min: 0, max: 0.5, step: 0.01, label: 'Diffusion' },
+      bleed: { value: 0.95, min: 0, max: 1, step: 0.01, label: 'Bleed' },
+      feedback: { value: 0.997, min: 0.9, max: 1, step: 0.001, label: 'Feedback' },
+      banding: { value: 0.30, min: 0, max: 1, step: 0.01, label: 'Banding' },
+      dry: { value: 0.03, min: 0, max: 0.2, step: 0.005, label: 'Dry' },
+      gain: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Gain' },
     };
 
-    // Create all shaders
-    this.colorShader = glCanvas.createShader(this._getVertSrc(), protozoaColorFrag);
-    this.diffuseShader = glCanvas.createShader(this._getVertSrc(), protozoaDiffuseFrag);
-    this.bleedShader = glCanvas.createShader(this._getVertSrc(), protozoaBleedFrag);
-    this.feedbackShader = glCanvas.createShader(this._getVertSrc(), protozoaFeedbackFrag);
-    this.bandingShader = glCanvas.createShader(this._getVertSrc(), protozoaBandingFrag);
-    this.displayShader = glCanvas.createShader(this._getVertSrc(), protozoaDisplayFrag);
+    this.injectShader = glCanvas.createShader(vertSrc, protozoaInjectFrag);
+    this.diffuseShader = glCanvas.createShader(vertSrc, protozoaDiffuseFrag);
+    this.bleedShader = glCanvas.createShader(vertSrc, protozoaBleedFrag);
+    this.feedbackShader = glCanvas.createShader(vertSrc, protozoaFeedbackFrag);
+    this.bandingShader = glCanvas.createShader(vertSrc, protozoaBandingFrag);
+    this.displayShader = glCanvas.createShader(vertSrc, protozoaDisplayFrag);
+    this.meanShader = glCanvas.createShader(vertSrc, protozoaMeanFrag);
+    this.sceneShader = glCanvas.createShader(vertSrc, protozoaSceneFrag);
 
-    // Create four framebuffers for circular feedback loop
-    this.fb1 = glCanvas.createFramebuffer();
-    this.fb2 = glCanvas.createFramebuffer();
-    this.fb3 = glCanvas.createFramebuffer();
-    this.fb4 = glCanvas.createFramebuffer();
+    // The sim's SHORT axis is pinned and the long axis follows the aspect
+    // ratio. Diffusion, fibre bleed and the ripple displacement are all
+    // texel-stencil operations, so a texel has to be a fixed fraction of the
+    // frame or the field spreads at a different rate in every canvas shape.
+    // Pinning it also keeps the per-frame cost off the output resolution: six
+    // full-size passes would be wasteful, and the field is soft enough that
+    // the upsample into the scene is free.
+    const [simW, simH] = this._simSize(glCanvas);
+    this.simW = simW;
+    this.simH = simH;
+    this.simRes = [simW, simH];
 
-    // Clear all FBOs
-    this._clearFBO(this.fb1, glCanvas);
-    this._clearFBO(this.fb2, glCanvas);
-    this._clearFBO(this.fb3, glCanvas);
-    this._clearFBO(this.fb4, glCanvas);
+    this.hasFloat = this._detectFloat(glCanvas);
+    this.state = [this._createRT(simW, simH), this._createRT(simW, simH)];
+    this.disp = [this._createRT(simW, simH), this._createRT(simW, simH)];
+    this.meanA = this._createRT(MEAN_CELLS, MEAN_CELLS);
+    this.meanB = this._createRT(1, 1);
+    this.dispCur = 0;
+
+    for (const rt of [this.state[0], this.state[1], this.disp[0], this.disp[1]]) {
+      rt.begin();
+      glCanvas.clear();
+      rt.end();
+    }
 
     this.createOutputFBO();
 
-    // Color blob tracking
-    this.colorBlobs = [];
-    this.maxBlobs = 50;
+    // Uniform staging, reused every frame
+    this.posArr = new Float32Array(PROTO_MAX_CELLS * 2);
+    this.colArr = new Float32Array(PROTO_MAX_CELLS * 3);
+    this.radArr = new Float32Array(PROTO_MAX_CELLS);
 
-    this.startTime = performance.now();
-  }
-
-  _getVertSrc() {
-    return `
-      precision highp float;
-      attribute vec3 aPosition;
-      attribute vec2 aTexCoord;
-      varying vec2 vTexCoord;
-      void main() {
-        vTexCoord = aTexCoord;
-        vec4 positionVec4 = vec4(aPosition, 1.0);
-        positionVec4.xy = positionVec4.xy * 2.0 - 1.0;
-        gl_Position = positionVec4;
-      }
-    `;
-  }
-
-  _clearFBO(fbo, glCanvas) {
-    fbo.begin();
-    glCanvas.clear();
-    fbo.end();
-  }
-
-  _addColorBlob(x, y, r, g, b, radius) {
-    this.colorBlobs.push({
-      x: x,
-      y: y,
-      r: r,
-      g: g,
-      b: b,
-      radius: radius,
-      life: 1.0
-    });
-    if (this.colorBlobs.length > this.maxBlobs) {
-      this.colorBlobs.shift();
+    // Ambient drifters wander the frame on deterministic sinusoidal paths;
+    // trail emitters ride the snake bodies. Built once, so a patch reloads to
+    // the same arrangement.
+    this.drifters = [];
+    for (let i = 0; i < AMBIENT; i++) {
+      const s = i * 2.399963;   // golden-angle spread
+      this.drifters.push({
+        col: PALETTE[i % PALETTE.length],
+        seed: s,
+        sx: 0.040 + (i % 5) * 0.011,
+        sy: 0.034 + (i % 7) * 0.009,
+        sx2: 0.085 + (i % 3) * 0.019,
+        sy2: 0.071 + (i % 4) * 0.015,
+        rad: 0.035 + (i % 6) * 0.017,
+        pr: 0.16 + (i % 9) * 0.03,
+        amp: 0.9 + (i % 5) * 0.12,
+      });
     }
+
+    // Both clocks are accumulated rather than scaled from an absolute time, so
+    // turning Speed or Motion changes the rate without jumping the animation.
+    this.time = 0;
+    this.ftime = 0;
+    this.lastTime = performance.now() / 1000;
   }
 
-  _updateBlobs() {
-    for (let i = this.colorBlobs.length - 1; i >= 0; i--) {
-      this.colorBlobs[i].life -= 0.02;
-      if (this.colorBlobs[i].life <= 0) {
-        this.colorBlobs.splice(i, 1);
-      }
-    }
+  _simSize(glCanvas) {
+    const w = glCanvas.width, h = glCanvas.height;
+    const long = Math.min(PROTO_SIM_LONG_MAX,
+      Math.round(PROTO_SIM_SHORT * Math.max(w, h) / Math.min(w, h)));
+    const portrait = h > w;
+    return [
+      Math.max(2, portrait ? PROTO_SIM_SHORT : long),
+      Math.max(2, portrait ? long : PROTO_SIM_SHORT),
+    ];
   }
 
-  _autoSpawn(time) {
-    const spawnRate = this.params.spawnRate.value;
-    if (Math.random() < spawnRate) {
-      const hue = (time * 50) % 360;
-      const rgb = this._hsvToRgb(hue / 360, 0.6 + Math.random() * 0.4, 0.7 + Math.random() * 0.3);
-      const size = this.params.spawnSize.value * (0.5 + Math.random());
-      this._addColorBlob(
-        Math.random(),
-        Math.random(),
-        rgb.r,
-        rgb.g,
-        rgb.b,
-        size
-      );
-    }
+  // Half-float keeps the watercolour feedback loop from banding out, and gives
+  // the reduced mean density enough resolution to steer the auto-exposure.
+  _detectFloat(glCanvas) {
+    const gl = glCanvas.drawingContext;
+    const webgl2 = glCanvas._renderer && glCanvas._renderer.webglVersion === 'webgl2';
+    return !!(webgl2 && gl && gl.getExtension &&
+      (gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float')));
   }
 
-  _hsvToRgb(h, s, v) {
-    let r, g, b;
-    const i = Math.floor(h * 6);
-    const f = h * 6 - i;
-    const p = v * (1 - s);
-    const q = v * (1 - f * s);
-    const t = v * (1 - (1 - f) * s);
-    switch (i % 6) {
-      case 0: r = v; g = t; b = p; break;
-      case 1: r = q; g = v; b = p; break;
-      case 2: r = p; g = v; b = t; break;
-      case 3: r = p; g = q; b = v; break;
-      case 4: r = t; g = p; b = v; break;
-      case 5: r = v; g = p; b = q; break;
-    }
-    return { r, g, b };
-  }
-
-  _injectColors(fb, glCanvas) {
-    fb.begin();
-    glCanvas.shader(this.colorShader);
-
-    const positions = [];
-    const rgbColors = [];
-    const radii = [];
-
-    for (let i = 0; i < this.maxBlobs; i++) {
-      if (i < this.colorBlobs.length) {
-        const c = this.colorBlobs[i];
-        positions.push(c.x, c.y);
-        rgbColors.push(c.r, c.g, c.b);
-        radii.push(c.radius * c.life);
-      } else {
-        positions.push(-1, 0);
-        rgbColors.push(0, 0, 0);
-        radii.push(0);
+  _createRT(w, h) {
+    const g = this.glCanvas;
+    const opts = { width: w, height: h, density: 1, channels: g.RGBA };
+    if (this.hasFloat) {
+      try {
+        return g.createFramebuffer(Object.assign({ format: g.HALF_FLOAT }, opts));
+      } catch (e) {
+        this.hasFloat = false;
       }
     }
-
-    this.colorShader.setUniform('u_positions', positions);
-    this.colorShader.setUniform('u_rgbColors', rgbColors);
-    this.colorShader.setUniform('u_radii', radii);
-    this.colorShader.setUniform('u_numColors', Math.min(this.colorBlobs.length, this.maxBlobs));
-    this.colorShader.setUniform('u_resolution', [glCanvas.width, glCanvas.height]);
-
-    this.renderQuad();
-    fb.end();
+    return g.createFramebuffer(opts);
   }
 
-  _renderPass(source, target, shader, uniforms, glCanvas) {
+  // One full-screen pass into `target`. REPLACE because the display pass writes
+  // meaningful alpha (the pigment density the reduction reads), which p5's
+  // default blend would otherwise fold into the colour; end() pops it back.
+  _pass(shader, target, setup) {
+    const g = this.glCanvas;
     target.begin();
-    glCanvas.clear();
-    glCanvas.shader(shader);
-
-    for (const key in uniforms) {
-      shader.setUniform(key, uniforms[key]);
-    }
-    shader.setUniform('u_texture', source);
-
+    g.clear();
+    g.blendMode(g.REPLACE);
+    g.shader(shader);
+    setup(shader);
     this.renderQuad();
     target.end();
   }
 
+  // Scene space -> field uv. Inverts the scene shader's
+  // uv = (suv - 0.5) * res / min(res) * 1.5.
+  _sceneToUV(x, y) {
+    const w = this.glCanvas.width, h = this.glCanvas.height;
+    const m = Math.min(w, h);
+    return [0.5 + x * m / (1.5 * w), 0.5 + y * m / (1.5 * h)];
+  }
+
+  // Mirrors the segment path inside snakeSDF2D, on the same accumulated
+  // foreground clock. Keep this in step with the GLSL or the trails detach
+  // from the bodies.
+  _snakeSegPos(seed, i) {
+    const time = this.ftime * 0.8;
+    const hx = Math.sin(time + seed) * 0.6 + Math.sin(time * 0.62 + seed * 3.0) * 0.25;
+    const hy = Math.cos(time * 0.7 + seed) * 0.5 + Math.cos(time * 0.53 + seed * 5.0) * 0.2;
+    const phase = time - i * PROTO_SEG_LAG + seed * 7.0;
+    const side = Math.sin(phase * 1.15) * 0.35 * (1.0 - i * 0.06);
+    const forward = Math.cos(phase * 0.85) * 0.25 * (1.0 - i * 0.04);
+    return [hx + forward - i * PROTO_SEG_LEN, hy + side];
+  }
+
+  // Fill the staging arrays; returns how many colonies to inject this frame.
+  // Deposition runs on wall-clock seconds, so Speed changes the pace of the
+  // scene without changing how much pigment ends up in the field.
+  _updateCells(dt) {
+    const t = this.time;
+    const gain = this.params.deposit.value * dt;
+    const pos = this.posArr, col = this.colArr, rad = this.radArr;
+    let n = 0;
+
+    for (let i = 0; i < this.drifters.length && n < PROTO_MAX_CELLS; i++) {
+      const c = this.drifters[i];
+      const x = 0.5 + (Math.sin(t * c.sx + c.seed) * 0.42 + Math.sin(t * c.sx2 + c.seed * 3.1) * 0.11) * c.amp;
+      const y = 0.5 + (Math.cos(t * c.sy + c.seed * 1.7) * 0.38 + Math.cos(t * c.sy2 + c.seed * 2.3) * 0.10) * c.amp;
+      const pulse = 0.65 + 0.35 * Math.sin(t * c.pr + c.seed * 5.0);
+
+      pos[n * 2] = x;
+      pos[n * 2 + 1] = y;
+      rad[n] = c.rad * pulse;
+      col[n * 3] = c.col[0] * gain * pulse;
+      col[n * 3 + 1] = c.col[1] * gain * pulse;
+      col[n * 3 + 2] = c.col[2] * gain * pulse;
+      n++;
+    }
+
+    for (let s = 0; s < SNAKE_SEEDS.length && n < PROTO_MAX_CELLS; s++) {
+      for (let k = 0; k < TRAIL_SEGS.length && n < PROTO_MAX_CELLS; k++) {
+        const seg = TRAIL_SEGS[k];
+        const p = this._snakeSegPos(SNAKE_SEEDS[s], seg);
+        const uvp = this._sceneToUV(p[0], p[1]);
+        const fade = 1.0 - seg / 14.0;
+        const c = PALETTE[(s * 3 + k) % PALETTE.length];
+
+        pos[n * 2] = uvp[0];
+        pos[n * 2 + 1] = uvp[1];
+        rad[n] = (0.05 - seg * 0.0025) * (0.9 + 0.1 * Math.sin(t * 0.7 + seg));
+        col[n * 3] = c[0] * gain * 2.1 * fade;
+        col[n * 3 + 1] = c[1] * gain * 2.1 * fade;
+        col[n * 3 + 2] = c[2] * gain * 2.1 * fade;
+        n++;
+      }
+    }
+
+    return n;
+  }
+
   process(graph, glCanvas) {
-    const time = (performance.now() - this.startTime) / 1000.0;
+    const now = performance.now() / 1000;
+    const dt = Math.min(Math.max(now - this.lastTime, 0), MAX_DT);
+    this.lastTime = now;
 
-    // Update and auto-spawn color blobs
-    this._updateBlobs();
-    this._autoSpawn(time);
+    const scaled = dt * this.params.speed.value;
+    this.time += scaled;
+    this.ftime += scaled * this.params.motion.value;
 
-    // Circular feedback loop: fb1 -> fb2 -> fb3 -> fb4 -> fb1
+    const count = this._updateCells(dt);
 
-    // Pass 1: Diffusion (fb1 -> fb2)
-    this._renderPass(this.fb1, this.fb2, this.diffuseShader, {
-      'u_resolution': [glCanvas.width, glCanvas.height],
-      'u_time': time,
-      'u_diffusionRate': this.params.diffusion.value
-    }, glCanvas);
+    // 1. Inject the colonies onto the persistent field: state[0] -> state[1]
+    this._pass(this.injectShader, this.state[1], sh => {
+      sh.setUniform('u_texture', this.state[0]);
+      sh.setUniform('u_resolution', this.simRes);
+      sh.setUniform('u_positions', this.posArr);
+      sh.setUniform('u_rgbColors', this.colArr);
+      sh.setUniform('u_radii', this.radArr);
+      sh.setUniform('u_numColors', count);
+    });
 
-    // Pass 2: Bleed effect (fb2 -> fb3)
-    this._renderPass(this.fb2, this.fb3, this.bleedShader, {
-      'u_resolution': [glCanvas.width, glCanvas.height],
-      'u_time': time,
-      'u_bleedStrength': this.params.bleed.value
-    }, glCanvas);
+    // 2. Diffuse: state[1] -> state[0]
+    this._pass(this.diffuseShader, this.state[0], sh => {
+      sh.setUniform('u_texture', this.state[1]);
+      sh.setUniform('u_resolution', this.simRes);
+      sh.setUniform('u_diffusionRate', this.params.diffusion.value);
+      sh.setUniform('u_pigmentGamma', PIGMENT_GAMMA);
+    });
 
-    // Pass 3: Feedback with ripples (fb3 -> fb4)
-    this._renderPass(this.fb3, this.fb4, this.feedbackShader, {
-      'u_resolution': [glCanvas.width, glCanvas.height],
-      'u_time': time,
-      'u_feedback': this.params.feedback.value
-    }, glCanvas);
+    // 3. Bleed along paper fibre: state[0] -> state[1]
+    this._pass(this.bleedShader, this.state[1], sh => {
+      sh.setUniform('u_texture', this.state[0]);
+      sh.setUniform('u_resolution', this.simRes);
+      sh.setUniform('u_bleedStrength', this.params.bleed.value);
+      sh.setUniform('u_paperFreq', PAPER_FREQ);
+      sh.setUniform('u_dry', this.params.dry.value);
+    });
 
-    // Pass 4: Inject colors and apply banding (fb4 -> fb1)
-    this._injectColors(this.fb1, glCanvas);
-    this._renderPass(this.fb4, this.fb1, this.bandingShader, {
-      'u_resolution': [glCanvas.width, glCanvas.height],
-      'u_time': time,
-      'u_bandingStrength': this.params.banding.value
-    }, glCanvas);
+    // 4. Ripple feedback + decay: state[1] -> state[0]. Four passes, so the
+    //    live field lands back where it started and nothing has to be swapped.
+    this._pass(this.feedbackShader, this.state[0], sh => {
+      sh.setUniform('u_texture', this.state[1]);
+      sh.setUniform('u_resolution', this.simRes);
+      sh.setUniform('u_time', this.time);
+      sh.setUniform('u_feedback', this.params.feedback.value);
+      sh.setUniform('u_wash', WASH);
+    });
 
-    // Final display pass to outputFBO
-    this.outputFBO.begin();
-    glCanvas.clear();
-    glCanvas.shader(this.displayShader);
-    this.displayShader.setUniform('u_resolution', [glCanvas.width, glCanvas.height]);
-    this.displayShader.setUniform('u_time', time);
-    this.displayShader.setUniform('u_texture', this.fb2);
-    this.displayShader.setUniform('u_previousTexture', this.fb4);
-    this.renderQuad();
-    this.outputFBO.end();
+    // 5. Banding, outside the persistent chain. state[1] is stale now, so it
+    //    doubles as the scratch target.
+    this._pass(this.bandingShader, this.state[1], sh => {
+      sh.setUniform('u_texture', this.state[0]);
+      sh.setUniform('u_resolution', this.simRes);
+      sh.setUniform('u_time', this.time);
+      sh.setUniform('u_bandingStrength', this.params.banding.value);
+    });
+
+    // 6. Display grade with a soft temporal trail
+    const prev = this.dispCur;
+    this.dispCur = 1 - this.dispCur;
+    this._pass(this.displayShader, this.disp[this.dispCur], sh => {
+      sh.setUniform('u_texture', this.state[1]);
+      sh.setUniform('u_previousTexture', this.disp[prev]);
+      sh.setUniform('u_resolution', this.simRes);
+      sh.setUniform('u_time', this.time);
+    });
+
+    // 7. Reduce the display target's alpha to a single frame-wide mean, which
+    //    is what the scene's auto-exposure runs on.
+    this._pass(this.meanShader, this.meanA, sh => {
+      sh.setUniform('u_texture', this.disp[this.dispCur]);
+      sh.setUniform('u_cells', MEAN_CELLS);
+    });
+    this._pass(this.meanShader, this.meanB, sh => {
+      sh.setUniform('u_texture', this.meanA);
+      sh.setUniform('u_cells', 1);
+    });
+
+    // 8. Scene, with the watercolour field blended into the swamp
+    this._pass(this.sceneShader, this.outputFBO, sh => {
+      sh.setUniform('u_protozoa', this.disp[this.dispCur]);
+      sh.setUniform('u_mean', this.meanB);
+      sh.setUniform('u_time', this.time);
+      sh.setUniform('u_ftime', this.ftime);
+      // protoGrad derives a texel step from this, so it wants the physical size
+      sh.setUniform('u_resolution', this.fragResolution());
+      sh.setUniform('u_gain', this.params.gain.value);
+    });
   }
 
   dispose() {
-    this.fb1 = null;
-    this.fb2 = null;
-    this.fb3 = null;
-    this.fb4 = null;
-    this.colorShader = null;
+    this.state = [null, null];
+    this.disp = [null, null];
+    this.meanA = null;
+    this.meanB = null;
+    this.injectShader = null;
     this.diffuseShader = null;
     this.bleedShader = null;
     this.feedbackShader = null;
     this.bandingShader = null;
     this.displayShader = null;
+    this.meanShader = null;
+    this.sceneShader = null;
     super.dispose();
   }
 }
