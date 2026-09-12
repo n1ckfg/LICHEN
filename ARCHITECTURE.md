@@ -39,9 +39,9 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 
 ### Module Categories
 
-- **Sources**: Camera, Cloudy, GridGuys, InkDrops, NAPLPS, Protozoa, SpiralGalaxy, VideoPlayer
+- **Sources**: Camera, Cloudy, GridGuys, NAPLPS, Protozoa, SpiralGalaxy, VideoPlayer
 - **Utility**: Brcosa, Edges, Levels, Sharpen, VideoMixer
-- **Canon**: Conway, GRASS, Yellowtail
+- **Interactive**: Conway, GRASS, InkDrops, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
 - **Output**: Monitor
@@ -120,7 +120,7 @@ The Protozoa module (`js/modules/ProtozoaModule.js`) generates autonomous waterc
 
 ## InkDrops Module
 
-The InkDrops module (`js/modules/InkDropsModule.js`, `js/shaders/inkdrops.js`) is a source: a sheet of cold-press paper worked in watercolour. Splashes bloom and shatter, fat drops fall in from off-screen and soak out huge, and a wet rag is dragged across the sheet, lifting pigment back off. Ported from the WebGL2 sketch `splottissimo.html`.
+The InkDrops module (`js/modules/InkDropsModule.js`, `js/shaders/inkdrops.js`) is an interactive module: a sheet of cold-press paper worked in watercolour. Splashes bloom and shatter, fat drops fall in from off-screen and soak out huge, and a wet rag is dragged across the sheet, lifting pigment back off. Ported from the WebGL2 sketch `splottissimo.html`.
 
 **Three passes over a persistent sheet.** Unlike the stateless first version, the module keeps an accumulation buffer (the "sheet") that two framebuffers ping-pong, because every pass reads the whole sheet to write the next one:
 

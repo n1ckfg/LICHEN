@@ -10,25 +10,24 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'Cloudy', 'Crystalline', 'GridGuys', 'InkDrops', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
+  'Sources': ['Camera', 'Cloudy', 'Crystalline', 'GridGuys', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
   'Utility': ['Brcosa', 'Edges', 'Levels', 'Sharpen', 'VideoMixer'],
-  'Canon': ['Conway', 'GRASS', 'Yellowtail'],
+  'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Yellowtail'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
   'Output': ['Monitor'],
 };
 
 const color_source_basic = [34, 85, 170];
-const color_source_grass = [34, 120, 68];
+const color_grass = [34, 120, 68];
 const color_source_art = [170, 85, 136];
-const color_core_sandin = [102, 102, 68];
+const color_sandin = [102, 102, 68];
 const color_effect_noise = [68, 102, 136];
 const color_effect_tv = [125, 85, 129];
 const color_effect_flow = [136, 85, 34];
 const color_effect_op = [108, 102, 186];
 const color_utility = [85, 120, 100];
 const color_output = [170, 85, 34];
-
 const color_canon = [160, 120, 40];
 
 const MODULE_COLORS = {
@@ -37,7 +36,6 @@ const MODULE_COLORS = {
   Cloudy: color_source_art,
   Crystalline: color_source_art,
   GridGuys: color_source_art,
-  InkDrops: color_source_art,
   NAPLPS: color_source_art,
   Protozoa: color_source_art,
   SpiralGalaxy: color_source_art,
@@ -48,19 +46,20 @@ const MODULE_COLORS = {
   Levels: color_utility,
   Sharpen: color_utility,
   VideoMixer: color_utility,
-  // - - - CANON - - -
+  // - - - INTERACTIVE - - -
   Conway: color_canon,
-  GRASS: color_source_grass,
+  InkDrops: color_canon,
+  GRASS: color_grass,
   Yellowtail: color_canon,
   // - - - SANDIN - - -
-  AdderMultiplier: color_core_sandin,
-  ColorEncoder: color_core_sandin,
-  Comparator: color_core_sandin,
-  Differentiator: color_core_sandin,
-  FunctionGenerator: color_core_sandin,
-  Oscillator: color_core_sandin,
-  SyncGenerator: color_core_sandin,
-  ValueScrambler: color_core_sandin,
+  AdderMultiplier: color_sandin,
+  ColorEncoder: color_sandin,
+  Comparator: color_sandin,
+  Differentiator: color_sandin,
+  FunctionGenerator: color_sandin,
+  Oscillator: color_sandin,
+  SyncGenerator: color_sandin,
+  ValueScrambler: color_sandin,
   // - - - EFFECTS - - -
   BooleanLogic: color_effect_op,
   BufferSmear: color_effect_flow,
@@ -77,7 +76,9 @@ const MODULE_COLORS = {
   Mosaic: color_effect_op,
   PixelVision: color_effect_tv,
   RuttEtra: color_effect_tv,
+  LuminanceDelay: color_effect_op,
   SpatialSlice: color_effect_op,
+  Slitscan: color_effect_op,
   TimeTunnel: color_effect_tv,
   TVLines: color_effect_tv,
   UnrealBloom: color_effect_op,
@@ -175,7 +176,7 @@ export class NodeGraphUI {
     const sectionInitialState = {
       'Sources': true,
       'Utility': true,
-      'Canon': true,
+      'Interactive': true,
       'Sandin': true,
       'Effects': true,
       'Output': true,
