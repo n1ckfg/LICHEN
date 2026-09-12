@@ -68,7 +68,7 @@
 	{
 		"name": "UnrealBloom",
 		"year": 2019,
-		"title": "<a href='https://threejs.org/docs/UnrealBloomPass'>UnrealBloom</a>",
-		"body": "Inspired by the bloom pass of Unreal Engine, by <a href='https://github.com/Mugen87'>Michael Herzog</a>."		
+		"title": "<a href='https://threejs.org/docs/#UnrealBloomPass'>UnrealBloom</a>",
+		"body": "Inspired by the bloom pass of Unreal Engine, by <a href='https://github.com/Mugen87'>Michael Herzog</a>."
 	}
 ]

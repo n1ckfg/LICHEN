@@ -50,7 +50,7 @@ const MODULE_COLORS = {
   VideoMixer: color_utility,
   // - - - CANON - - -
   Conway: color_canon,
-  GRASS: color_canon,
+  GRASS: color_source_grass,
   Yellowtail: color_canon,
   // - - - SANDIN - - -
   AdderMultiplier: color_core_sandin,

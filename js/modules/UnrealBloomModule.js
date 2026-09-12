@@ -12,6 +12,7 @@ export class UnrealBloomModule extends Module {
     super('UnrealBloom', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    this.historicalInfo = "UnrealBloom";
     this.params = {
       threshold: { value: 0.8, min: 0.0, max: 1.0, step: 0.01, label: 'Threshold' },
       strength: { value: 1.5, min: 0.0, max: 5.0, step: 0.01, label: 'Strength' },
