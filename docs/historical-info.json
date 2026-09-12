@@ -64,5 +64,11 @@
 		"year": 1998,
 		"title": "<a href='https://www.flong.com/archive/projects/yellowtail/index.html'>Yellowtail</a>",
 		"body": "An interactive software system for the gestural creation and performance of realtime abstract animation, by <a href='https://www.flong.com'>Golan Levin</a>."		
+	},
+	{
+		"name": "UnrealBloom",
+		"year": 2019,
+		"title": "<a href='https://threejs.org/docs/UnrealBloomPass'>UnrealBloom</a>",
+		"body": "Inspired by the bloom pass of Unreal Engine, by <a href='https://github.com/Mugen87'>Michael Herzog</a>."		
 	}
 ]
