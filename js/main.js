@@ -3,9 +3,7 @@ import { NodeGraphUI } from './ui.js';
 // - - - SOURCES - - -
 import './modules/CameraModule.js';
 import './modules/CloudyModule.js';
-import './modules/ConwayModule.js';
 import './modules/CrystallineModule.js';
-import './modules/GRASSModule.js';
 import './modules/InkDropsModule.js';
 import './modules/GridGuysModule.js';
 import './modules/NAPLPSModule.js';
@@ -44,6 +42,10 @@ import './modules/TimeTunnelModule.js';
 import './modules/TVLinesModule.js';
 import './modules/UnrealBloomModule.js';
 import './modules/VHSCModule.js';
+// - - - CANON - - -
+import './modules/ConwayModule.js';
+import './modules/GRASSModule.js';
+import './modules/YellowtailModule.js';
 // - - - UTILITY - - -
 import './modules/BrcosaModule.js';
 import './modules/EdgesModule.js';
@@ -169,6 +171,15 @@ const sketch = (p) => {
       }
       if (fsmod && fsmod.type === 'Conway') {
         // ESC exits fullscreen
+        if (p.key === 'Escape') {
+          fsmod.hideFullscreenUI();
+          ui.fullscreenMonitor = null;
+        } else {
+          fsmod.handleKey(p.key, p.keyCode, p);
+        }
+        return false;
+      }
+      if (fsmod && fsmod.type === 'Yellowtail') {
         if (p.key === 'Escape') {
           fsmod.hideFullscreenUI();
           ui.fullscreenMonitor = null;

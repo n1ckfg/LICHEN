@@ -39,9 +39,10 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 
 ### Module Categories
 
-- **Sources**: Camera, Cloudy, Conway, GridGuys, InkDrops, NAPLPS, Protozoa, SpiralGalaxy, VideoPlayer
+- **Sources**: Camera, Cloudy, GridGuys, InkDrops, NAPLPS, Protozoa, SpiralGalaxy, VideoPlayer
 - **Utility**: Brcosa, Edges, Levels, Sharpen, VideoMixer
-- **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, GRASS, Oscillator, SyncGenerator, ValueScrambler
+- **Canon**: Conway, GRASS, Yellowtail
+- **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
 - **Output**: Monitor
 
@@ -178,6 +179,17 @@ Both modules implement time-based effects that require random access to a ring b
 - `Slitscan` (`js/modules/SlitscanModule.js`, `js/shaders/slitscan.js`) partitions the output along `axis` (Y or X) into `strips` bands, each delayed proportionally to its index by `delay` frames per strip.
 
 Both modules clear their atlases on construction so the early frames show progressive fill rather than garbage memory.
+
+## Yellowtail Module
+
+The Yellowtail module (`js/modules/YellowtailModule.js`) implements Golan Levin's interactive kinetic gesture system, ported from a p5.js version.
+
+**Rendering path:** The module internally creates an off-screen `p5.Graphics` context (`this.pg`) in 2D mode. Gestures are simulated and compiled into polygon meshes which are drawn to this 2D buffer every frame using standard p5 shape functions. The resulting 2D canvas texture is then piped into the module's WebGL `outputFBO` via the passthrough shader.
+
+**Fullscreen interaction:**
+- Double-click the node preview to enter fullscreen.
+- Click, drag, and release to create repeating kinetic gestures.
+- ESC exits fullscreen; C clears the canvas.
 
 ## Development Conventions
 

@@ -10,9 +10,10 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'Cloudy', 'Conway', 'Crystalline', 'GridGuys', 'InkDrops', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
+  'Sources': ['Camera', 'Cloudy', 'Crystalline', 'GridGuys', 'InkDrops', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
   'Utility': ['Brcosa', 'Edges', 'Levels', 'Sharpen', 'VideoMixer'],
-  'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
+  'Canon': ['Conway', 'GRASS', 'Yellowtail'],
+  'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
   'Output': ['Monitor'],
 };
@@ -28,11 +29,12 @@ const color_effect_op = [108, 102, 186];
 const color_utility = [85, 120, 100];
 const color_output = [170, 85, 34];
 
+const color_canon = [160, 120, 40];
+
 const MODULE_COLORS = {
   // - - - SOURCES - - -
   Camera: color_source_basic,
   Cloudy: color_source_art,
-  Conway: color_source_art,
   Crystalline: color_source_art,
   GridGuys: color_source_art,
   InkDrops: color_source_art,
@@ -40,13 +42,22 @@ const MODULE_COLORS = {
   Protozoa: color_source_art,
   SpiralGalaxy: color_source_art,
   VideoPlayer: color_source_basic,
+  // - - - UTILITY - - -
+  Brcosa: color_utility,
+  Edges: color_utility,
+  Levels: color_utility,
+  Sharpen: color_utility,
+  VideoMixer: color_utility,
+  // - - - CANON - - -
+  Conway: color_canon,
+  GRASS: color_canon,
+  Yellowtail: color_canon,
   // - - - SANDIN - - -
   AdderMultiplier: color_core_sandin,
   ColorEncoder: color_core_sandin,
   Comparator: color_core_sandin,
   Differentiator: color_core_sandin,
   FunctionGenerator: color_core_sandin,
-  GRASS: color_source_grass,
   Oscillator: color_core_sandin,
   SyncGenerator: color_core_sandin,
   ValueScrambler: color_core_sandin,
@@ -71,12 +82,6 @@ const MODULE_COLORS = {
   TVLines: color_effect_tv,
   UnrealBloom: color_effect_op,
   VHSC: color_effect_tv,
-  // - - - UTILITY - - -
-  Brcosa: color_utility,
-  Edges: color_utility,
-  Levels: color_utility,
-  Sharpen: color_utility,
-  VideoMixer: color_utility,
   // - - - OUTPUT - - -
   Monitor: color_output 
 };
@@ -170,6 +175,7 @@ export class NodeGraphUI {
     const sectionInitialState = {
       'Sources': true,
       'Utility': true,
+      'Canon': true,
       'Sandin': true,
       'Effects': true,
       'Output': true,
@@ -306,9 +312,9 @@ export class NodeGraphUI {
     const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
     const paramCount = Object.keys(mod.params).length;
     const paramSection = paramCount * PARAM_ROW_HEIGHT;
-    const hasPreview = mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway';
+    const hasPreview = mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway' && mod.type !== 'Yellowtail';
     const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
-    let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS' || mod.type === 'Conway') ? MONITOR_PREVIEW_H + 8 : 0;
+    let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail') ? MONITOR_PREVIEW_H + 8 : 0;
     if (mod.type === 'Monitor') {
       monitorSection += 124; // Extra space for param padding + FPS counter + record/fullscreen/load+save+link buttons
     }
@@ -684,7 +690,7 @@ export class NodeGraphUI {
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
 
-      if (mod.type === 'Monitor' || mod.type === 'GRASS' || mod.type === 'Conway') {
+      if (mod.type === 'Monitor' || mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail') {
         // Large preview area (Monitor has params above preview, GRASS/Conway do not)
         const py = mod.y + HEADER_HEIGHT + portSection + (mod.type === 'Monitor' ? paramSection + 12 : 0);
         if (wx >= mod.x + 4 && wx <= mod.x + 4 + MONITOR_PREVIEW_W &&
@@ -902,7 +908,7 @@ export class NodeGraphUI {
           }
           // Render terminal/REPL overlays on top of the clean video
           mod.renderOverlays(p);
-        } else if (mod.type === 'Conway') {
+        } else if (mod.type === 'Conway' || mod.type === 'Yellowtail') {
           if (mod.outputFBO) {
             this._drawFBO(mod.outputFBO, dx, dy, dw, dh);
           }
@@ -1436,7 +1442,7 @@ export class NodeGraphUI {
     }
 
     // Conway preview (same size as Monitor/GRASS preview)
-    if (mod.type === 'Conway') {
+    if (mod.type === 'Conway' || mod.type === 'Yellowtail') {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const py = mod.y + HEADER_HEIGHT + portSection;
@@ -1452,7 +1458,7 @@ export class NodeGraphUI {
     }
 
     // Module preview thumbnail (for non-Monitor, non-GRASS, non-Conway modules with FBO)
-    if (mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway') {
+    if (mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway' && mod.type !== 'Yellowtail') {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
@@ -1496,7 +1502,7 @@ export class NodeGraphUI {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       // Conway / InkDrops: handle the click instead of exiting fullscreen
-      if (mod && (mod.type === 'Conway' || mod.type === 'InkDrops')) {
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops')) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
         return;
@@ -1855,7 +1861,7 @@ export class NodeGraphUI {
     // Conway: handle mouse drawing in fullscreen
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && mod.type === 'Conway') {
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail')) {
         mod.handleMouseDrag(mx, my, this.p.width, this.p.height);
         return;
       }
@@ -1912,7 +1918,7 @@ export class NodeGraphUI {
     // Conway: handle mouse release in fullscreen
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && mod.type === 'Conway') {
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail')) {
         mod.handleMouseUp();
         return;
       }
@@ -2073,7 +2079,7 @@ export class NodeGraphUI {
     // Conway: handle scroll wheel for cell size in fullscreen
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && mod.type === 'Conway') {
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail')) {
         mod.handleWheel(delta);
         return;
       }
@@ -2277,7 +2283,7 @@ export class NodeGraphUI {
     const mod = this.pipeline.graph.nodes.get(id);
     if (mod) {
       // Hide Conway UI if deleting a fullscreened Conway
-      if (mod.type === 'Conway' && mod.hideFullscreenUI) {
+      if ((mod.type === 'Conway' || mod.type === 'Yellowtail') && mod.hideFullscreenUI) {
         mod.hideFullscreenUI();
       }
       // Start fade-out animation
