@@ -10,7 +10,7 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'Cloudy', 'Crystalline', 'GridGuys', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
+  'Sources': ['Camera', 'Cloudy', 'Crystalline', 'GridGuys', 'Image', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
   'Utility': ['Brcosa', 'Edges', 'Levels', 'Sharpen', 'VideoMixer'],
   'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Yellowtail'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
@@ -36,6 +36,7 @@ const MODULE_COLORS = {
   Cloudy: color_source_art,
   Crystalline: color_source_art,
   GridGuys: color_source_art,
+  Image: color_source_basic,
   NAPLPS: color_source_art,
   Protozoa: color_source_art,
   SpiralGalaxy: color_source_art,
@@ -319,7 +320,7 @@ export class NodeGraphUI {
     if (mod.type === 'Monitor') {
       monitorSection += 124; // Extra space for param padding + FPS counter + record/fullscreen/load+save+link buttons
     }
-    const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS';
+    const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image';
     const fileBtnSection = hasFileBtn ? 24 : 0;
     return HEADER_HEIGHT + portSection + paramSection + previewSection + monitorSection + fileBtnSection + 12;
   }
@@ -716,7 +717,7 @@ export class NodeGraphUI {
   hitTestVideoPlayerBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS') continue;
+      if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS' && mod.type !== 'Image') continue;
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramCount = Object.keys(mod.params).length;
@@ -1475,8 +1476,8 @@ export class NodeGraphUI {
       }
     }
 
-    // File picker button (VideoPlayer, NAPLPS)
-    if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS') {
+    // File picker button (VideoPlayer, NAPLPS, Image)
+    if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image') {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
@@ -1491,7 +1492,7 @@ export class NodeGraphUI {
       p.fill(200);
       p.textSize(9);
       p.textAlign(p.CENTER, p.CENTER);
-      const btnLabel = mod.type === 'NAPLPS' ? 'Load .nap...' : 'Load Video...';
+      const btnLabel = mod.type === 'NAPLPS' ? 'Load .nap...' : mod.type === 'Image' ? 'Load Image...' : 'Load Video...';
       p.text(btnLabel, mod.x + MODULE_WIDTH / 2, btnY + 10);
     }
 

@@ -39,7 +39,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 
 ### Module Categories
 
-- **Sources**: Camera, Cloudy, GridGuys, NAPLPS, Protozoa, SpiralGalaxy, VideoPlayer
+- **Sources**: Camera, Cloudy, GridGuys, Image, NAPLPS, Protozoa, SpiralGalaxy, VideoPlayer
 - **Utility**: Brcosa, Edges, Levels, Sharpen, VideoMixer
 - **Interactive**: Conway, GRASS, InkDrops, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
@@ -81,6 +81,16 @@ The NAPLPS module (`js/modules/NAPLPSModule.js`) decodes North American Presenta
 
 **Decoding:** Relies on the external `js/modules/naplps/naplps.js` decoder logic. It accepts file drops through a hidden HTML file input, creating draw commands progressively with a configurable playback speed.
 **Rendering path:** Commands are executed into a 2D `p5.Graphics` buffer using p5 drawing commands (`pg.rect`, `pg.vertex`, etc.), tracking color and progressive drawing state, which is then mapped to the module's WebGL `outputFBO` via the passthrough shader.
+
+## Image Module
+
+The Image module (`js/modules/ImageModule.js`) is a source that loads a still image file and outputs it as video.
+
+**File loading:** Uses the same hidden `<input type="file">` pattern as NAPLPS and VideoPlayer, accepting any image format the browser supports (`accept="image/*"`). The node's "Load Image…" button triggers the picker via `pickFile()`. On load, `p5.loadImage()` decodes the file into a `p5.Image` stored as `this.img`.
+
+**Parameters:** `width` and `height` are set to the image's native pixel dimensions on load. The user can then adjust them via the knobs; `process()` redraws the image into the `p5.Graphics` buffer at the current param dimensions, centered on a black background, every frame.
+
+**Rendering path:** The 2D `p5.Graphics` buffer is mapped to the module's WebGL `outputFBO` via the passthrough shader, identical to Camera and VideoPlayer.
 
 ## GridGuys Module
 

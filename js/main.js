@@ -6,6 +6,7 @@ import './modules/CloudyModule.js';
 import './modules/CrystallineModule.js';
 import './modules/InkDropsModule.js';
 import './modules/GridGuysModule.js';
+import './modules/ImageModule.js';
 import './modules/NAPLPSModule.js';
 import './modules/OscillatorModule.js';
 import './modules/ProtozoaModule.js';
