@@ -11,7 +11,7 @@ js/main.js (p5.js loop)
 
 ### Key Files
 
-- `js/main.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+A select all, Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen)
+- `js/main.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+A select all, Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen); also parses and loads shareable patch data from the URL hash.
 - `js/pipeline.js` — `ProcessingPipeline`: holds the `ConnectionGraph`, drives per-frame processing
 - `js/graph.js` — `ConnectionGraph`: DAG of modules; tracks video `connections` and parameter `controlConnections`; re-runs topological sort on every structural change; serializes/deserializes the full patch as JSON. This is the source of truth for patch state.
 - `js/moduleRegistry.js` — global module registry; `registerModule(typeName, class)` / `createModule(typeName, glCanvas, id)`
@@ -39,7 +39,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 
 ### Module Categories
 
-- **Sources**: Camera, Cloudy, GridGuys, Image, NAPLPS, Protozoa, SpiralGalaxy, VideoPlayer
+- **Sources**: Camera, Cloudy, Crystalline, GridGuys, Image, NAPLPS, Protozoa, SpiralGalaxy, VideoPlayer
 - **Utility**: Brcosa, Edges, Levels, Sharpen, VideoMixer
 - **Interactive**: Conway, GRASS, InkDrops, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
@@ -162,6 +162,14 @@ The SpiralGalaxy module (`js/modules/SpiralGalaxyModule.js`) is a source: a rota
 **Rendering path:** each world ping-pongs a pair of framebuffers through `js/shaders/spiralgalaxy.js:spiralgalaxyFrag`, which advects the previous frame along a twist that shears with radius (the inner turns faster than the outer, which is what winds the feedback into arms) and adds fbm-warped ripples and a bright core. `spiralgalaxyBlendFrag` then cross-dissolves the two worlds into the module's `outputFBO`.
 
 **No Game of Life:** the WebGL sketch this was ported from drove `swirl`, `ripple`, `speed` and a dye injection from a Game of Life grid, but that grid never reached its shader — it was uploaded as raw 0/1 bytes in a `gl.ALPHA` texture, so a live cell arrived as `1/255`, `dye = smoothstep(0.6, 1.0, 0.0039)` was identically 0, and every GoL-driven term sat on a constant. The simulation is therefore not reproduced here; the three constants it was stuck on are exposed as the `swirl`, `ripple` and `speed` knobs instead, whose defaults match the original.
+
+## Crystalline Module
+
+The Crystalline module (`js/modules/CrystallineModule.js`, `js/shaders/crystalline.js`) is a source: a ray-marched signed distance field built from 3D Voronoi cells that generates a faceted, iridescent crystal. The crystal assembles, holds, then shatters along its own cell boundaries, and reassembles on a continuous loop.
+
+**Cycle and Control Export:** The animation loop is divided into three phases: assemble (shards fly together), hold (intact crystal), and shatter (crystal flies apart). This cycle runs over `cycle` seconds. The module calculates a burst amount (0 for intact, 1 for fully burst) and exports this as a control value (`burst`), allowing the cycle to drive downstream parameters via control cables.
+
+**Rendering path:** The fragment shader performs sphere-tracing through a Voronoi-based distance field. During the burst phase, each cell is displaced along a hashed direction. The normal and material properties are calculated in the un-displaced field so shards retain their original facets and colors as they fly apart.
 
 ## Edges Module
 
