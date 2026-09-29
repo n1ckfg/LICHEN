@@ -29,7 +29,6 @@ export class DitherModule extends Module {
     // Ping-pong FBOs for error diffusion
     this.fboA = glCanvas.createFramebuffer();
     this.fboB = glCanvas.createFramebuffer();
-    this.originalFBO = glCanvas.createFramebuffer();
   }
 
   _getVertSrc() {
@@ -75,11 +74,9 @@ export class DitherModule extends Module {
   _processErrorDiffusion(inputFBO, glCanvas) {
     const numPasses = Math.floor(this.params.passes.value);
 
-    // Store original input
-    this.originalFBO.begin();
-    glCanvas.clear();
-    glCanvas.image(inputFBO, -glCanvas.width/2, -glCanvas.height/2, glCanvas.width, glCanvas.height);
-    this.originalFBO.end();
+    // Every pass reads the original luminance straight from inputFBO. Don't copy it
+    // with glCanvas.image(): p5 draws that through whatever shader is bound if it has
+    // a sampler (the UI's blit shader, left bound between frames), not the image.
 
     // Initial pass: quantize and calculate error
     this.fboA.begin();
@@ -100,7 +97,7 @@ export class DitherModule extends Module {
       glCanvas.clear();
       glCanvas.shader(this.errorDiffuseShader);
       this.errorDiffuseShader.setUniform('tex0', readFBO);
-      this.errorDiffuseShader.setUniform('texOriginal', this.originalFBO);
+      this.errorDiffuseShader.setUniform('texOriginal', inputFBO);
       this.errorDiffuseShader.setUniform('levels', this.params.levels.value);
       this.errorDiffuseShader.setUniform('ditherStrength', this.params.ditherStrength.value);
       this.errorDiffuseShader.setUniform('uResolution', this.fragResolution());
@@ -126,7 +123,6 @@ export class DitherModule extends Module {
   dispose() {
     this.fboA = null;
     this.fboB = null;
-    this.originalFBO = null;
     this.errorInitShader = null;
     this.errorDiffuseShader = null;
     this.errorRenderShader = null;

@@ -143,9 +143,29 @@ void main() {
 }
 `;
 
+// Error diffusion runs every pixel in parallel, each pass gathering its neighbours'
+// error from the pass before. Left alone, a flat area gathers the same error at every
+// pixel, so the whole area makes the same choice and flips between black and white
+// from pass to pass. A fixed per-pixel threshold offset makes neighbours decide
+// differently. Its strength (up to +-0.625 of a step) was tuned by measurement: weaker
+// lets flat areas lock step, stronger drowns the error feedback in noise.
+const errorThresholdNoise = `
+const float THRESHOLD_NOISE = 1.25;
+
+float hash(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+float thresholdOffset(float numSteps) {
+  return (hash(gl_FragCoord.xy) - 0.5) * THRESHOLD_NOISE / numSteps;
+}
+`;
+
 // Error diffusion shader - initial pass: quantize and calculate error
 export const ditherErrorInitFrag = `
-precision mediump float;
+precision highp float;
 
 uniform sampler2D tex0;
 uniform float levels;
@@ -160,14 +180,14 @@ float getLuminance(vec3 col) {
 float closestStep(float value, float numSteps) {
   return floor(value * numSteps + 0.5) / numSteps;
 }
-
+${errorThresholdNoise}
 void main() {
   vec2 uv = vTexCoord.xy;
   vec3 texColor = texture2D(tex0, uv).rgb;
   float gray = getLuminance(texColor);
 
   float numSteps = max(levels - 1.0, 1.0);
-  float quantized = closestStep(gray, numSteps);
+  float quantized = closestStep(clamp(gray + thresholdOffset(numSteps), 0.0, 1.0), numSteps);
   float error = gray - quantized;
 
   // Store: RGB = quantized value, A = error (shifted to 0-1 range)
@@ -177,7 +197,7 @@ void main() {
 
 // Error diffusion shader - diffusion pass: spread error to neighbors
 export const ditherErrorDiffuseFrag = `
-precision mediump float;
+precision highp float;
 
 uniform sampler2D tex0;
 uniform sampler2D texOriginal;
@@ -195,7 +215,7 @@ float getLuminance(vec3 col) {
 float closestStep(float value, float numSteps) {
   return floor(value * numSteps + 0.5) / numSteps;
 }
-
+${errorThresholdNoise}
 void main() {
   vec2 uv = vTexCoord.xy;
   vec2 texel = 1.0 / uResolution;
@@ -225,7 +245,7 @@ void main() {
   // Apply gathered error to original value and re-quantize
   float numSteps = max(levels - 1.0, 1.0);
   float adjusted = origGray + gatheredError * ditherStrength;
-  float newQuantized = closestStep(clamp(adjusted, 0.0, 1.0), numSteps);
+  float newQuantized = closestStep(clamp(adjusted + thresholdOffset(numSteps), 0.0, 1.0), numSteps);
   float newError = adjusted - newQuantized;
 
   gl_FragColor = vec4(vec3(newQuantized), newError * 0.5 + 0.5);
