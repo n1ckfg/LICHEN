@@ -33,6 +33,8 @@ Modules can also export control values by setting `this.controlValues['portName'
 
 The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number (used by `Edges` for its `mode` selector).
 
+A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob (used by `VideoMixer` for its `mode`). Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself. While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
+
 Each node header has a collapse toggle in the upper right ("−" when expanded, "+" when collapsed). A module may also set `this.historicalInfo = 'Name'` in its constructor; this adds a "?" button to the left of the collapse toggle that opens an info popup (2× the node's size, centered on the node, dismissed by any click outside it). The popup content comes from the entry with a matching `name` in `docs/historical-info.json`: the popup's heading is that entry's `title` followed by its `year` in parentheses (the title falls back to the `historicalInfo` name when the entry or its title is missing; the year is omitted when absent), and its text is the entry's `body`. Modules leaving `historicalInfo` at its default `null` show no button.
 
 The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not canvas text, so an entry's `title` and `body` are both rendered as HTML markup — links, emphasis, lists, images. `NodeGraphUI._updateInfoPopup()` runs each frame from `draw()`: it repositions and `scale()`s the element to track the node's pan/zoom, clamps it to the viewport, and hides it while a module is fullscreened. Mouse and wheel events inside the popup are stopped from reaching p5's window-level handlers so links stay clickable and long entries scroll instead of zooming the graph; anchors get `target="_blank"` so following one doesn't tear down the patch.
@@ -185,6 +187,23 @@ The Edges module (`js/modules/EdgesModule.js`, `js/shaders/edges.js`) is a utili
 `threshold` is normalized 0-1 (the original's 0-255 slider divided by 255) and means something different per mode, so it is left to the user rather than reset on a mode change - resetting it would also fight any parameter cable patched into the knob.
 
 **Port note:** the reference shaders sampled the red channel (`.r`) for every gradient operator, which is harmless for a webcam feed but wrong downstream of LICHEN's saturated color sources. All four operators here run on luminance instead, using the same `(0.299, 0.587, 0.114)` weights the original grayscale shader defines.
+
+## VideoMixer Module
+
+The VideoMixer module (`js/modules/VideoMixerModule.js`, `js/shaders/video-mixer.js`) composites input B over input A. The operation is chosen with the `mode` drop-down. `mix` acts as B's opacity: the output is `mix(A, op(A, B), mix)`, so Blend reproduces the old crossfade exactly, and `mix = 0` passes A through in every mode.
+
+| mode | Label | op(A, B) per RGB channel |
+| --- | --- | --- |
+| 0 (default) | Blend | B |
+| 1 | Add | A + B |
+| 2 | Subtract | A − B |
+| 3 | Multiply | A × B |
+| 4 | Divide | A / max(B, 1/255), so a black B saturates any non-black A to white |
+| 5 | Lighten | max(A, B) |
+| 6 | Darken | min(A, B) |
+| 7 | Difference | \|A − B\| |
+
+`op` is clamped to 0–1 before the mix. Alpha is always crossfaded by `mix`. When only one input is connected, it feeds both A and B.
 
 ## LuminanceDelay and Slitscan Modules
 

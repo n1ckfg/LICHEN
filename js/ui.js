@@ -98,6 +98,13 @@ const MONITOR_PREVIEW_W = 152;
 const MONITOR_PREVIEW_H = 114;
 const PREVIEW_W = 80;
 const PREVIEW_H = 60;
+const DROPDOWN_W = 84;
+const DROPDOWN_H = 14;
+
+// A param with widget: 'dropdown' is drawn as a menu of its valueLabels instead of a knob
+function isDropdown(param) {
+  return param.widget === 'dropdown' && Array.isArray(param.valueLabels);
+}
 
 export class NodeGraphUI {
   constructor(pipeline, p) {
@@ -127,6 +134,7 @@ export class NodeGraphUI {
     this.fullscreenMonitor = null;
     this._blitShader = null;
     this._activeParamInput = null; // currently active inline text input
+    this._dropdownMenu = null;     // { el, nodeId, paramName, highlighted } for the open dropdown param
 
     this._createPalette();
     this._addDefaultNodes();
@@ -418,6 +426,8 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       const paramNames = Object.keys(mod.params);
       for (let i = 0; i < paramNames.length; i++) {
+        // A dropdown's inlet dot is not a knob to drag; it only matters once a cable is plugged in
+        if (isDropdown(mod.params[paramNames[i]]) && !this._isControlled(id, paramNames[i])) continue;
         const py = this.getParamY(mod, i);
         const kx = mod.x + 16;
         const ky = py + 4;
@@ -450,12 +460,40 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       const paramNames = Object.keys(mod.params);
       for (let i = 0; i < paramNames.length; i++) {
+        if (isDropdown(mod.params[paramNames[i]])) continue; // the menu box replaces the value text
         const py = this.getParamY(mod, i);
         const ky = py + 4;
         const rx = mod.x + MODULE_WIDTH - 8;
         // Value text region: roughly 40px wide, 14px tall, right-aligned
         if (wx >= rx - 40 && wx <= rx && wy >= ky - 7 && wy <= ky + 7) {
           return { nodeId: id, paramName: paramNames[i], paramIndex: i };
+        }
+      }
+    }
+    return null;
+  }
+
+  // Dropdown box, right-aligned where a knob's value text would be
+  _dropdownRect(mod, paramIndex) {
+    const ky = this.getParamY(mod, paramIndex) + 4;
+    return {
+      x: mod.x + MODULE_WIDTH - 8 - DROPDOWN_W,
+      y: ky - DROPDOWN_H / 2,
+      w: DROPDOWN_W,
+      h: DROPDOWN_H,
+    };
+  }
+
+  hitTestDropdown(wx, wy) {
+    const graph = this.pipeline.graph;
+    for (const [id, mod] of graph.nodes) {
+      if (mod.collapsed) continue;
+      const paramNames = Object.keys(mod.params);
+      for (let i = 0; i < paramNames.length; i++) {
+        if (!isDropdown(mod.params[paramNames[i]])) continue;
+        const r = this._dropdownRect(mod, i);
+        if (wx >= r.x && wx <= r.x + r.w && wy >= r.y && wy <= r.y + r.h) {
+          return { nodeId: id, paramName: paramNames[i] };
         }
       }
     }
@@ -534,6 +572,99 @@ export class NodeGraphUI {
       if (el.parentNode) {
         el.remove();
       }
+    }
+  }
+
+  // Dropdown menu: a DOM list under the param's box. Like the info popup it is
+  // sized in world units and scaled with zoom; _updateDropdownMenu() keeps it
+  // pinned to the box every frame.
+  _openDropdownMenu(nodeId, paramName) {
+    this._closeDropdownMenu();
+    const mod = this.pipeline.graph.nodes.get(nodeId);
+    const param = mod && mod.params[paramName];
+    if (!param || !isDropdown(param)) return;
+
+    const el = document.createElement('div');
+    el.className = 'param-dropdown';
+
+    const current = Math.round(param.value);
+    const menu = { el, nodeId, paramName, highlighted: current, keyHandler: null };
+
+    const highlight = (i) => {
+      menu.highlighted = i;
+      el.childNodes.forEach((item, j) => item.classList.toggle('highlighted', j === i));
+    };
+    const choose = (i) => {
+      mod.setParam(paramName, i);
+      this._closeDropdownMenu();
+    };
+
+    param.valueLabels.forEach((label, i) => {
+      const item = document.createElement('div');
+      item.className = 'param-dropdown-item';
+      if (i === current) item.classList.add('selected');
+      item.textContent = label;
+      item.addEventListener('mouseenter', () => highlight(i));
+      item.addEventListener('click', () => choose(i));
+      el.appendChild(item);
+    });
+    highlight(current);
+
+    // p5 binds its mouse handlers to window, so without this a click on an
+    // item would also reach the graph and close the menu before it chose.
+    for (const type of ['mousedown', 'mouseup', 'click', 'dblclick', 'wheel']) {
+      el.addEventListener(type, e => e.stopPropagation());
+    }
+    // Keys go to the open menu wherever focus is: capturing on window runs ahead
+    // of p5's own keydown handler, so Backspace/Delete can't delete the node.
+    menu.keyHandler = (e) => {
+      const last = param.valueLabels.length - 1;
+      if (e.key === 'ArrowDown') { e.preventDefault(); highlight(Math.min(menu.highlighted + 1, last)); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); highlight(Math.max(menu.highlighted - 1, 0)); }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(menu.highlighted); }
+      if (e.key === 'Escape') { e.preventDefault(); this._closeDropdownMenu(); }
+      e.stopPropagation();
+    };
+    window.addEventListener('keydown', menu.keyHandler, true);
+
+    document.body.appendChild(el);
+    this._dropdownMenu = menu;
+    this._updateDropdownMenu();
+  }
+
+  _updateDropdownMenu() {
+    const menu = this._dropdownMenu;
+    if (!menu) return;
+    const mod = this.pipeline.graph.nodes.get(menu.nodeId);
+    const paramIndex = mod ? Object.keys(mod.params).indexOf(menu.paramName) : -1;
+
+    // Close once the node is gone or folded up, or a control cable takes over the param
+    if (paramIndex < 0 || mod.collapsed || this.fullscreenMonitor !== null ||
+        !isDropdown(mod.params[menu.paramName]) || this._isControlled(menu.nodeId, menu.paramName)) {
+      this._closeDropdownMenu();
+      return;
+    }
+
+    const r = this._dropdownRect(mod, paramIndex);
+    const el = menu.el;
+    el.style.width = `${r.w}px`;
+    el.style.transform = `scale(${this.zoom})`;
+
+    // Drop down below the box, or open upward when there's no room underneath
+    const below = this.worldToScreen(r.x, r.y + r.h + 2);
+    const sh = el.offsetHeight * this.zoom;
+    const top = below.y + sh <= this.p.height
+      ? below.y
+      : this.worldToScreen(r.x, r.y - 2).y - sh;
+    el.style.left = `${below.x}px`;
+    el.style.top = `${top}px`;
+  }
+
+  _closeDropdownMenu() {
+    if (this._dropdownMenu) {
+      window.removeEventListener('keydown', this._dropdownMenu.keyHandler, true);
+      this._dropdownMenu.el.remove();
+      this._dropdownMenu = null;
     }
   }
 
@@ -884,8 +1015,9 @@ export class NodeGraphUI {
     // Show/hide sidebar based on fullscreen state
     this._paletteEl.style.display = this.fullscreenMonitor !== null ? 'none' : '';
 
-    // Historical-info popup is a DOM overlay, so it updates outside the canvas passes
+    // Historical-info popup and dropdown menu are DOM overlays, so they update outside the canvas passes
     this._updateInfoPopup();
+    this._updateDropdownMenu();
 
     // Draw fullscreen module if active
     if (this.fullscreenMonitor !== null) {
@@ -1298,8 +1430,43 @@ export class NodeGraphUI {
       const kx = mod.x + 16;
       const ky = py + 4;
 
-      // Knob background
       const controlled = this._isControlled(id, name);
+
+      if (isDropdown(param)) {
+        // Control inlet where the knob would be: a cable can still drive the menu
+        p.fill(controlled ? [100, 255, 130] : [100, 200, 255]);
+        p.stroke(255);
+        p.strokeWeight(1);
+        p.ellipse(kx, ky, 8, 8);
+
+        // Label
+        p.noStroke();
+        p.fill(170);
+        p.textSize(9);
+        p.textAlign(p.LEFT, p.CENTER);
+        p.text(param.label || name, kx + KNOB_RADIUS + 6, ky);
+
+        // Box showing the selected option, outlined while its menu is open
+        const r = this._dropdownRect(mod, i);
+        const menu = this._dropdownMenu;
+        const open = menu && menu.nodeId === id && menu.paramName === name;
+        p.fill(controlled ? 30 : 50);
+        p.stroke(controlled ? [100, 255, 130] : open ? [100, 200, 255] : 100);
+        p.strokeWeight(1);
+        p.rect(r.x, r.y, r.w, r.h, 2);
+        p.noStroke();
+        p.fill(controlled ? 130 : 200);
+        p.textSize(8);
+        p.text(param.valueLabels[Math.round(param.value)] ?? '', r.x + 5, ky);
+
+        // Caret
+        const cx = r.x + r.w - 8;
+        p.fill(controlled ? 100 : 170);
+        p.triangle(cx - 3, ky - 1.5, cx + 3, ky - 1.5, cx, ky + 2);
+        continue;
+      }
+
+      // Knob background
       p.fill(controlled ? 30 : 50);
       p.stroke(controlled ? [100, 255, 130] : 100);
       p.strokeWeight(controlled ? 1.5 : 1);
@@ -1524,6 +1691,12 @@ export class NodeGraphUI {
       return;
     }
 
+    // Likewise an open dropdown menu (clicks inside the menu never reach here)
+    if (this._dropdownMenu !== null) {
+      this._closeDropdownMenu();
+      return;
+    }
+
     // Placing module: left-click to finalize, right-click to cancel
     if (this._placingModule !== null) {
       if (button === this.p.RIGHT) {
@@ -1738,6 +1911,15 @@ export class NodeGraphUI {
     const linkHit = this.hitTestLinkBtn(world.x, world.y);
     if (linkHit !== null) {
       this.copyLinkToClipboard();
+      return;
+    }
+
+    // Check dropdown box — opens its menu unless a control cable is driving the param
+    const dropdownHit = this.hitTestDropdown(world.x, world.y);
+    if (dropdownHit) {
+      if (!this._isControlled(dropdownHit.nodeId, dropdownHit.paramName)) {
+        this._openDropdownMenu(dropdownHit.nodeId, dropdownHit.paramName);
+      }
       return;
     }
 
