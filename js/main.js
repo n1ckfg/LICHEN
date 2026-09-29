@@ -51,6 +51,7 @@ import './modules/YellowtailModule.js';
 import './modules/BrcosaModule.js';
 import './modules/EdgesModule.js';
 import './modules/LevelsModule.js';
+import './modules/LUTModule.js';
 import './modules/SharpenModule.js';
 import './modules/VideoMixerModule.js';
 // - - - OUTPUT - - -

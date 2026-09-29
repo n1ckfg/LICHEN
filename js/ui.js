@@ -11,7 +11,7 @@ void main() {
 
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Cloudy', 'Crystalline', 'GridGuys', 'Image', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
-  'Utility': ['Brcosa', 'Edges', 'Levels', 'Sharpen', 'VideoMixer'],
+  'Utility': ['Brcosa', 'Edges', 'Levels', 'LUT', 'Sharpen', 'VideoMixer'],
   'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Yellowtail'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
@@ -45,6 +45,7 @@ const MODULE_COLORS = {
   Brcosa: color_utility,
   Edges: color_utility,
   Levels: color_utility,
+  LUT: color_utility,
   Sharpen: color_utility,
   VideoMixer: color_utility,
   // - - - INTERACTIVE - - -
@@ -336,7 +337,7 @@ export class NodeGraphUI {
     if (mod.type === 'Monitor') {
       monitorSection += 124; // Extra space for param padding + FPS counter + record/fullscreen/load+save+link buttons
     }
-    const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image';
+    const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT';
     const fileBtnSection = hasFileBtn ? 24 : 0;
     return HEADER_HEIGHT + portSection + paramSection + previewSection + monitorSection + fileBtnSection + 12;
   }
@@ -856,7 +857,7 @@ export class NodeGraphUI {
   hitTestVideoPlayerBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS' && mod.type !== 'Image') continue;
+      if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS' && mod.type !== 'Image' && mod.type !== 'LUT') continue;
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramCount = Object.keys(mod.params).length;
@@ -1652,8 +1653,8 @@ export class NodeGraphUI {
       }
     }
 
-    // File picker button (VideoPlayer, NAPLPS, Image)
-    if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image') {
+    // File picker button (VideoPlayer, NAPLPS, Image, LUT)
+    if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT') {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
@@ -1668,7 +1669,10 @@ export class NodeGraphUI {
       p.fill(200);
       p.textSize(9);
       p.textAlign(p.CENTER, p.CENTER);
-      const btnLabel = mod.type === 'NAPLPS' ? 'Load .nap...' : mod.type === 'Image' ? 'Load Image...' : 'Load Video...';
+      // A loaded LUT names itself on the button, which still opens the picker
+      const btnLabel = mod.type === 'NAPLPS' ? 'Load .nap...' : mod.type === 'Image' ? 'Load Image...'
+        : mod.type === 'LUT' ? (mod.lutName ? fitText(p, mod.lutName, MODULE_WIDTH - 32) : 'Load LUT...')
+        : 'Load Video...';
       p.text(btnLabel, mod.x + MODULE_WIDTH / 2, btnY + 10);
     }
 

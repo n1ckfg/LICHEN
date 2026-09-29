@@ -42,7 +42,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 ### Module Categories
 
 - **Sources**: Camera, Cloudy, Crystalline, GridGuys, Image, NAPLPS, Protozoa, SpiralGalaxy, VideoPlayer
-- **Utility**: Brcosa, Edges, Levels, Sharpen, VideoMixer
+- **Utility**: Brcosa, Edges, Levels, LUT, Sharpen, VideoMixer
 - **Interactive**: Conway, GRASS, InkDrops, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC
@@ -209,6 +209,20 @@ The VideoMixer module (`js/modules/VideoMixerModule.js`, `js/shaders/video-mixer
 
 Modes 0–7 and Overlay work on each RGB channel separately. Color, Saturation and Luminance are the W3C Compositing and Blending spec's non-separable modes, with `Lum` weights (0.3, 0.59, 0.11). `SetLum` brings an out-of-range result back with `ClipColor`, which pulls it toward its own grey and so keeps its luminance, instead of clamping each channel separately. New modes are appended rather than inserted, because patches save the mode as its index. `op` is clamped to 0–1 before the mix. Alpha is always crossfaded by `mix`. When only one input is connected, it feeds both A and B.
 
+## LUT Module
+
+The LUT module (`js/modules/LUTModule.js`, `js/modules/lut/clf.js`, `js/shaders/lut.js`) applies a colour transform loaded from a Common LUT Format file (`.clf`). It reads Academy/ASC CLF v2 and v3 and SMPTE ST 2136-1. "Load LUT…" opens a file picker, and the button then shows the loaded file's name. `mix` blends from the input (0) to the fully transformed image (1). As with Image and VideoPlayer, the file itself is not saved in patches.
+
+**Reading.** `parseCLF()` parses the XML ProcessList into ops whose parameters are normalized to 0–1, with each node's `inBitDepth`/`outBitDepth` scaling folded in. It covers all seven CLF node types: Matrix, LUT1D (including `halfDomain` and `rawHalfs`), LUT3D (trilinear or tetrahedral), Range, Log, Exponent and ASC_CDL, plus CLF v2's two-entry IndexMap. It validates files the way OpenColorIO's reader does and throws a `CLFError` that names the problem; the module shows that message in an alert and keeps the previous LUT. `compileCLF()` then turns the ops into one function that transforms an RGB value.
+
+**Baking.** The GPU never runs the individual nodes. When a file loads, the module runs that function once per point of a 65×65×65 lattice, which takes about 15 ms for a typical file and 230 ms for the longest chain in OpenColorIO's test files. The result is stored as an 8-bit texture atlas of 65 blue slices. `js/shaders/lut.js` is one fixed shader: bilinear texture filtering interpolates red and green within a slice, and mixing the two neighbouring slices adds blue. Every pixel therefore costs two texture fetches, however many nodes the file chains together.
+
+**Accuracy.** Checked against OpenColorIO 2.5.2 on its CLF test files (`tests/data/files/clf` in the OpenColorIO repo):
+- **Reader, before baking:** matches OpenColorIO to about 1e-6 on all 42 files it loads, and rejects all 37 illegal ones.
+- **After baking, on 8-bit input:** most files land within 1–3 code values, with a mean under 0.5.
+- **Steep curves:** a curve that bends faster than the lattice spacing is approximated. The x^0.45 test curve is off by up to 11 code values near black, and two deliberately extreme test curves by up to 93.
+- **Range:** input outside 0–1 is clamped, but LICHEN's 8-bit video never leaves that range.
+
 ## Dither Module
 
 The Dither module (`js/modules/DitherModule.js`, `js/shaders/dither.js`) quantizes luminance to `levels` gray steps. The `mode` drop-down chooses how: Bayer (an 8×8 ordered threshold matrix), Blue Noise (a noise threshold built from three octaves of interleaved gradient noise), or Error Diffusion.
@@ -251,4 +265,5 @@ The Yellowtail module (`js/modules/YellowtailModule.js`) implements Golan Levin'
 - **Pixel Density**: framebuffers are allocated at the graphics' pixel density, so on a retina display `gl_FragCoord` runs over twice as many pixels as `glCanvas.width` / `glCanvas.height` report. A shader that works in `gl_FragCoord` space — or that derives a texel step from a resolution — must be given `Module.fragResolution()` rather than the logical size, and any pixel-valued uniform the shader compares against `gl_FragCoord` must be scaled by `Module.pixelDensity` (Conway's spawn position, radius and cell size; GridGuys' target). Getting this wrong confines the output to one quadrant, and in a feedback shader it also reads off the clamped edge. Shaders that address themselves through `vTexCoord` are unaffected, which is most of them — only `conway`, `dither`, `gridguys-simulation`, `inkdrops` and `spiralgalaxy` read `gl_FragCoord` (`cyberlace` uses it for a `mod(…, 2.0)` dither that is deliberately one physical pixel wide).
 - **Framebuffer Orientation**: `NodeGraphUI` blits an FBO to the P2D canvas through a shader that flips `v`, so within a framebuffer `gl_FragCoord.y = 0` is the *top* of the displayed image. A pass that reads a buffer it also writes (feedback, ping-pong) must address it with the unflipped `gl_FragCoord.xy / resolution`: `v = y / H` is by definition the row being written, and reading through a flipped uv mirrors the buffer on every iteration. `InkDrops` and `SpiralGalaxy` both carry notes on this.
 - **No `glCanvas.image()` in `process()`**: p5 draws `image()` through the bound shader whenever that shader has a sampler, not through its own texture shader. Between frames the bound shader is `NodeGraphUI`'s preview-blit shader, because `framebuffer.end()` pops each module's own `shader()` call back off. An `image()` copy therefore draws whatever the UI blitted last, instead of the image. This is what turned Dither's error diffusion solid black. To read an upstream frame, bind it as a sampler uniform. To copy one, draw it through a shader you bind yourself.
+- **Set every sampler**: bind a texture to every sampler uniform a shader declares, even one the current code path won't read. p5 binds a placeholder to an unset sampler, and the first time it creates that placeholder it lands on whichever texture unit is active, blanking another input for that frame. The LUT module binds its input as a stand-in until a LUT loads.
 
