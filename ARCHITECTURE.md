@@ -192,7 +192,7 @@ The Edges module (`js/modules/EdgesModule.js`, `js/shaders/edges.js`) is a utili
 
 The VideoMixer module (`js/modules/VideoMixerModule.js`, `js/shaders/video-mixer.js`) composites input B over input A. The operation is chosen with the `mode` drop-down. `mix` acts as B's opacity: the output is `mix(A, op(A, B), mix)`, so Blend reproduces the old crossfade exactly, and `mix = 0` passes A through in every mode.
 
-| mode | Label | op(A, B) per RGB channel |
+| mode | Label | op(A, B) |
 | --- | --- | --- |
 | 0 (default) | Blend | B |
 | 1 | Add | A + B |
@@ -202,8 +202,12 @@ The VideoMixer module (`js/modules/VideoMixerModule.js`, `js/shaders/video-mixer
 | 5 | Lighten | max(A, B) |
 | 6 | Darken | min(A, B) |
 | 7 | Difference | \|A − B\| |
+| 8 | Color | SetLum(B, Lum(A)): B's hue and saturation, A's luminance |
+| 9 | Overlay | 2AB where A ≤ 0.5, else 1 − 2(1 − A)(1 − B): multiplies A's darks and screens its lights |
+| 10 | Saturation | SetLum(SetSat(A, Sat(B)), Lum(A)): B's saturation, A's hue and luminance |
+| 11 | Luminance | SetLum(A, Lum(B)): A's hue and saturation, B's luminance |
 
-`op` is clamped to 0–1 before the mix. Alpha is always crossfaded by `mix`. When only one input is connected, it feeds both A and B.
+Modes 0–7 and Overlay work on each RGB channel separately. Color, Saturation and Luminance are the W3C Compositing and Blending spec's non-separable modes, with `Lum` weights (0.3, 0.59, 0.11). `SetLum` brings an out-of-range result back with `ClipColor`, which pulls it toward its own grey and so keeps its luminance, instead of clamping each channel separately. New modes are appended rather than inserted, because patches save the mode as its index. `op` is clamped to 0–1 before the mix. Alpha is always crossfaded by `mix`. When only one input is connected, it feeds both A and B.
 
 ## Dither Module
 

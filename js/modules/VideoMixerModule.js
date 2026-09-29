@@ -12,8 +12,10 @@ export class VideoMixerModule extends Module {
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
       mode: {
-        value: 0, min: 0, max: 7, step: 1, label: 'Mode', widget: 'dropdown',
-        valueLabels: ['Blend', 'Add', 'Subtract', 'Multiply', 'Divide', 'Lighten', 'Darken', 'Difference'],
+        // Patches save the index, so new modes go on the end
+        value: 0, min: 0, max: 11, step: 1, label: 'Mode', widget: 'dropdown',
+        valueLabels: ['Blend', 'Add', 'Subtract', 'Multiply', 'Divide', 'Lighten', 'Darken', 'Difference',
+          'Color', 'Overlay', 'Saturation', 'Luminance'],
       },
       mix: { value: 0.5, min: 0, max: 1, step: 0.01, label: 'Mix' },
     };
