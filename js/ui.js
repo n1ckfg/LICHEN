@@ -98,12 +98,20 @@ const MONITOR_PREVIEW_W = 152;
 const MONITOR_PREVIEW_H = 114;
 const PREVIEW_W = 80;
 const PREVIEW_H = 60;
-const DROPDOWN_W = 84;
+const DROPDOWN_W = 92;
 const DROPDOWN_H = 14;
 
 // A param with widget: 'dropdown' is drawn as a menu of its valueLabels instead of a knob
 function isDropdown(param) {
   return param.widget === 'dropdown' && Array.isArray(param.valueLabels);
+}
+
+// Text cut down with an ellipsis to fit maxW at the current text size
+function fitText(p, text, maxW) {
+  if (p.textWidth(text) <= maxW) return text;
+  let s = text;
+  while (s.length > 1 && p.textWidth(s + '…') > maxW) s = s.slice(0, -1);
+  return s + '…';
 }
 
 export class NodeGraphUI {
@@ -647,7 +655,7 @@ export class NodeGraphUI {
 
     const r = this._dropdownRect(mod, paramIndex);
     const el = menu.el;
-    el.style.width = `${r.w}px`;
+    el.style.minWidth = `${r.w}px`; // at least the box's width, wider for long options
     el.style.transform = `scale(${this.zoom})`;
 
     // Drop down below the box, or open upward when there's no room underneath
@@ -1457,7 +1465,8 @@ export class NodeGraphUI {
         p.noStroke();
         p.fill(controlled ? 130 : 200);
         p.textSize(8);
-        p.text(param.valueLabels[Math.round(param.value)] ?? '', r.x + 5, ky);
+        const option = param.valueLabels[Math.round(param.value)] ?? '';
+        p.text(fitText(p, option, r.w - 19), r.x + 5, ky); // stop short of the caret
 
         // Caret
         const cx = r.x + r.w - 8;

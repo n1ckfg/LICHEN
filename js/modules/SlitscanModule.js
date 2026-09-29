@@ -16,7 +16,7 @@ export class SlitscanModule extends Module {
     this.params = {
       strips: { value: 1.0, min: 0, max: 1, step: 0.001, label: 'Strips' },
       delay: { value: 0.0, min: 0, max: 1, step: 0.001, label: 'Delay' },
-      axis: { value: 0, min: 0, max: 1, step: 1, label: 'Axis' },
+      axis: { value: 0, min: 0, max: 1, step: 1, label: 'Axis', widget: 'dropdown', valueLabels: ['Y', 'X'] },
       mirror: { value: 1, min: 0, max: 1, step: 1, label: 'Mirror' },
     };
 

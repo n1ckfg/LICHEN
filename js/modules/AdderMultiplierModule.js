@@ -12,7 +12,10 @@ export class AdderMultiplierModule extends Module {
     this.outputs = [{ name: 'out', type: 'video' }];
     this.historicalInfo="Sandin"
     this.params = {
-      mode: { value: 0, min: 0, max: 3, step: 1, label: 'Mode' },
+      mode: {
+        value: 0, min: 0, max: 3, step: 1, label: 'Mode', widget: 'dropdown',
+        valueLabels: ['Add', 'Multiply', 'Difference', 'Screen'],
+      },
       mixVal: { value: 0.5, min: 0, max: 1, step: 0.01, label: 'Mix' },
       contrast: { value: 1, min: 0, max: 3, step: 0.01, label: 'Contrast' },
     };

@@ -10,7 +10,10 @@ export class SyncGeneratorModule extends Module {
     this.historicalInfo="Sandin"
     this.params = {
       steps: { value: 4, min: 2, max: 32, step: 1, label: 'Steps' },
-      mode: { value: 0, min: 0, max: 2, step: 1, label: 'Mode' },
+      mode: {
+        value: 0, min: 0, max: 2, step: 1, label: 'Mode', widget: 'dropdown',
+        valueLabels: ['Floor', 'Round', 'Gamma'],
+      },
     };
     this.createShader(syncGeneratorFrag);
     this.createOutputFBO();

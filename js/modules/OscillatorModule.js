@@ -9,8 +9,14 @@ export class OscillatorModule extends Module {
     this.historicalInfo="Sandin"
     this.params = {
       frequency: { value: 4, min: 0.0001, max: 50, step: 0.1, label: 'Freq' },
-      waveform: { value: 0, min: 0, max: 3, step: 1, label: 'Wave' },
-      direction: { value: 0, min: 0, max: 2, step: 1, label: 'Dir' },
+      waveform: {
+        value: 0, min: 0, max: 3, step: 1, label: 'Wave', widget: 'dropdown',
+        valueLabels: ['Sine', 'Square', 'Triangle', 'Sawtooth'],
+      },
+      direction: {
+        value: 0, min: 0, max: 2, step: 1, label: 'Dir', widget: 'dropdown',
+        valueLabels: ['Horizontal', 'Vertical', 'Radial'],
+      },
     };
     this.createShader(oscillatorFrag);
     this.createOutputFBO();

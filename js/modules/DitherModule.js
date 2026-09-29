@@ -8,7 +8,10 @@ export class DitherModule extends Module {
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
-      mode: { value: 0, min: 0, max: 2, step: 1, label: 'Mode' },
+      mode: {
+        value: 0, min: 0, max: 2, step: 1, label: 'Mode', widget: 'dropdown',
+        valueLabels: ['Bayer', 'Blue Noise', 'Error Diffusion'],
+      },
       levels: { value: 2, min: 2, max: 16, step: 1, label: 'Levels' },
       ditherStrength: { value: 1.0, min: 0, max: 2, step: 0.01, label: 'Strength' },
       passes: { value: 4, min: 1, max: 8, step: 1, label: 'Passes' },
@@ -48,7 +51,8 @@ export class DitherModule extends Module {
     const inputFBO = this.getInput(graph, 0);
     if (!inputFBO) return;
 
-    const mode = Math.floor(this.params.mode.value);
+    // Rounded, like the dropdown's label, so a control cable can't land between modes
+    const mode = Math.round(this.params.mode.value);
 
     if (mode < 2) {
       // Mode 0 (Bayer) or Mode 1 (Blue Noise) - single pass
@@ -58,7 +62,7 @@ export class DitherModule extends Module {
       this.shader.setUniform('tex0', inputFBO);
       this.shader.setUniform('levels', this.params.levels.value);
       this.shader.setUniform('ditherStrength', this.params.ditherStrength.value);
-      this.shader.setUniform('mode', this.params.mode.value);
+      this.shader.setUniform('mode', mode);
       this.shader.setUniform('uResolution', this.fragResolution());
       this.renderQuad();
       this.outputFBO.end();

@@ -9,7 +9,7 @@ export class EdgesModule extends Module {
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
       mode: {
-        value: 0, min: 0, max: 3, step: 1, label: 'Mode',
+        value: 0, min: 0, max: 3, step: 1, label: 'Mode', widget: 'dropdown',
         valueLabels: ['Refine Contour', 'Scharr', 'Quantum Walk', 'Grayscale (debug)'],
       },
       threshold: { value: 0.5, min: 0, max: 1, step: 0.01, label: 'Threshold' },

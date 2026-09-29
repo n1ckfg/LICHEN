@@ -9,7 +9,10 @@ export class FunctionGeneratorModule extends Module {
     this.outputs = [{ name: 'out', type: 'video' }];
     this.historicalInfo="Sandin"
     this.params = {
-      curve: { value: 0, min: 0, max: 5, step: 1, label: 'Curve' },
+      curve: {
+        value: 0, min: 0, max: 5, step: 1, label: 'Curve', widget: 'dropdown',
+        valueLabels: ['Linear', 'Square', 'Square Root', 'Sine', 'Fold', 'Stairs'],
+      },
       gain: { value: 1, min: 0, max: 3, step: 0.01, label: 'Gain' },
     };
     this.createShader(functionGeneratorFrag);
