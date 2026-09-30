@@ -1,4 +1,13 @@
 import { vertSrc } from '../shaders/vert.js';
+import { StringSeed } from '../stringseed.js';
+
+// A param's seed candidates: its step grid over the whole range (random: true)
+// or over a narrower [lo, hi]. toPrecision drops the float drift of lo + i*step.
+function seedCandidates(param) {
+  const [lo, hi] = Array.isArray(param.random) ? param.random : [param.min, param.max];
+  const n = Math.floor((hi - lo) / param.step + 1e-9) + 1;
+  return Array.from({ length: n }, (_, i) => parseFloat((lo + i * param.step).toPrecision(12)));
+}
 
 export class Module {
   constructor(type, glCanvas, id) {
@@ -16,6 +25,10 @@ export class Module {
     this.collapsed = false;
     // Name key into docs/historical-info.json; null hides the info button
     this.historicalInfo = null;
+    // Hex seed the random params were last drawn from; null until randomize()
+    this.seed = null;
+    // Trigger param name -> performance.now() it last fired, for the button flash
+    this.triggeredAt = {};
   }
 
   createShader(fragSrc) {
@@ -74,6 +87,37 @@ export class Module {
 
   getParam(name) {
     return this.params[name] ? this.params[name].value : 0;
+  }
+
+  // Seeded randomization (StringSeed, js/stringseed.js). Every param with a
+  // `random` key is one axis, in declaration order, so axis i always reads
+  // slice i of the seed. Omit `seed` to draw a fresh one sized to the axes.
+  randomize(seed) {
+    const ss = new StringSeed();
+    for (const [name, param] of Object.entries(this.params)) {
+      if (param.random) ss.addAxis(name, seedCandidates(param));
+    }
+    if (ss.axes.length === 0) return [];
+    this.seed = seed ?? StringSeed.generateSeed(ss.requiredSeedBytes());
+    const results = ss.resolve(this.seed);
+    for (const r of results) this.setParam(r.axis, r.choice);
+    return results;
+  }
+
+  // A trigger param (widget: 'trigger') fires on a click of its button, or when
+  // a control cable driving it rises through 0.5. Modules act in onTrigger().
+  fireTrigger(name) {
+    this.triggeredAt[name] = performance.now();
+    this.onTrigger(name);
+  }
+
+  onTrigger(name) {
+    // Override in subclasses
+  }
+
+  // Text on a trigger param's button
+  triggerText(name) {
+    return '';
   }
 
   dispose() {

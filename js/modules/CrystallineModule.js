@@ -26,20 +26,28 @@ export class CrystallineModule extends Module {
       { name: 'out', type: 'video' },
       { name: 'burst', type: 'control' },
     ];
+    // `random` ranges keep a fresh seed away from the knobs' degenerate ends
+    // (frozen at speed 0, frantic at cycle 5). Steps is a render budget, not a
+    // look, so the seed leaves it alone.
     this.params = {
-      speed: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed' },
-      cycle: { value: 60, min: 5, max: 180, step: 1, label: 'Cycle' },
-      scale: { value: 2.0, min: 0.5, max: 6, step: 0.05, label: 'Scale' },
-      burst: { value: 1.0, min: 0, max: 2, step: 0.01, label: 'Burst' },
-      dist: { value: 3.0, min: 1.5, max: 8, step: 0.05, label: 'Dist' },
-      orbit: { value: 1.0, min: 0, max: 4, step: 0.01, label: 'Orbit' },
-      hue: { value: 0.55, min: 0, max: 1, step: 0.01, label: 'Hue' },
-      glow: { value: 2.0, min: 0, max: 5, step: 0.05, label: 'Glow' },
+      speed: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.25, 2] },
+      cycle: { value: 60, min: 5, max: 180, step: 1, label: 'Cycle', random: [20, 120] },
+      scale: { value: 2.0, min: 0.5, max: 6, step: 0.05, label: 'Scale', random: [1, 4] },
+      burst: { value: 1.0, min: 0, max: 2, step: 0.01, label: 'Burst', random: [0.4, 1.6] },
+      dist: { value: 3.0, min: 1.5, max: 8, step: 0.05, label: 'Dist', random: [2, 5] },
+      orbit: { value: 1.0, min: 0, max: 4, step: 0.01, label: 'Orbit', random: [0.25, 2.5] },
+      hue: { value: 0.55, min: 0, max: 1, step: 0.01, label: 'Hue', random: true },
+      glow: { value: 2.0, min: 0, max: 5, step: 0.05, label: 'Glow', random: [0.5, 3.5] },
       steps: { value: 64, min: 16, max: 80, step: 1, label: 'Steps' },
+      reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
 
     this.createShader(crystallineFrag);
     this.createOutputFBO();
+
+    // Every new crystal starts from its own seed. Patch loads and duplicates
+    // then restore the saved params and seed over this one.
+    this.randomize();
 
     // Both clocks are accumulated rather than derived from an absolute time, so
     // turning Speed or Cycle changes the rate without jumping the animation.
@@ -76,6 +84,14 @@ export class CrystallineModule extends Module {
     this.outputFBO.end();
 
     this.controlValues['burst'] = shatter;
+  }
+
+  onTrigger(name) {
+    if (name === 'reseed') this.randomize();
+  }
+
+  triggerText(name) {
+    return name === 'reseed' ? this.seed : '';
   }
 }
 

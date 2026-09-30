@@ -107,6 +107,11 @@ function isDropdown(param) {
   return param.widget === 'dropdown' && Array.isArray(param.valueLabels);
 }
 
+// A param with widget: 'trigger' is drawn as a momentary button that calls mod.fireTrigger()
+function isTrigger(param) {
+  return param.widget === 'trigger';
+}
+
 // Text cut down with an ellipsis to fit maxW at the current text size
 function fitText(p, text, maxW) {
   if (p.textWidth(text) <= maxW) return text;
@@ -144,6 +149,8 @@ export class NodeGraphUI {
     this._blitShader = null;
     this._activeParamInput = null; // currently active inline text input
     this._dropdownMenu = null;     // { el, nodeId, paramName, highlighted } for the open dropdown param
+    this._drawTime = 0;            // performance.now() of this frame's draw() and the one before,
+    this._prevDrawTime = 0;        // so a trigger that fired between them flashes however slow the frame
 
     this._createPalette();
     this._addDefaultNodes();
@@ -435,8 +442,9 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       const paramNames = Object.keys(mod.params);
       for (let i = 0; i < paramNames.length; i++) {
-        // A dropdown's inlet dot is not a knob to drag; it only matters once a cable is plugged in
-        if (isDropdown(mod.params[paramNames[i]]) && !this._isControlled(id, paramNames[i])) continue;
+        // A dropdown's or trigger's inlet dot is not a knob to drag; it only matters once a cable is plugged in
+        const param = mod.params[paramNames[i]];
+        if ((isDropdown(param) || isTrigger(param)) && !this._isControlled(id, paramNames[i])) continue;
         const py = this.getParamY(mod, i);
         const kx = mod.x + 16;
         const ky = py + 4;
@@ -469,7 +477,8 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       const paramNames = Object.keys(mod.params);
       for (let i = 0; i < paramNames.length; i++) {
-        if (isDropdown(mod.params[paramNames[i]])) continue; // the menu box replaces the value text
+        const param = mod.params[paramNames[i]];
+        if (isDropdown(param) || isTrigger(param)) continue; // the menu box or button replaces the value text
         const py = this.getParamY(mod, i);
         const ky = py + 4;
         const rx = mod.x + MODULE_WIDTH - 8;
@@ -500,6 +509,23 @@ export class NodeGraphUI {
       const paramNames = Object.keys(mod.params);
       for (let i = 0; i < paramNames.length; i++) {
         if (!isDropdown(mod.params[paramNames[i]])) continue;
+        const r = this._dropdownRect(mod, i);
+        if (wx >= r.x && wx <= r.x + r.w && wy >= r.y && wy <= r.y + r.h) {
+          return { nodeId: id, paramName: paramNames[i] };
+        }
+      }
+    }
+    return null;
+  }
+
+  // Trigger button: the same box a dropdown draws
+  hitTestTrigger(wx, wy) {
+    const graph = this.pipeline.graph;
+    for (const [id, mod] of graph.nodes) {
+      if (mod.collapsed) continue;
+      const paramNames = Object.keys(mod.params);
+      for (let i = 0; i < paramNames.length; i++) {
+        if (!isTrigger(mod.params[paramNames[i]])) continue;
         const r = this._dropdownRect(mod, i);
         if (wx >= r.x && wx <= r.x + r.w && wy >= r.y && wy <= r.y + r.h) {
           return { nodeId: id, paramName: paramNames[i] };
@@ -1020,6 +1046,8 @@ export class NodeGraphUI {
   draw() {
     const p = this.p;
     const graph = this.pipeline.graph;
+    this._prevDrawTime = this._drawTime;
+    this._drawTime = performance.now();
 
     // Show/hide sidebar based on fullscreen state
     this._paletteEl.style.display = this.fullscreenMonitor !== null ? 'none' : '';
@@ -1441,8 +1469,8 @@ export class NodeGraphUI {
 
       const controlled = this._isControlled(id, name);
 
-      if (isDropdown(param)) {
-        // Control inlet where the knob would be: a cable can still drive the menu
+      if (isDropdown(param) || isTrigger(param)) {
+        // Control inlet where the knob would be: a cable can still drive the menu or fire the trigger
         p.fill(controlled ? [100, 255, 130] : [100, 200, 255]);
         p.stroke(255);
         p.strokeWeight(1);
@@ -1455,8 +1483,25 @@ export class NodeGraphUI {
         p.textAlign(p.LEFT, p.CENTER);
         p.text(param.label || name, kx + KNOB_RADIUS + 6, ky);
 
-        // Box showing the selected option, outlined while its menu is open
         const r = this._dropdownRect(mod, i);
+
+        if (isTrigger(param)) {
+          // Button, flashing each time it fires: fully lit on the first frame after, then fading over 250 ms
+          const fired = mod.triggeredAt[name] ?? -Infinity;
+          const flash = fired > this._prevDrawTime ? 1 : Math.max(0, 1 - (this._drawTime - fired) / 250);
+          p.fill(p.lerpColor(p.color(60, 60, 90), p.color(100, 200, 255), flash));
+          p.stroke(controlled ? [100, 255, 130] : 100);
+          p.strokeWeight(1);
+          p.rect(r.x, r.y, r.w, r.h, 3);
+          p.noStroke();
+          p.fill(200);
+          p.textSize(8);
+          p.textAlign(p.CENTER, p.CENTER);
+          p.text(fitText(p, mod.triggerText(name) ?? '', r.w - 10), r.x + r.w / 2, ky);
+          continue;
+        }
+
+        // Box showing the selected option, outlined while its menu is open
         const menu = this._dropdownMenu;
         const open = menu && menu.nodeId === id && menu.paramName === name;
         p.fill(controlled ? 30 : 50);
@@ -1933,6 +1978,13 @@ export class NodeGraphUI {
       if (!this._isControlled(dropdownHit.nodeId, dropdownHit.paramName)) {
         this._openDropdownMenu(dropdownHit.nodeId, dropdownHit.paramName);
       }
+      return;
+    }
+
+    // Check trigger button — firing leaves the value alone, so it works under a cable too
+    const triggerHit = this.hitTestTrigger(world.x, world.y);
+    if (triggerHit) {
+      this.pipeline.graph.nodes.get(triggerHit.nodeId).fireTrigger(triggerHit.paramName);
       return;
     }
 
@@ -2473,6 +2525,7 @@ export class NodeGraphUI {
     for (const [k, v] of Object.entries(src.params)) {
       mod.setParam(k, v.value);
     }
+    mod.seed = src.seed;
     return graph.addNode(mod);
   }
 

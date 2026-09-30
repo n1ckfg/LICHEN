@@ -159,14 +159,16 @@ export class ConnectionGraph {
       for (const [k, v] of Object.entries(mod.params)) {
         params[k] = v.value;
       }
-      nodes.push({
+      const node = {
         id,
         type: mod.type,
         x: mod.x,
         y: mod.y,
         params,
         collapsed: mod.collapsed || false
-      });
+      };
+      if (mod.seed) node.seed = mod.seed;
+      nodes.push(node);
     }
     return {
       nodes,
@@ -194,6 +196,10 @@ export class ConnectionGraph {
           mod.setParam(k, v);
         }
       }
+      // The saved params replaced the ones the constructor seeded, so the
+      // constructor's seed no longer describes them; a patch saved before
+      // seeds existed has none to restore.
+      mod.seed = nodeData.seed ?? null;
       this.nodes.set(nodeData.id, mod);
     }
 
