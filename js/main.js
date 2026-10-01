@@ -43,6 +43,7 @@ import './modules/TimeTunnelModule.js';
 import './modules/TVLinesModule.js';
 import './modules/UnrealBloomModule.js';
 import './modules/VHSCModule.js';
+import './modules/VideoToastingModule.js';
 // - - - CANON - - -
 import './modules/ConwayModule.js';
 import './modules/GRASSModule.js';
