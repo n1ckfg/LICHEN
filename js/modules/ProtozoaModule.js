@@ -10,6 +10,7 @@ import {
   protozoaMeanFrag,
   protozoaSceneFrag,
   PROTO_MAX_CELLS,
+  PROTO_MAX_STIR,
   PROTO_SIM_SHORT,
   PROTO_SIM_LONG_MAX,
   PROTO_SEG_LAG,
@@ -40,6 +41,8 @@ const PALETTE = [
 const AMBIENT = 14;                  // free-drifting colonies
 const TRAIL_SEGS = [0, 3, 6, 9];     // which body segments emit
 const SNAKE_SEEDS = [0.0, 1.0];
+const SNAKE_SEGS = 12;               // body segments, as in snakeSDF2D
+const WAKE = 0.5;                    // share of a segment's motion its wake carries
 
 export class ProtozoaModule extends Module {
   constructor(glCanvas, id) {
@@ -53,6 +56,7 @@ export class ProtozoaModule extends Module {
     this.params = {
       speed: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.4, 2] },
       motion: { value: 0.34, min: 0, max: 2, step: 0.01, label: 'Motion', random: [0.1, 1] },
+      flow: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Flow', random: [0.4, 2] },
       deposit: { value: 5.0, min: 0, max: 15, step: 0.1, label: 'Deposit', random: [2, 10] },
       diffusion: { value: 0.10, min: 0, max: 0.5, step: 0.01, label: 'Diffusion', random: [0.03, 0.3] },
       bleed: { value: 0.95, min: 0, max: 1, step: 0.01, label: 'Bleed', random: [0.4, 1] },
@@ -103,6 +107,11 @@ export class ProtozoaModule extends Module {
     this.posArr = new Float32Array(PROTO_MAX_CELLS * 2);
     this.colArr = new Float32Array(PROTO_MAX_CELLS * 3);
     this.radArr = new Float32Array(PROTO_MAX_CELLS);
+    this.stirArr = new Float32Array(PROTO_MAX_STIR * 4);
+    // Segment positions this frame and last, for the wake displacement
+    this.stirCur = new Float32Array(PROTO_MAX_STIR * 2);
+    this.stirPrev = new Float32Array(PROTO_MAX_STIR * 2);
+    this.stirPrimed = false;
 
     // Ambient drifters wander the frame on deterministic sinusoidal paths;
     // trail emitters ride the snake bodies. Built once, so a patch reloads to
@@ -247,6 +256,30 @@ export class ProtozoaModule extends Module {
     return n;
   }
 
+  // Every body segment stirs the water: its wake moves the field by WAKE of
+  // the distance the segment moved this frame. Returns the stirrer count.
+  _updateStir(flow) {
+    const n = Math.min(SNAKE_SEEDS.length * SNAKE_SEGS, PROTO_MAX_STIR);
+    const cur = this.stirCur, prev = this.stirPrev, a = this.stirArr;
+    for (let k = 0; k < n; k++) {
+      const p = this._snakeSegPos(SNAKE_SEEDS[Math.floor(k / SNAKE_SEGS)], k % SNAKE_SEGS);
+      const uvp = this._sceneToUV(p[0], p[1]);
+      cur[k * 2] = uvp[0];
+      cur[k * 2 + 1] = uvp[1];
+    }
+    // No wake on the first frame: there is no previous position to move from
+    if (!this.stirPrimed) { prev.set(cur); this.stirPrimed = true; }
+    for (let k = 0; k < n; k++) {
+      a[k * 4] = cur[k * 2];
+      a[k * 4 + 1] = cur[k * 2 + 1];
+      a[k * 4 + 2] = (cur[k * 2] - prev[k * 2]) * WAKE * flow;
+      a[k * 4 + 3] = (cur[k * 2 + 1] - prev[k * 2 + 1]) * WAKE * flow;
+    }
+    this.stirCur = prev;
+    this.stirPrev = cur;
+    return n;
+  }
+
   process(graph, glCanvas) {
     const now = performance.now() / 1000;
     const dt = Math.min(Math.max(now - this.lastTime, 0), MAX_DT);
@@ -257,8 +290,12 @@ export class ProtozoaModule extends Module {
     this.ftime += scaled * this.params.motion.value;
 
     const count = this._updateCells(dt);
+    const flow = this.params.flow.value;
+    const stirCount = this._updateStir(flow);
 
-    // 1. Inject the colonies onto the persistent field: state[0] -> state[1]
+    // 1. Carry the field on the current and the snakes' wakes, then inject the
+    //    colonies: state[0] -> state[1]. The current runs on scene seconds, so
+    //    Speed sets the pace of the water along with everything else.
     this._pass(this.injectShader, this.state[1], sh => {
       sh.setUniform('u_texture', this.state[0]);
       sh.setUniform('u_resolution', this.simRes);
@@ -266,6 +303,10 @@ export class ProtozoaModule extends Module {
       sh.setUniform('u_rgbColors', this.colArr);
       sh.setUniform('u_radii', this.radArr);
       sh.setUniform('u_numColors', count);
+      sh.setUniform('u_time', this.time);
+      sh.setUniform('u_flowStep', flow * scaled);
+      sh.setUniform('u_stir', this.stirArr);
+      sh.setUniform('u_numStir', stirCount);
     });
 
     // 2. Diffuse: state[1] -> state[0]

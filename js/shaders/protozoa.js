@@ -12,6 +12,7 @@
 // replaced by an explicit two-stage reduction (protozoaMeanFrag).
 
 export const PROTO_MAX_CELLS = 50;    // colony emitters uploaded per frame
+export const PROTO_MAX_STIR = 24;     // snake segments stirring the water, per frame
 export const PROTO_SIM_SHORT = 340;   // sim texels across the short axis
 export const PROTO_SIM_LONG_MAX = 900;
 
@@ -25,11 +26,21 @@ export const PROTO_PIGMENT_TARGET = 0.065;
 const MEAN_TAPS = 8;                  // taps per axis, per reduction stage
 
 // ---------------------------------------------------------------------------
-// 1. Inject — Gaussian colony blobs added onto the persistent field.
+// 1. Advect + inject — the water carries the field along, then Gaussian colony
+//    blobs are added onto it.
 //
-// The sketch drew this with additive blending straight onto the live target.
-// Here it reads the field and adds in the shader instead, which keeps the pass
-// independent of p5's blend state and lets every pass run under REPLACE.
+// The current is the curl of a slowly evolving noise potential, so it is
+// divergence-free: pigment swirls and shears but never piles up or thins out
+// on its own. The potential is faded to zero at the frame border, which turns
+// the current along the edges instead of through them, so nothing is dragged
+// in from the clamped edge texels. Each snake segment adds a wake: the curl of
+// a local stream function whose flow at the segment's centre is the
+// segment's own motion, curling back round its sides.
+//
+// The sketch drew the blobs with additive blending straight onto the live
+// target. Here the pass reads the field and adds in the shader instead, which
+// keeps it independent of p5's blend state and lets every pass run under
+// REPLACE.
 // ---------------------------------------------------------------------------
 export const protozoaInjectFrag = `
 precision highp float;
@@ -41,12 +52,99 @@ uniform vec2 u_positions[${PROTO_MAX_CELLS}];
 uniform vec3 u_rgbColors[${PROTO_MAX_CELLS}];
 uniform float u_radii[${PROTO_MAX_CELLS}];
 uniform int u_numColors;
+uniform float u_time;        // scene clock; the current evolves on it
+uniform float u_flowStep;    // current strength x this frame's scene seconds
+uniform vec4 u_stir[${PROTO_MAX_STIR}];   // xy: segment, zw: wake displacement this frame (field uv)
+uniform int u_numStir;
+
+#define FLOW_GAIN 0.035      // q-units per second per unit potential gradient
+#define FLOW_EDGE 0.12       // width of the border the current turns along
+#define WAKE_SIGMA 0.05      // wake radius, about a snake's body width
+
+// Sin-free hash (Hoskins), so the noise stays stable at large coordinates
+float vhash(vec3 p) {
+  p = fract(p * 0.1031);
+  p += dot(p, p.zyx + 31.32);
+  return fract((p.x + p.y) * p.z);
+}
+
+// Value noise with a quintic fade: its gradient, which is the velocity, is
+// continuous across cell boundaries, so the current has no creases.
+float vnoise(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = p - i;
+  vec3 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+  return mix(mix(mix(vhash(i), vhash(i + vec3(1.0, 0.0, 0.0)), u.x),
+                 mix(vhash(i + vec3(0.0, 1.0, 0.0)), vhash(i + vec3(1.0, 1.0, 0.0)), u.x), u.y),
+             mix(mix(vhash(i + vec3(0.0, 0.0, 1.0)), vhash(i + vec3(1.0, 0.0, 1.0)), u.x),
+                 mix(vhash(i + vec3(0.0, 1.0, 1.0)), vhash(i + vec3(1.0, 1.0, 1.0)), u.x), u.y), u.z);
+}
+
+// Stream function in q (short-axis-normalised, centred) space. Centred noise,
+// so the border envelope doesn't leave a standing circulation round the frame.
+float potential(vec2 q, vec2 halfExt) {
+  float p = (vnoise(vec3(q * 1.6, u_time * 0.05)) - 0.5)
+          + (vnoise(vec3(q * 3.7 + 17.0, u_time * 0.08)) - 0.5) * 0.4;
+  vec2 e = halfExt - abs(q);   // distance to the nearer edge on each axis
+  return p * smoothstep(0.0, FLOW_EDGE, e.x) * smoothstep(0.0, FLOW_EDGE, e.y);
+}
+
+vec4 tap(vec2 i0, float dx, float dy) {
+  return texture2D(u_texture, (i0 + vec2(dx, dy) + 0.5) / u_resolution);
+}
+
+vec4 rowCR(vec2 i0, float dy, vec4 wx) {
+  return tap(i0, -1.0, dy) * wx.x + tap(i0, 0.0, dy) * wx.y
+       + tap(i0, 1.0, dy) * wx.z + tap(i0, 2.0, dy) * wx.w;
+}
+
+// Catmull-Rom read of the field. A bilinear read blurs the field a little on
+// every frame it moves, which over a pigment's lifetime would quadruple the
+// diffusion. Clamping to the four nearest texels stops the sharper filter
+// ringing, which in a feedback loop would otherwise build up.
+vec4 sampleField(vec2 uv) {
+  vec2 pos = uv * u_resolution - 0.5;
+  vec2 i0 = floor(pos);
+  vec2 f = pos - i0;
+  vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
+  vec2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+  vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
+  vec2 w3 = f * f * (-0.5 + 0.5 * f);
+  vec4 wx = vec4(w0.x, w1.x, w2.x, w3.x);
+  vec4 c = rowCR(i0, -1.0, wx) * w0.y + rowCR(i0, 0.0, wx) * w1.y
+         + rowCR(i0, 1.0, wx) * w2.y + rowCR(i0, 2.0, wx) * w3.y;
+  vec4 a = tap(i0, 0.0, 0.0), b = tap(i0, 1.0, 0.0);
+  vec4 d = tap(i0, 0.0, 1.0), e = tap(i0, 1.0, 1.0);
+  return clamp(c, min(min(a, b), min(d, e)), max(max(a, b), max(d, e)));
+}
 
 void main() {
   // Normalise against the SHORT axis, matching how the scene builds its own uv.
   // Dividing by height alone made a colony's on-screen size track window
   // height, so the same radius drew a far bigger blob in a portrait window.
   vec2 aspect = u_resolution / min(u_resolution.x, u_resolution.y);
+  vec2 q = (vTexCoord - 0.5) * aspect;
+
+  // Current: curl of the potential, by central differences
+  float h = 0.01;
+  vec2 halfExt = aspect * 0.5;
+  vec2 vel = vec2(potential(q + vec2(0.0, h), halfExt) - potential(q - vec2(0.0, h), halfExt),
+                  potential(q - vec2(h, 0.0), halfExt) - potential(q + vec2(h, 0.0), halfExt)) / (2.0 * h);
+  vec2 disp = vel * FLOW_GAIN * u_flowStep;
+
+  // Wakes: psi = (D x r) g(r) gives flow D at the centre, curling back round
+  // the sides, and is divergence-free like the current
+  float s2 = WAKE_SIGMA * WAKE_SIGMA;
+  for (int i = 0; i < ${PROTO_MAX_STIR}; i++) {
+    if (i >= u_numStir) break;
+    vec2 r = q - (u_stir[i].xy - 0.5) * aspect;
+    vec2 D = u_stir[i].zw * aspect;
+    float g = exp(-0.5 * dot(r, r) / s2);
+    float s = D.x * r.y - D.y * r.x;
+    disp += g * (D - (s / s2) * vec2(r.y, -r.x));
+  }
+
+  vec4 field = sampleField(vTexCoord - disp / aspect);
   vec3 finalColor = vec3(0.0);
 
   for (int i = 0; i < ${PROTO_MAX_CELLS}; i++) {
@@ -63,7 +161,7 @@ void main() {
     finalColor += u_rgbColors[i] * gaussian;
   }
 
-  gl_FragColor = texture2D(u_texture, vTexCoord) + vec4(finalColor, 0.0);
+  gl_FragColor = field + vec4(finalColor, 0.0);
 }`;
 
 // ---------------------------------------------------------------------------
@@ -121,16 +219,17 @@ float noise(vec2 p) {
   vec2 i = floor(p);
   vec2 f = fract(p);
 
+  // Corners (0,0) (1,0) (0,1) (1,1). This read (1,0) twice and blended them
+  // with mismatched weights, so neighbouring cells disagreed along every
+  // shared edge and the fibre field was a grid of seams.
   float a = hash(i.x + i.y * 57.0);
   float b = hash(i.x + i.y * 57.0 + 1.0);
-  float c = hash(i.x + 1.0 + i.y * 57.0);
-  float d = hash(i.x + 1.0 + i.y * 57.0 + 1.0);
+  float c = hash(i.x + i.y * 57.0 + 57.0);
+  float d = hash(i.x + i.y * 57.0 + 58.0);
 
   vec2 u = f * f * (3.0 - 2.0 * f);
 
-  return mix(a, b, u.x) +
-         (c - a) * u.x * (1.0 - u.y) +
-         (d - b) * u.y * (1.0 - u.x);
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
 float fbm(vec2 p) {
@@ -211,7 +310,11 @@ void main() {
   float ripplePhase = intensity * rippleFreq - u_time * rippleSpeed;
   float ripple = sin(ripplePhase) * 0.5 + 0.5;
 
-  vec2 displacement = normalize(gradient + vec2(0.001)) * ripple * texel * 3.0 * intensity;
+  // Soft-normalised: a full unit step where the field has a real gradient,
+  // fading to nothing where it is flat. normalize() gave flat areas a direction
+  // picked by rounding noise, plus a fixed diagonal drift from the bias.
+  vec2 dir = gradient / (length(gradient) + 0.02);
+  vec2 displacement = dir * ripple * texel * 3.0 * intensity;
 
   vec4 rippled = texture2D(u_texture, vTexCoord - displacement);
 
@@ -251,12 +354,14 @@ float hash(float n) {
 float noise(vec2 p) {
   vec2 i = floor(p);
   vec2 f = fract(p);
+  // Same corner fix as the bleed pass; here the noise moves, so its seams swept
+  // across the frame
   float a = hash(i.x + i.y * 57.0);
   float b = hash(i.x + i.y * 57.0 + 1.0);
-  float c = hash(i.x + 1.0 + i.y * 57.0);
-  float d = hash(i.x + 1.0 + i.y * 57.0 + 1.0);
+  float c = hash(i.x + i.y * 57.0 + 57.0);
+  float d = hash(i.x + i.y * 57.0 + 58.0);
   vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(a, b, u.x) + (c - a) * u.x * (1.0 - u.y) + (d - b) * u.y * (1.0 - u.x);
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
 }
 
 void main() {
@@ -418,10 +523,14 @@ float noise3(vec3 p) {
   float a = hash3d(n);
   float b = hash3d(n + 1.0);
   float c = hash3d(n + 157.0);
-  float d = hash3d(n + 289.0);
+  // Corner (x,y,z) is n + x + 157y + 289z. Three corners had the wrong offset,
+  // so cells disagreed at their faces: seams in the gas that slid across the
+  // frame with the x drift, and a pop of the whole layer whenever z crossed
+  // an integer.
+  float d = hash3d(n + 158.0);
   return mix(mix(mix(a, b, f.x), mix(c, d, f.x), f.y),
-             mix(mix(hash3d(n + 158.0), hash3d(n + 289.0 + 1.0), f.x),
-                 mix(hash3d(n + 446.0), hash3d(n + 735.0), f.x), f.y), f.z);
+             mix(mix(hash3d(n + 289.0), hash3d(n + 290.0), f.x),
+                 mix(hash3d(n + 446.0), hash3d(n + 447.0), f.x), f.y), f.z);
 }
 
 float fbm2(vec2 p, int octaves) {
@@ -595,15 +704,29 @@ float swampBG2D(vec2 p, float t) {
     foliage += smoothstep(0.5, 0.7, n) * exp(-abs(p.y - layer) * 8.0) * 0.15;
   }
 
+  // Gas bubbles rising through the water. Each lives for one cycle of its own
+  // clock, swelling out of nothing and back, and respawns somewhere new only
+  // at the instant it is invisible.
+  //
+  // These were hashed straight on the clock, which moved them to a new random
+  // place every frame, and their smoothstep() swapped its edges each time the
+  // pulse crossed 0.5. That is undefined in GLSL; in practice it flipped each
+  // bubble's term between ~0 and ~1 across the whole frame, dropping the
+  // waterline by 0.1 a bubble about once a second. The fixed 0.15 below is
+  // that drop's average, so the snakes keep the size they had.
   float bubbles = 0.0;
   for (int i = 0; i < 3; i++) {
-    vec2 center = hash2(vec2(float(i), t * 0.1)) * 2.0 - 1.0;
-    float r = 0.05 + hash(float(i) + t * 0.05) * 0.08;
-    float pulse = sin(t * 3.0 + float(i) * 10.0) * 0.5 + 0.5;
-    bubbles += smoothstep(r, r * (0.8 + pulse * 0.4), length(p - center));
+    float fi = float(i);
+    float cyc = t * 0.12 + fi / 3.0;
+    float id = floor(cyc);
+    float ph = cyc - id;
+    vec2 center = hash2(vec2(fi, id)) * 2.0 - 1.0 + vec2(sin(ph * 3.0 + fi) * 0.05, ph * 0.5);
+    float r = 0.05 + hash(fi * 7.0 + id) * 0.08;
+    float life = sin(ph * PI);
+    bubbles += (1.0 - smoothstep(r * 0.8, r, length(p - center))) * life * life;
   }
 
-  return water + foliage - bubbles * 0.1;
+  return water + foliage - 0.15 - bubbles * 0.1;
 }
 
 vec3 swampColor(vec2 p, float t) {
@@ -806,9 +929,6 @@ void main() {
   float vig = 1.0 - length(uv) * 0.3;
   color *= vig;
 
-  float grain = hash2d(gl_FragCoord.xy * 0.1 + fract(t)) * 0.025;
-  color += grain - 0.0125;
-
   color = pow(max(color, 0.0), vec3(1.0 / 2.2));
   color = pow(color, vec3(0.92, 0.98, 0.88));   // swampy green cast
   color = color / (color + 0.7);
@@ -817,6 +937,11 @@ void main() {
   color.r *= 1.0 + ca;
   color.b *= 1.0 - ca;
   color.g *= 1.05;
+
+  // A fixed one-level dither keeps the dark gradients from banding. This was a
+  // grain redrawn every frame and added before the gamma lift, which in the
+  // shadows made it most of the frame-to-frame change in the whole image.
+  color += (hash2d(gl_FragCoord.xy) - 0.5) / 255.0;
 
   gl_FragColor = vec4(color, 1.0);
 }`;
