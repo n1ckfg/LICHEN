@@ -20,17 +20,25 @@ export class SpiralGalaxyModule extends Module {
     super('SpiralGalaxy', glCanvas, id);
     this.inputs = [];
     this.outputs = [{ name: 'out', type: 'video' }];
+    // `random` ranges keep a fresh seed away from the knobs' degenerate ends:
+    // frozen at speed 0, no arms at swirl 0, a dark tunnel at ripple 0, and the
+    // top of trail, where the white core swells over more of the frame.
     this.params = {
-      loop: { value: 60, min: 5, max: 180, step: 1, label: 'Loop' },
-      speed: { value: 0.5, min: 0, max: 3, step: 0.01, label: 'Speed' },
-      trail: { value: 0.92, min: 0.7, max: 0.99, step: 0.005, label: 'Trail' },
-      swirl: { value: 0.012, min: 0, max: 0.06, step: 0.001, label: 'Swirl' },
-      ripple: { value: 0.4, min: 0, max: 1.5, step: 0.01, label: 'Ripple' },
+      loop: { value: 60, min: 5, max: 180, step: 1, label: 'Loop', random: [20, 120] },
+      speed: { value: 0.5, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.15, 1.5] },
+      trail: { value: 0.92, min: 0.7, max: 0.99, step: 0.005, label: 'Trail', random: [0.8, 0.95] },
+      swirl: { value: 0.012, min: 0, max: 0.06, step: 0.001, label: 'Swirl', random: [0.004, 0.04] },
+      ripple: { value: 0.4, min: 0, max: 1.5, step: 0.01, label: 'Ripple', random: [0.15, 1.2] },
+      reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
 
     this.createShader(spiralgalaxyFrag);
     this.blendShader = glCanvas.createShader(vertSrc, spiralgalaxyBlendFrag);
     this.createOutputFBO();
+
+    // Every new galaxy starts from its own seed. Patch loads and duplicates
+    // then restore the saved params and seed over this one.
+    this.randomize();
 
     // offset: where in the cycle this world restarts (0 = at phase 0, 0.5 = at phase 0.5)
     this.worlds = [this._makeWorld(0.0), this._makeWorld(0.5)];
@@ -116,6 +124,14 @@ export class SpiralGalaxyModule extends Module {
 
     // Swap each world's read/draw buffers
     for (const w of this.worlds) { const r = w.read; w.read = w.draw; w.draw = r; }
+  }
+
+  onTrigger(name) {
+    if (name === 'reseed') this.randomize();
+  }
+
+  triggerText(name) {
+    return name === 'reseed' ? this.seed : '';
   }
 
   dispose() {

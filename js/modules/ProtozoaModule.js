@@ -46,16 +46,21 @@ export class ProtozoaModule extends Module {
     super('Protozoa', glCanvas, id);
     this.inputs = [];
     this.outputs = [{ name: 'out', type: 'video' }];
+    // `random` ranges keep a fresh seed away from the knobs' degenerate ends:
+    // frozen at speed 0, no colonies at deposit 0, and feedback toward 0.9,
+    // where the trails fade as fast as they are laid and only the live
+    // colonies remain.
     this.params = {
-      speed: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed' },
-      motion: { value: 0.34, min: 0, max: 2, step: 0.01, label: 'Motion' },
-      deposit: { value: 5.0, min: 0, max: 15, step: 0.1, label: 'Deposit' },
-      diffusion: { value: 0.10, min: 0, max: 0.5, step: 0.01, label: 'Diffusion' },
-      bleed: { value: 0.95, min: 0, max: 1, step: 0.01, label: 'Bleed' },
-      feedback: { value: 0.997, min: 0.9, max: 1, step: 0.001, label: 'Feedback' },
-      banding: { value: 0.30, min: 0, max: 1, step: 0.01, label: 'Banding' },
-      dry: { value: 0.03, min: 0, max: 0.2, step: 0.005, label: 'Dry' },
-      gain: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Gain' },
+      speed: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.4, 2] },
+      motion: { value: 0.34, min: 0, max: 2, step: 0.01, label: 'Motion', random: [0.1, 1] },
+      deposit: { value: 5.0, min: 0, max: 15, step: 0.1, label: 'Deposit', random: [2, 10] },
+      diffusion: { value: 0.10, min: 0, max: 0.5, step: 0.01, label: 'Diffusion', random: [0.03, 0.3] },
+      bleed: { value: 0.95, min: 0, max: 1, step: 0.01, label: 'Bleed', random: [0.4, 1] },
+      feedback: { value: 0.997, min: 0.9, max: 1, step: 0.001, label: 'Feedback', random: [0.99, 0.999] },
+      banding: { value: 0.30, min: 0, max: 1, step: 0.01, label: 'Banding', random: [0.1, 0.7] },
+      dry: { value: 0.03, min: 0, max: 0.2, step: 0.005, label: 'Dry', random: [0.01, 0.08] },
+      gain: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Gain', random: [0.6, 1.8] },
+      reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
 
     this.injectShader = glCanvas.createShader(vertSrc, protozoaInjectFrag);
@@ -117,6 +122,10 @@ export class ProtozoaModule extends Module {
         amp: 0.9 + (i % 5) * 0.12,
       });
     }
+
+    // Every new swamp starts from its own seed. Patch loads and duplicates
+    // then restore the saved params and seed over this one.
+    this.randomize();
 
     // Both clocks are accumulated rather than scaled from an absolute time, so
     // turning Speed or Motion changes the rate without jumping the animation.
@@ -326,6 +335,14 @@ export class ProtozoaModule extends Module {
       sh.setUniform('u_resolution', this.fragResolution());
       sh.setUniform('u_gain', this.params.gain.value);
     });
+  }
+
+  onTrigger(name) {
+    if (name === 'reseed') this.randomize();
+  }
+
+  triggerText(name) {
+    return name === 'reseed' ? this.seed : '';
   }
 
   dispose() {

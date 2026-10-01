@@ -7,19 +7,28 @@ export class CloudyModule extends Module {
     super('Cloudy', glCanvas, id);
     this.inputs = [];
     this.outputs = [{ name: 'out', type: 'video' }];
+    // `random` ranges keep a fresh seed away from the knobs' degenerate ends:
+    // frozen at speed 0, and either end of depth, where the cloud flattens into
+    // a white haze (-2) or sinks into the dark background (2).
     this.params = {
-      speed: { value: 0.4, min: 0, max: 2, step: 0.01, label: 'Speed' },
-      depth: { value: -0.31, min: -2, max: 2, step: 0.01, label: 'Depth' },
-      wander: { value: 0.08, min: 0, max: 1, step: 0.01, label: 'Wander' },
-      noiseScale: { value: 2.5, min: 0.1, max: 8, step: 0.1, label: 'Noise' },
-      displace: { value: 0.12, min: 0, max: 0.5, step: 0.01, label: 'Displace' },
-      colorShift: { value: 3.0, min: 0, max: 6.28, step: 0.01, label: 'Color' },
-      glow: { value: 0.4, min: 0, max: 2, step: 0.01, label: 'Glow' },
-      zoom: { value: 1.0, min: 0.2, max: 4, step: 0.05, label: 'Zoom' },
+      speed: { value: 0.4, min: 0, max: 2, step: 0.01, label: 'Speed', random: [0.1, 1.2] },
+      depth: { value: -0.31, min: -2, max: 2, step: 0.01, label: 'Depth', random: [-1, 1.25] },
+      wander: { value: 0.08, min: 0, max: 1, step: 0.01, label: 'Wander', random: [0, 0.5] },
+      noiseScale: { value: 2.5, min: 0.1, max: 8, step: 0.1, label: 'Noise', random: [1, 5] },
+      displace: { value: 0.12, min: 0, max: 0.5, step: 0.01, label: 'Displace', random: [0.03, 0.35] },
+      colorShift: { value: 3.0, min: 0, max: 6.28, step: 0.01, label: 'Color', random: true },
+      glow: { value: 0.4, min: 0, max: 2, step: 0.01, label: 'Glow', random: [0.1, 1.2] },
+      zoom: { value: 1.0, min: 0.2, max: 4, step: 0.05, label: 'Zoom', random: [0.5, 2] },
+      reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
 
     this.createShader(cloudyFrag);
     this.createOutputFBO();
+
+    // Every new cloud starts from its own seed. Patch loads and duplicates
+    // then restore the saved params and seed over this one.
+    this.randomize();
+
     this.startTime = performance.now();
   }
 
@@ -41,6 +50,14 @@ export class CloudyModule extends Module {
     this.shader.setUniform('zoom', this.params.zoom.value);
     this.renderQuad();
     this.outputFBO.end();
+  }
+
+  onTrigger(name) {
+    if (name === 'reseed') this.randomize();
+  }
+
+  triggerText(name) {
+    return name === 'reseed' ? this.seed : '';
   }
 }
 

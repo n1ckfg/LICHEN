@@ -49,7 +49,7 @@ A param that sets `widget: 'trigger'` is drawn as a momentary button instead of 
 
 The seed is kept on `mod.seed`. A node whose `mod.seed` is set saves it as `seed` in the patch JSON, and duplicating a node copies it. On load, `fromJSON` restores the saved seed and the saved param values, and does not re-resolve the seed, because knobs may have moved since it was drawn. A patch saved before seeds existed loads with `mod.seed = null`.
 
-A module adopts this by adding `random` to its params. It may call `this.randomize()` at the end of its constructor, and may add a trigger param with `onTrigger()` calling `this.randomize()` and `triggerText()` returning `this.seed`. Crystalline does all three.
+A module adopts this by adding `random` to its params. It may call `this.randomize()` at the end of its constructor, and may add a trigger param with `onTrigger()` calling `this.randomize()` and `triggerText()` returning `this.seed`. Cloudy, Crystalline, InkDrops, Protozoa and SpiralGalaxy all do all three, each with the trigger named `reseed` and labelled Seed, last in its params. The seed sets params only. Anything a module draws from `Math.random` stays unseeded.
 
 Each node header has a collapse toggle in the upper right ("−" when expanded, "+" when collapsed). A module may also set `this.historicalInfo = 'Name'` in its constructor; this adds a "?" button to the left of the collapse toggle that opens an info popup (2× the node's size, centered on the node, dismissed by any click outside it). The popup content comes from the entry with a matching `name` in `docs/historical-info.json`: the popup's heading is that entry's `title` followed by its `year` in parentheses (the title falls back to the `historicalInfo` name when the entry or its title is missing; the year is omitted when absent), and its text is the entry's `body`. Modules leaving `historicalInfo` at its default `null` show no button.
 
@@ -146,6 +146,8 @@ The Protozoa module (`js/modules/ProtozoaModule.js`) generates autonomous waterc
 
 **Rendering path:** Final display pass (`protozoaDisplayFrag`) combines the middle buffer state with tone mapping, gamma correction, and subtle vignette, output to the module's `outputFBO`.
 
+**Seed:** works as Crystalline's does (see Seeded Randomization). A new node starts from its own seed, and the Seed trigger draws a new one. All nine params are seeded over narrower ranges. These avoid a frozen clock at speed 0, an empty field at deposit 0, and feedback toward 0.9, where the trails fade as fast as they are laid. The colony paths are fixed, so a seed changes how the pigment behaves, not where the colonies swim.
+
 ## InkDrops Module
 
 The InkDrops module (`js/modules/InkDropsModule.js`, `js/shaders/inkdrops.js`) is an interactive module: a sheet of cold-press paper worked in watercolour. Splashes bloom and shatter, fat drops fall in from off-screen and soak out huge, and a wet rag is dragged across the sheet, lifting pigment back off. Ported from the WebGL2 sketch `splottissimo.html`.
@@ -169,6 +171,8 @@ Bake runs only on frames where a drop settles; lift runs whenever a wipe is live
 - `uRes` comes from `Module.fragResolution()` (see Pixel Density below). Everything here is in `gl_FragCoord` space, which runs over *physical* pixels; passing the logical size squeezes the sheet into one quadrant and makes the feedback passes read off the edge.
 - The sheet starts as bare paper, which takes a GL pass (`p5`'s `clear()` premultiplies, so clearing to white with zero alpha is not available): the lift shader with a full step of evaporation and no wipes resolves to white with zero coverage, so `clear()` just runs that twice.
 
+**Seed:** works as Crystalline's does (see Seeded Randomization). All ten params are seeded: `hue` over its full range, and the rest over narrower ranges. These avoid a frozen clock at speed 0, a sheet that barely holds a stain at fade 5, and a `hueVar` near 0.5, which spreads the palette round the whole wheel. Where each drop lands is still drawn from `Math.random`, so a seed fixes the palette and pacing, not the sheet itself.
+
 **Fullscreen interaction:** double-click the node preview to enter fullscreen; click to throw a cluster, a splash and (at most every 0.7 s) a wipe; C clears the sheet back to bare paper; ESC exits. `js/ui.js mousePressed` routes the click to `handleMouseDown()` for `Conway` and `InkDrops` rather than exiting fullscreen, and `js/main.js keyPressed` routes keys the same way it does for `GRASS` and `Conway`.
 
 ## SpiralGalaxy Module
@@ -180,6 +184,14 @@ The SpiralGalaxy module (`js/modules/SpiralGalaxyModule.js`) is a source: a rota
 **Rendering path:** each world ping-pongs a pair of framebuffers through `js/shaders/spiralgalaxy.js:spiralgalaxyFrag`, which advects the previous frame along a twist that shears with radius (the inner turns faster than the outer, which is what winds the feedback into arms) and adds fbm-warped ripples and a bright core. `spiralgalaxyBlendFrag` then cross-dissolves the two worlds into the module's `outputFBO`.
 
 **No Game of Life:** the WebGL sketch this was ported from drove `swirl`, `ripple`, `speed` and a dye injection from a Game of Life grid, but that grid never reached its shader — it was uploaded as raw 0/1 bytes in a `gl.ALPHA` texture, so a live cell arrived as `1/255`, `dye = smoothstep(0.6, 1.0, 0.0039)` was identically 0, and every GoL-driven term sat on a constant. The simulation is therefore not reproduced here; the three constants it was stuck on are exposed as the `swirl`, `ripple` and `speed` knobs instead, whose defaults match the original.
+
+**Seed:** works as Crystalline's does (see Seeded Randomization). All five params are seeded over narrower ranges. These avoid a frozen tunnel at speed 0, no arms at swirl 0, a dark tunnel at ripple 0, and the top of `trail`, where the white core keeps swelling: it covers 6% of the frame at the default 0.92 and 13% at 0.99. Because a new node starts from a seed, it no longer opens on the original sketch's look. Setting the knobs to their declared defaults still reproduces it.
+
+## Cloudy Module
+
+The Cloudy module (`js/modules/CloudyModule.js`, `js/shaders/cloudy.js`) is a source. Camera rays cut a slice through drifting 3D fbm noise at `depth`, and the slice is lit as a surface.
+
+**Seed:** works as Crystalline's does (see Seeded Randomization). All eight params are seeded: `colorShift` over its full range, and the rest over narrower ranges. These avoid a frozen clock at speed 0 and both ends of `depth`, where the cloud flattens into a white haze (−2) or sinks into the dark background (2).
 
 ## Crystalline Module
 

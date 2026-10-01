@@ -123,17 +123,22 @@ export class InkDropsModule extends Module {
     super('InkDrops', glCanvas, id);
     this.inputs = [];
     this.outputs = [{ name: 'out', type: 'video' }];
+    // `random` ranges keep a fresh seed away from the knobs' degenerate ends:
+    // frozen at speed 0, a sheet that barely holds a stain at fade 5, and
+    // hueVar up near 0.5, where the palette spreads round the whole wheel and
+    // loses its family.
     this.params = {
-      speed: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed' },
-      rate: { value: 1.0, min: 0.1, max: 4, step: 0.05, label: 'Rate' },
-      size: { value: 1.0, min: 0.3, max: 2.5, step: 0.05, label: 'Size' },
-      stains: { value: 3, min: 0, max: 6, step: 1, label: 'Stains' },
-      wipes: { value: 1.0, min: 0, max: 3, step: 0.05, label: 'Wipes' },
-      fade: { value: 40, min: 5, max: 120, step: 1, label: 'Fade' },
-      hue: { value: 0.58, min: 0, max: 1, step: 0.01, label: 'Hue' },
-      hueVar: { value: 0.085, min: 0, max: 0.5, step: 0.005, label: 'Hue Var' },
-      sat: { value: 0.80, min: 0, max: 1, step: 0.01, label: 'Sat' },
-      grain: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Grain' },
+      speed: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.5, 1.75] },
+      rate: { value: 1.0, min: 0.1, max: 4, step: 0.05, label: 'Rate', random: [0.5, 2.5] },
+      size: { value: 1.0, min: 0.3, max: 2.5, step: 0.05, label: 'Size', random: [0.6, 1.6] },
+      stains: { value: 3, min: 0, max: 6, step: 1, label: 'Stains', random: [1, 5] },
+      wipes: { value: 1.0, min: 0, max: 3, step: 0.05, label: 'Wipes', random: [0.3, 2] },
+      fade: { value: 40, min: 5, max: 120, step: 1, label: 'Fade', random: [15, 90] },
+      hue: { value: 0.58, min: 0, max: 1, step: 0.01, label: 'Hue', random: true },
+      hueVar: { value: 0.085, min: 0, max: 0.5, step: 0.005, label: 'Hue Var', random: [0.02, 0.2] },
+      sat: { value: 0.80, min: 0, max: 1, step: 0.01, label: 'Sat', random: [0.3, 1] },
+      grain: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Grain', random: [0.3, 2] },
+      reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
 
     this.bakeShader = glCanvas.createShader(vertSrc, inkDropsBakeFrag);
@@ -168,6 +173,10 @@ export class InkDropsModule extends Module {
     this.nextStain = 4.0;
     this.nextRing = 1.2;
     this.lastRingClick = -99;
+
+    // Every new sheet starts from its own seed. Patch loads and duplicates
+    // then restore the saved params and seed over this one.
+    this.randomize();
 
     this._themeKey = null;
     this._syncTheme();
@@ -626,6 +635,14 @@ export class InkDropsModule extends Module {
 
   handleKey(key) {
     if (key === 'c' || key === 'C') this._pendingClear = true;
+  }
+
+  onTrigger(name) {
+    if (name === 'reseed') this.randomize();
+  }
+
+  triggerText(name) {
+    return name === 'reseed' ? this.seed : '';
   }
 
   dispose() {
