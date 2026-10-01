@@ -504,10 +504,10 @@ uniform float u_hue;         // first accent's hue; the second is its complement
 #define PIGMENT_TARGET ${PROTO_PIGMENT_TARGET.toFixed(5)}
 #define LUMA vec3(0.299, 0.587, 0.114)
 #define GREY_LO 0.22         // display levels that stretch the murk to a full scan range
-#define GREY_HI 0.56
+#define GREY_HI 0.50
 #define GREY_TINT 0.10       // saturation of the grey's tint
 #define ACCENT_SAT 0.70
-#define ACCENT_MIX 0.85      // most an accent covers the grey under it
+#define ACCENT_MIX 0.75      // most an accent covers the grey under it
 
 // Hash functions
 float hash(float n) { return fract(sin(n) * 43758.5453); }
