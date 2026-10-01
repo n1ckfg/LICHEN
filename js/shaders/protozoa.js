@@ -369,8 +369,15 @@ void main() {
 
   float intensity = length(color.rgb);
 
-  float bands = sin(vTexCoord.x * 50.0 + u_time * 2.0) * sin(vTexCoord.y * 50.0 + u_time * 1.5);
-  bands += noise(vTexCoord * 30.0 + u_time * 0.5) * 0.5;
+  // A vein-like network: the ridges of two octaves of noise, drifting apart
+  // slowly so the network reshapes rather than slides. This was a lattice of
+  // sin(50x) * sin(50y), which under the greyscale grade read as a regular
+  // grid of dots over the whole frame.
+  vec2 p = vTexCoord * (u_resolution / min(u_resolution.x, u_resolution.y)) * 7.0;
+  float f = noise(p + u_time * vec2(0.03, 0.02)) * 0.65
+          + noise(p * 2.1 + 13.0 + u_time * vec2(-0.04, 0.03)) * 0.35;
+  float ridge = 1.0 - abs(f - 0.5) * 2.0;
+  float bands = ridge * ridge * ridge;
 
   float bandThreshold = 0.5 + intensity * 0.3;
   float bandMask = smoothstep(bandThreshold - 0.1, bandThreshold + 0.1, bands);
@@ -488,12 +495,19 @@ uniform vec2 u_resolution;
 uniform sampler2D u_protozoa;
 uniform sampler2D u_mean;    // 1x1; frame-wide mean pigment density in alpha
 uniform float u_gain;        // bloom weight at PIGMENT_TARGET density
+uniform float u_hue;         // first accent's hue; the second is its complement
 
 #define PI 3.14159265359
 #define SEG_LAG ${PROTO_SEG_LAG.toFixed(4)}
 #define SEG_LEN ${PROTO_SEG_LEN.toFixed(4)}
 #define FG_EDGE 0.018
 #define PIGMENT_TARGET ${PROTO_PIGMENT_TARGET.toFixed(5)}
+#define LUMA vec3(0.299, 0.587, 0.114)
+#define GREY_LO 0.22         // display levels that stretch the murk to a full scan range
+#define GREY_HI 0.56
+#define GREY_TINT 0.10       // saturation of the grey's tint
+#define ACCENT_SAT 0.70
+#define ACCENT_MIX 0.85      // most an accent covers the grey under it
 
 // Hash functions
 float hash(float n) { return fract(sin(n) * 43758.5453); }
@@ -560,6 +574,18 @@ vec2 warp(vec2 p, float t) {
 float smin(float a, float b, float k) {
   float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
   return mix(b, a, h) - k * h * (1.0 - h);
+}
+
+// Fully saturated colour of hue h (0-1 round the wheel)
+vec3 hueRGB(float h) {
+  return clamp(abs(mod(h * 6.0 + vec3(0.0, 4.0, 2.0), 6.0) - 3.0) - 1.0, 0.0, 1.0);
+}
+
+// Hue h at saturation s, scaled to unit luminance so a tint never changes how
+// bright the grey under it reads
+vec3 unitTint(float h, float s) {
+  vec3 c = mix(vec3(1.0), hueRGB(h), s);
+  return c / dot(c, LUMA);
 }
 
 // --- Protozoa field sampling ------------------------------------------------
@@ -929,14 +955,28 @@ void main() {
   float vig = 1.0 - length(uv) * 0.3;
   color *= vig;
 
-  color = pow(max(color, 0.0), vec3(1.0 / 2.2));
-  color = pow(color, vec3(0.92, 0.98, 0.88));   // swampy green cast
-  color = color / (color + 0.7);
+  // Medical-imaging grade. The whole scene collapses to one grey channel,
+  // levelled out to a scan's contrast and faintly tinted a quarter-turn from
+  // the accents, so the tint never leans toward either of them. The colonies
+  // come back on top as two complementary accents, like a two-channel
+  // fluorescence overlay on a greyscale image: cool pigment (algae, teal,
+  // duckweed) in u_hue, warm pigment (ochre, rust) in its complement. Where the
+  // two mix they cancel back toward grey, so only clear colonies carry colour.
+  float y = pow(max(dot(color, LUMA), 0.0), 1.0 / 2.2);
+  y = y / (y + 0.7);
+  y = clamp((y - GREY_LO) / (GREY_HI - GREY_LO), 0.0, 1.0);
+  y = y * y * (3.0 - 2.0 * y);
+  vec3 grey = y * unitTint(u_hue + 0.25, GREY_TINT);
 
-  float ca = length(uv) * 0.012;
-  color.r *= 1.0 + ca;
-  color.b *= 1.0 - ca;
-  color.g *= 1.05;
+  float warm = smoothstep(0.8, 1.5, ink.r / max(ink.g, 1e-4));
+  vec3 accent = mix(hueRGB(u_hue), hueRGB(u_hue + 0.5), warm);
+  accent = mix(vec3(dot(accent, LUMA)), accent, ACCENT_SAT);
+  accent /= max(dot(accent, LUMA), 1e-3);
+  // Only clear colonies, never on the animals, and lit partly by the grey
+  // under them so the water's structure still reads through the colour
+  float acc = smoothstep(0.15, 0.75, density) * (1.0 - cover) * ACCENT_MIX;
+  float lit = clamp(0.2 + 0.45 * y + 0.45 * density, 0.0, 1.0);
+  color = clamp(mix(grey, accent * lit, acc), 0.0, 1.0);
 
   // A fixed one-level dither keeps the dark gradients from banding. This was a
   // grain redrawn every frame and added before the gamma lift, which in the

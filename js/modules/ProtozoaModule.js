@@ -64,6 +64,7 @@ export class ProtozoaModule extends Module {
       banding: { value: 0.30, min: 0, max: 1, step: 0.01, label: 'Banding', random: [0.1, 0.7] },
       dry: { value: 0.03, min: 0, max: 0.2, step: 0.005, label: 'Dry', random: [0.01, 0.08] },
       gain: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Gain', random: [0.6, 1.8] },
+      hue: { value: 0.33, min: 0, max: 1, step: 0.01, label: 'Hue', random: true },
       reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
 
@@ -375,6 +376,7 @@ export class ProtozoaModule extends Module {
       // protoGrad derives a texel step from this, so it wants the physical size
       sh.setUniform('u_resolution', this.fragResolution());
       sh.setUniform('u_gain', this.params.gain.value);
+      sh.setUniform('u_hue', this.params.hue.value);
     });
   }
 
