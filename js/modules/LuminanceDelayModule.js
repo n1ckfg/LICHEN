@@ -16,7 +16,7 @@ export class LuminanceDelayModule extends Module {
     this.params = {
       divisions: { value: 8, min: -12, max: 12, step: 1, label: 'Segments' },
       framesPerDivision: { value: 4, min: 1, max: 10, step: 1, label: 'Delay' },
-      mirror: { value: 1, min: 0, max: 1, step: 1, label: 'Mirror' },
+      mirror: { value: 0, min: 0, max: 1, step: 1, label: 'Mirror' },
     };
 
     this.createShader(luminanceDelayFrag);

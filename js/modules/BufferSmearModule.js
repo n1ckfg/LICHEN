@@ -10,7 +10,7 @@ export class BufferSmearModule extends Module {
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
-      smearAmount: { value: 1.0, min: 0, max: 5, step: 0.01, label: 'Smear' },
+      smearAmount: { value: 0.2, min: 0, max: 5, step: 0.01, label: 'Smear' },
       feedback: { value: 0.96, min: 0, max: 1, step: 0.01, label: 'Feedback' },
       zoomSpeed: { value: 1.0, min: 0, max: 5, step: 0.01, label: 'Zoom' },
     };

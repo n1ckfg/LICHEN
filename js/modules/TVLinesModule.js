@@ -8,9 +8,9 @@ export class TVLinesModule extends Module {
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
-      lineThickness: { value: 1.2, min: 0.1, max: 5, step: 0.01, label: 'Thickness' },
+      lineThickness: { value: 4, min: 0.1, max: 5, step: 0.01, label: 'Thickness' },
       lineDarkness: { value: 0.1, min: 0, max: 1, step: 0.01, label: 'Darkness' },
-      flicker: { value: 0.02, min: 0, max: 0.2, step: 0.001, label: 'Flicker' },
+      flicker: { value: 0.01, min: 0, max: 0.2, step: 0.001, label: 'Flicker' },
     };
     this.createShader(tvFrag);
     this.createOutputFBO();
