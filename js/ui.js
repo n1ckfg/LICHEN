@@ -11,7 +11,7 @@ void main() {
 
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Cloudy', 'Crystalline', 'GridGuys', 'Image', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
-  'Utility': ['Brcosa', 'Edges', 'Levels', 'LUT', 'Sharpen', 'VideoMixer'],
+  'Utility': ['Blur', 'Brcosa', 'Edges', 'Levels', 'LUT', 'Sharpen', 'VideoMixer'],
   'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Yellowtail'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC'],
@@ -42,6 +42,7 @@ const MODULE_COLORS = {
   SpiralGalaxy: color_source_art,
   VideoPlayer: color_source_basic,
   // - - - UTILITY - - -
+  Blur: color_utility,
   Brcosa: color_utility,
   Edges: color_utility,
   Levels: color_utility,

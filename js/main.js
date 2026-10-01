@@ -48,6 +48,7 @@ import './modules/ConwayModule.js';
 import './modules/GRASSModule.js';
 import './modules/YellowtailModule.js';
 // - - - UTILITY - - -
+import './modules/BlurModule.js';
 import './modules/BrcosaModule.js';
 import './modules/EdgesModule.js';
 import './modules/LevelsModule.js';
