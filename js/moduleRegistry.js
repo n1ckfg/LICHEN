@@ -2,8 +2,6 @@ const registry = new Map();
 
 // Old type names, so patches saved before a module was renamed still load
 const RENAMED = {
-  Cyberlace: 'Cyberlaced',
-  Glitch: 'TVGlitch',
 };
 
 export function registerModule(typeName, moduleClass) {
