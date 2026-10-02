@@ -1,4 +1,4 @@
-export const glitchFrag = `
+export const tvGlitchFrag = `
 precision highp float;
 varying vec2 vTexCoord;
 uniform sampler2D tex0;

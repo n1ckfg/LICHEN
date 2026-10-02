@@ -11,11 +11,11 @@ void main() {
 
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
-  'Utility': ['Blur', 'Brcosa', 'Edges', 'Levels', 'LUT', 'Sharpen', 'VideoMixer'],
+  'Utility': ['Blur', 'Brcosa', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Sharpen', 'VideoMixer'],
   'Generative': ['Cloudy', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy'],
   'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Yellowtail'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlaced', 'Delay', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVGlitch', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
   'Archival': ['NAPLPS', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
 };
@@ -25,7 +25,7 @@ const color_grass = [34, 120, 68];
 const color_generative = [170, 85, 136];
 const color_sandin = [102, 102, 68];
 const color_archival = [68, 102, 136];
-const color_effect_tv = [125, 85, 129];
+const color_effect = [125, 85, 129];
 const color_effect_op = [108, 102, 186];
 const color_utility = [85, 120, 100];
 const color_output = [170, 85, 34];
@@ -39,9 +39,11 @@ const MODULE_COLORS = {
   // - - - UTILITY - - -
   Blur: color_utility,
   Brcosa: color_utility,
+  Dither: color_utility,
   Edges: color_utility,
   Levels: color_utility,
   LUT: color_utility,
+  Mosaic: color_utility,
   Sharpen: color_utility,
   VideoMixer: color_utility,
   // - - - GENERATIVE - - -
@@ -66,28 +68,26 @@ const MODULE_COLORS = {
   ValueScrambler: color_sandin,
   // - - - EFFECTS - - -
   BooleanLogic: color_effect_op,
-  BufferSmear: color_effect_tv,
-  Cyberlace: color_effect_tv,
-  DeeSeventySix: color_effect_tv,
-  Delay: color_effect_tv,
-  Dither: color_effect_tv,
-  FilmGrain: color_effect_tv,
-  GameBoy: color_effect_tv,
-  Glitch: color_effect_tv,
-  HSFlow: color_effect_tv,
-  HyperCard: color_effect_tv,
-  Maelstrom: color_effect_tv,
-  Mosaic: color_effect_op,
-  PixelVision: color_effect_tv,
-  RuttEtra: color_effect_tv,
+  BufferSmear: color_effect_op,
+  Cyberlaced: color_effect,
+  DeeSeventySix: color_effect,
+  Delay: color_effect_op,
+  FilmGrain: color_effect_op,
+  GameBoy: color_effect_op,
+  HSFlow: color_effect,
+  HyperCard: color_effect_op,
+  Maelstrom: color_effect,
+  PixelVision: color_effect_op,
+  RuttEtra: color_effect,
   LuminanceDelay: color_effect_op,
-  SpatialSlice: color_effect_op,
+  SpatialSlice: color_effect,
   Slitscan: color_effect_op,
-  TimeTunnel: color_effect_tv,
-  TVLines: color_effect_tv,
+  TimeTunnel: color_effect,
+  TVGlitch: color_effect,
+  TVLines: color_effect_op,
   UnrealBloom: color_effect_op,
-  VHSC: color_effect_tv,
-  VideoToasting: color_effect_tv,
+  VHSC: color_effect_op,
+  VideoToasting: color_effect,
   // - - - ARCHIVAL - - -
   NAPLPS: color_archival,
   QTVR: color_archival,

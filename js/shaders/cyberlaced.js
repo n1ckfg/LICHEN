@@ -1,4 +1,4 @@
-export const cyberlaceFrag = `
+export const cyberlacedFrag = `
 precision highp float;
 
 uniform sampler2D tex0;

@@ -1,16 +1,16 @@
 import { Module } from './Module.js';
-import { cyberlaceFrag } from '../shaders/cyberlace.js';
+import { cyberlacedFrag } from '../shaders/cyberlaced.js';
 import { registerModule } from '../moduleRegistry.js';
 
-export class CyberlaceModule extends Module {
+export class CyberlacedModule extends Module {
   constructor(glCanvas, id) {
-    super('Cyberlace', glCanvas, id);
+    super('Cyberlaced', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
       levels: { value: 4, min: 2, max: 4, step: 1, label: 'Levels' },
     };
-    this.createShader(cyberlaceFrag);
+    this.createShader(cyberlacedFrag);
     this.createOutputFBO();
   }
 
@@ -28,4 +28,4 @@ export class CyberlaceModule extends Module {
   }
 }
 
-registerModule('Cyberlace', CyberlaceModule);
+registerModule('Cyberlaced', CyberlacedModule);

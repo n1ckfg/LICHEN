@@ -1,10 +1,10 @@
 import { Module } from './Module.js';
-import { glitchFrag } from '../shaders/glitch.js';
+import { tvGlitchFrag } from '../shaders/tv-glitch.js';
 import { registerModule } from '../moduleRegistry.js';
 
-export class GlitchModule extends Module {
+export class TVGlitchModule extends Module {
   constructor(glCanvas, id) {
-    super('Glitch', glCanvas, id);
+    super('TVGlitch', glCanvas, id);
     this.inputs = [
       { name: 'in', type: 'video' },
       { name: 'bars', type: 'video' },
@@ -16,7 +16,7 @@ export class GlitchModule extends Module {
       vsync: { value: 0, min: -1, max: 1, step: 0.01, label: 'V-Sync' },
       hsync: { value: 0, min: -1, max: 1, step: 0.01, label: 'H-Sync' },
     };
-    this.createShader(glitchFrag);
+    this.createShader(tvGlitchFrag);
     this.createOutputFBO();
   }
 
@@ -39,4 +39,4 @@ export class GlitchModule extends Module {
   }
 }
 
-registerModule('Glitch', GlitchModule);
+registerModule('TVGlitch', TVGlitchModule);
