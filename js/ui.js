@@ -10,37 +10,32 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'Cloudy', 'Crystalline', 'GridGuys', 'Image', 'NAPLPS', 'Protozoa', 'SpiralGalaxy', 'VideoPlayer'],
+  'Sources': ['Camera', 'Image', 'VideoPlayer'],
   'Utility': ['Blur', 'Brcosa', 'Edges', 'Levels', 'LUT', 'Sharpen', 'VideoMixer'],
+  'Generative': ['Cloudy', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy'],
   'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Yellowtail'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
+  'Archival': ['NAPLPS'],
   'Output': ['Monitor'],
 };
 
-const color_source_basic = [34, 85, 170];
+const color_source = [34, 85, 170];
 const color_grass = [34, 120, 68];
-const color_source_art = [170, 85, 136];
+const color_generative = [170, 85, 136];
 const color_sandin = [102, 102, 68];
-const color_effect_noise = [68, 102, 136];
+const color_archival = [68, 102, 136];
 const color_effect_tv = [125, 85, 129];
-const color_effect_flow = [136, 85, 34];
 const color_effect_op = [108, 102, 186];
 const color_utility = [85, 120, 100];
 const color_output = [170, 85, 34];
-const color_canon = [160, 120, 40];
+const color_interactive = [160, 120, 40];
 
 const MODULE_COLORS = {
   // - - - SOURCES - - -
-  Camera: color_source_basic,
-  Cloudy: color_source_art,
-  Crystalline: color_source_art,
-  GridGuys: color_source_art,
-  Image: color_source_basic,
-  NAPLPS: color_source_art,
-  Protozoa: color_source_art,
-  SpiralGalaxy: color_source_art,
-  VideoPlayer: color_source_basic,
+  Camera: color_source,
+  Image: color_source,
+  VideoPlayer: color_source,
   // - - - UTILITY - - -
   Blur: color_utility,
   Brcosa: color_utility,
@@ -49,11 +44,17 @@ const MODULE_COLORS = {
   LUT: color_utility,
   Sharpen: color_utility,
   VideoMixer: color_utility,
+  // - - - GENERATIVE - - -
+  Cloudy: color_generative,
+  Crystalline: color_generative,
+  GridGuys: color_generative,
+  Protozoa: color_generative,
+  SpiralGalaxy: color_generative,
   // - - - INTERACTIVE - - -
-  Conway: color_canon,
-  InkDrops: color_canon,
+  Conway: color_interactive,
+  InkDrops: color_interactive,
   GRASS: color_grass,
-  Yellowtail: color_canon,
+  Yellowtail: color_interactive,
   // - - - SANDIN - - -
   AdderMultiplier: color_sandin,
   ColorEncoder: color_sandin,
@@ -65,17 +66,17 @@ const MODULE_COLORS = {
   ValueScrambler: color_sandin,
   // - - - EFFECTS - - -
   BooleanLogic: color_effect_op,
-  BufferSmear: color_effect_flow,
+  BufferSmear: color_effect_tv,
   Cyberlace: color_effect_tv,
-  DeeSeventySix: color_effect_noise,
-  Delay: color_effect_flow,
-  Dither: color_effect_noise,
-  FilmGrain: color_effect_noise,
-  GameBoy: color_effect_noise,
+  DeeSeventySix: color_effect_tv,
+  Delay: color_effect_tv,
+  Dither: color_effect_tv,
+  FilmGrain: color_effect_tv,
+  GameBoy: color_effect_tv,
   Glitch: color_effect_tv,
-  HSFlow: color_effect_flow,
-  HyperCard: color_effect_noise,
-  Maelstrom: color_effect_flow,
+  HSFlow: color_effect_tv,
+  HyperCard: color_effect_tv,
+  Maelstrom: color_effect_tv,
   Mosaic: color_effect_op,
   PixelVision: color_effect_tv,
   RuttEtra: color_effect_tv,
@@ -87,6 +88,8 @@ const MODULE_COLORS = {
   UnrealBloom: color_effect_op,
   VHSC: color_effect_tv,
   VideoToasting: color_effect_tv,
+  // - - - ARCHIVAL - - -
+  NAPLPS: color_archival,
   // - - - OUTPUT - - -
   Monitor: color_output 
 };
@@ -203,9 +206,11 @@ export class NodeGraphUI {
     const sectionInitialState = {
       'Sources': true,
       'Utility': true,
+      'Generative': true,
       'Interactive': true,
       'Sandin': true,
       'Effects': true,
+      'Archival': true,
       'Output': true,
     };
 

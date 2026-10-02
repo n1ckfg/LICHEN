@@ -57,11 +57,13 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 
 ### Module Categories
 
-- **Sources**: Camera, Cloudy, Crystalline, GridGuys, Image, NAPLPS, Protozoa, SpiralGalaxy, VideoPlayer
+- **Sources**: Camera, Image, VideoPlayer
 - **Utility**: Blur, Brcosa, Edges, Levels, LUT, Sharpen, VideoMixer
+- **Generative**: Cloudy, Crystalline, GridGuys, Protozoa, SpiralGalaxy
 - **Interactive**: Conway, GRASS, InkDrops, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Dither, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, Mosaic, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
+- **Archival**: NAPLPS
 - **Output**: Monitor
 
 ### Shaders (`js/shaders/`)
