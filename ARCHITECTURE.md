@@ -14,7 +14,7 @@ js/main.js (p5.js loop)
 - `js/main.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+A select all, Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen); also parses and loads shareable patch data from the URL hash.
 - `js/pipeline.js` — `ProcessingPipeline`: holds the `ConnectionGraph`, drives per-frame processing
 - `js/graph.js` — `ConnectionGraph`: DAG of modules; tracks video `connections` and parameter `controlConnections`; re-runs topological sort on every structural change; serializes/deserializes the full patch as JSON. This is the source of truth for patch state.
-- `js/moduleRegistry.js` — global module registry; `registerModule(typeName, class)` / `createModule(typeName, glCanvas, id)`
+- `js/moduleRegistry.js` — global module registry; `registerModule(typeName, class)` / `createModule(typeName, glCanvas, id)`. Its `RENAMED` table maps old type names to current ones, so patches saved before a rename still load (see Renaming a Module)
 - `js/ui.js` — `NodeGraphUI`: full node graph editor drawn on the p5.js P2D canvas, with a DOM sidebar palette and right-click search popup; handles pan/zoom, node drag, cable wiring, parameter knobs, and monitor preview rendering
 - `js/modules/Module.js` — base class for all modules; defines common behavior for shaders, FBOs, and parameters, plus seeded randomization and trigger params
 - `js/stringseed.js` — `StringSeed`, the SSoT seed-to-choice mapping behind `Module.randomize()` (ported from the StringSeedGenerator project)
@@ -76,6 +76,17 @@ Fragment shaders are stored as JS template literal exports (e.g., `export const 
 2. Create `js/modules/MyModule.js` extending `Module`, defining `inputs`, `outputs`, `params`, and `process()`; call `registerModule('MyModule', MyModuleClass)` at the end
 3. Import `'./modules/MyModule.js'` in `js/main.js`
 4. Add the type name to the appropriate category in `MODULE_CATEGORIES` in `js/ui.js`
+
+## Renaming a Module
+
+Patches, including share-link hashes, save each node's type name, and `createModule()` throws on a name it doesn't know, which aborts the whole patch load. A rename therefore always adds the old name to the `RENAMED` table in `js/moduleRegistry.js`:
+
+1. Rename the type everywhere it appears: `super(...)` and `registerModule(...)` in the module, its entries in `MODULE_CATEGORIES` and `MODULE_COLORS` in `js/ui.js`, the import in `js/main.js`, any patches in `workflows/`, and this file. Rename the module and shader files to match with `git mv`, so history follows them.
+2. Add `OldName: 'NewName'` to `RENAMED`. `createModule()` looks a name up there before the registry, so an old patch builds the renamed module with its saved params and cables, and saves back under the new name.
+3. If the module was renamed before, point its earlier entries at the new name too. The lookup is a single step, so `Glitch: 'TVGlitch'` would stop loading if TVGlitch were renamed and its entry left alone.
+4. Never remove an entry, and never give a new module a name already in the table: the table is checked first, so that module could not be created.
+
+Current entries: `Cyberlace` → `Cyberlaced`, `Glitch` → `TVGlitch`.
 
 ## GRASS Module
 
