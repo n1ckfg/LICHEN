@@ -7,7 +7,6 @@ import './modules/CrystallineModule.js';
 import './modules/InkDropsModule.js';
 import './modules/GridGuysModule.js';
 import './modules/ImageModule.js';
-import './modules/NAPLPSModule.js';
 import './modules/OscillatorModule.js';
 import './modules/ProtozoaModule.js';
 import './modules/SpiralGalaxyModule.js';
@@ -56,6 +55,10 @@ import './modules/LevelsModule.js';
 import './modules/LUTModule.js';
 import './modules/SharpenModule.js';
 import './modules/VideoMixerModule.js';
+// - - - ARCHIVAL - - -
+import './modules/NAPLPSModule.js';
+import './modules/QTVRModule.js';
+import './modules/VRMLModule.js';
 // - - - OUTPUT - - -
 import './modules/MonitorModule.js';
 

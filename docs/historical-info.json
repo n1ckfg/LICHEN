@@ -70,5 +70,17 @@
 		"year": 2019,
 		"title": "<a href='https://threejs.org/docs/#UnrealBloomPass'>UnrealBloom</a>",
 		"body": "Inspired by the bloom pass of Unreal Engine, by <a href='https://github.com/Mugen87'>Michael Herzog</a>."
+	},
+	{
+		"name": "QTVR",
+		"year": 1995,
+		"title": "<a href='https://en.wikipedia.org/wiki/QuickTime_VR'>QuickTime VR</a>",
+		"body": "Based on the p5.js viewer in <a href='https://github.com/n1ckfg/vrml-qtvr-viewer'>vrml-qtvr-viewer</a>."
+	},
+	{
+		"name": "VRML",
+		"year": 1994,
+		"title": "<a href='https://en.wikipedia.org/wiki/VRML'>Virtual Reality Modeling Language</a>",
+		"body": "Based on the p5.js viewer in <a href='https://github.com/n1ckfg/vrml-qtvr-viewer'>vrml-qtvr-viewer</a>, whose parser comes from the <a href='https://threejs.org/'>three.js</a> VRMLLoader."
 	}
 ]

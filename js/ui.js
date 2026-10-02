@@ -16,7 +16,7 @@ const MODULE_CATEGORIES = {
   'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Yellowtail'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'Dither', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'Mosaic', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
-  'Archival': ['NAPLPS'],
+  'Archival': ['NAPLPS', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
 };
 
@@ -90,6 +90,8 @@ const MODULE_COLORS = {
   VideoToasting: color_effect_tv,
   // - - - ARCHIVAL - - -
   NAPLPS: color_archival,
+  QTVR: color_archival,
+  VRML: color_archival,
   // - - - OUTPUT - - -
   Monitor: color_output 
 };
@@ -351,7 +353,8 @@ export class NodeGraphUI {
     if (mod.type === 'Monitor') {
       monitorSection += 124; // Extra space for param padding + FPS counter + record/fullscreen/load+save+link buttons
     }
-    const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT';
+    const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
+      mod.type === 'QTVR' || mod.type === 'VRML';
     const fileBtnSection = hasFileBtn ? 24 : 0;
     return HEADER_HEIGHT + portSection + paramSection + previewSection + monitorSection + fileBtnSection + 12;
   }
@@ -890,7 +893,8 @@ export class NodeGraphUI {
   hitTestVideoPlayerBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS' && mod.type !== 'Image' && mod.type !== 'LUT') continue;
+      if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS' && mod.type !== 'Image' && mod.type !== 'LUT' &&
+        mod.type !== 'QTVR' && mod.type !== 'VRML') continue;
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramCount = Object.keys(mod.params).length;
@@ -1705,8 +1709,9 @@ export class NodeGraphUI {
       }
     }
 
-    // File picker button (VideoPlayer, NAPLPS, Image, LUT)
-    if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT') {
+    // File picker button (VideoPlayer, NAPLPS, Image, LUT, QTVR, VRML)
+    if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
+        mod.type === 'QTVR' || mod.type === 'VRML') {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
@@ -1721,9 +1726,11 @@ export class NodeGraphUI {
       p.fill(200);
       p.textSize(9);
       p.textAlign(p.CENTER, p.CENTER);
-      // A loaded LUT names itself on the button, which still opens the picker
+      // A loaded LUT, panorama or world names itself on the button, which still opens the picker
       const btnLabel = mod.type === 'NAPLPS' ? 'Load .nap...' : mod.type === 'Image' ? 'Load Image...'
         : mod.type === 'LUT' ? (mod.lutName ? fitText(p, mod.lutName, MODULE_WIDTH - 32) : 'Load LUT...')
+        : mod.type === 'QTVR' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load Panorama...')
+        : mod.type === 'VRML' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .wrl...')
         : 'Load Video...';
       p.text(btnLabel, mod.x + MODULE_WIDTH / 2, btnY + 10);
     }
@@ -1735,8 +1742,9 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      // Conway / InkDrops: handle the click instead of exiting fullscreen
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops')) {
+      // Conway / InkDrops / QTVR / VRML: handle the click instead of exiting fullscreen
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' ||
+                  mod.type === 'QTVR' || mod.type === 'VRML')) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
         return;
@@ -2114,10 +2122,10 @@ export class NodeGraphUI {
   }
 
   mouseDragged(mx, my) {
-    // Conway: handle mouse drawing in fullscreen
+    // Conway: handle mouse drawing in fullscreen (QTVR / VRML: turn the view)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail')) {
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML')) {
         mod.handleMouseDrag(mx, my, this.p.width, this.p.height);
         return;
       }
@@ -2174,7 +2182,7 @@ export class NodeGraphUI {
     // Conway: handle mouse release in fullscreen
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail')) {
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML')) {
         mod.handleMouseUp();
         return;
       }
@@ -2332,10 +2340,10 @@ export class NodeGraphUI {
   }
 
   mouseWheel(delta) {
-    // Conway: handle scroll wheel for cell size in fullscreen
+    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML: zoom)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail')) {
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML')) {
         mod.handleWheel(delta);
         return;
       }
