@@ -12,7 +12,7 @@ void main() {
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
   'Utility': ['Blur', 'Brcosa', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Sharpen', 'VideoMixer'],
-  'Generative': ['Cloudy', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
+  'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
   'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Yellowtail'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'DeeSeventySix', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
@@ -48,6 +48,7 @@ const MODULE_COLORS = {
   VideoMixer: color_utility,
   // - - - GENERATIVE - - -
   Cloudy: color_generative,
+  Coils: color_generative,
   Crystalline: color_generative,
   GridGuys: color_generative,
   Protozoa: color_generative,

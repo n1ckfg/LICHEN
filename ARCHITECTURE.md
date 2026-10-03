@@ -49,7 +49,7 @@ A param that sets `widget: 'trigger'` is drawn as a momentary button instead of 
 
 The seed is kept on `mod.seed`. A node whose `mod.seed` is set saves it as `seed` in the patch JSON, and duplicating a node copies it. On load, `fromJSON` restores the saved seed and the saved param values, and does not re-resolve the seed, because knobs may have moved since it was drawn. A patch saved before seeds existed loads with `mod.seed = null`.
 
-A module adopts this by adding `random` to its params. It may call `this.randomize()` at the end of its constructor, and may add a trigger param with `onTrigger()` calling `this.randomize()` and `triggerText()` returning `this.seed`. Cloudy, Crystalline, InkDrops, Protozoa and SpiralGalaxy all do all three, each with the trigger named `reseed` and labelled Seed, last in its params. The seed sets params only. Anything a module draws from `Math.random` stays unseeded.
+A module adopts this by adding `random` to its params. It may call `this.randomize()` at the end of its constructor, and may add a trigger param with `onTrigger()` calling `this.randomize()` and `triggerText()` returning `this.seed`. Cloudy, Coils, Crystalline, InkDrops, Protozoa and SpiralGalaxy all do all three, each with the trigger named `reseed` and labelled Seed, last in its params. The seed sets params only. Anything a module draws from `Math.random` stays unseeded.
 
 Each node header has a collapse toggle in the upper right ("−" when expanded, "+" when collapsed). A module may also set `this.historicalInfo = 'Name'` in its constructor; this adds a "?" button to the left of the collapse toggle that opens an info popup (2× the node's size, centered on the node, dismissed by any click outside it). The popup content comes from the entry with a matching `name` in `docs/historical-info.json`: the popup's heading is that entry's `title` followed by its `year` in parentheses (the title falls back to the `historicalInfo` name when the entry or its title is missing; the year is omitted when absent), and its text is the entry's `body`. Modules leaving `historicalInfo` at its default `null` show no button.
 
@@ -59,7 +59,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 
 - **Sources**: Camera, Image, VideoPlayer
 - **Utility**: Blur, Brcosa, Dither, Edges, Levels, LUT, Mosaic, Sharpen, VideoMixer
-- **Generative**: Cloudy, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
+- **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
 - **Interactive**: Conway, GRASS, InkDrops, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
@@ -238,6 +238,45 @@ The SpiralGalaxy module (`js/modules/SpiralGalaxyModule.js`) is a source: a rota
 The Cloudy module (`js/modules/CloudyModule.js`, `js/shaders/cloudy.js`) is a source. Camera rays cut a slice through drifting 3D fbm noise at `depth`, and the slice is lit as a surface.
 
 **Seed:** works as Crystalline's does (see Seeded Randomization). All eight params are seeded: `colorShift` over its full range, and the rest over narrower ranges. These avoid a frozen clock at speed 0 and both ends of `depth`, where the cloud flattens into a white haze (−2) or sinks into the dark background (2).
+
+## Coils Module
+
+The Coils module (`js/modules/CoilsModule.js`, `js/shaders/coils.js`) is a source ported from the WebGL sketch `fooz.html`. It ray-marches a liquid helix: a tube wound round a wriggling, bending axis and smooth-blended with a smaller copy of itself, seen from a slow orbit.
+
+**Params.** Each of the sketch's constants is a knob, and each knob defaults to the sketch's value:
+
+| Param | Label | Default | Sets |
+| --- | --- | --- | --- |
+| `speed` | Speed | 1 | The clock's rate |
+| `turns` | Turns | 5 | Turns of the coil per 6 units of height |
+| `radius` | Radius | 1.1 | The coil's radius |
+| `thick` | Tube | 0.28 | The tube's radius |
+| `lobes` | Lobes | 1 | Gain on the two twisting ripples round the tube's cross-section |
+| `bulge` | Bulge | 0.06 | The swelling that travels along the coil |
+| `wriggle` | Wriggle | 0.35 | The sway of the whole coil |
+| `bend` | Bend | 1 | Gain on the slow lean of the coil's axis |
+| `melt` | Melt | 0.35 | The smooth-min radius where the two coils merge. At 0 it is a plain union |
+| `dist` | Dist | 2.6 | Camera distance. The camera's height and the march's reach (12 units at the default) move with it, so it works as a dolly |
+| `orbit` | Orbit | 1 | Orbit rate, as a multiple of the sketch's 0.25 rad/s |
+| `hue` | Hue | 0 | Turns the palette |
+| `stepScale` | Step | 0.9 | The fraction of the field each march step takes |
+| `steps` | Steps | 96 | The march budget, up to 160 |
+
+The clock and the orbit angle are both accumulated (`time += dt × speed`), so turning Speed or Orbit doesn't jump the animation.
+
+**Torn ribbons.** The sketch's field is far from a true distance, and that is its look. The coil's centre moves sideways about 5.8 units per unit of height, but `sdCoil()` measures only across the horizontal slice. So the field can overestimate the distance nearly six times over. The march steps 0.9 of it, tunnels through most of the tube, and draws it as torn, streaming ribbons. Any step that lands inside the tube also counts as a hit. Turning Step down to about 0.2, with Steps at 160, fills the ribbons back in toward a solid tube. More turns, a wider coil or a thinner tube tear it further.
+
+**Port notes:**
+- The screen uv comes from `vTexCoord` rather than `gl_FragCoord`, so the shader is independent of pixel density.
+- `calcNormal()` takes its differences backwards, so the normal points into the tube. It is kept as written: flipping it changes every pixel the coil covers.
+- The sketch's vignette goes negative in the corners of a frame wider than about 1.7:1, where `pow()` is undefined, so it is floored at 0.
+- `smin()` divides by its radius, so Melt is floored at 1e-4 in the shader.
+
+**Checked against the sketch.** The comparison ran in headless Chrome at 640×480, with the defaults and the clock held at 3, 17.5 and 42 s. All but 0.1–0.2% of pixels match the sketch to within 2 levels. The rest are isolated pixels where the torn march magnifies float rounding.
+
+**Seed:** works as Crystalline's does (see Seeded Randomization). Twelve params are seeded: `hue` over its full range, and the rest over narrower ranges. These avoid a frozen clock at speed 0, and coils wound so tight, wide or thin (`turns` above 6, `thick` below 0.2) that the march tears them down to a few threads. Step and Steps are the march rather than the coil, so the seed leaves them alone.
+
+**Cost.** At 1280×960 (a retina display) on an M2 Max, a frame costs 3.5 ms at the defaults, and 4.9 ms at Step 0.2 with 160 Steps.
 
 ## Crystalline Module
 
