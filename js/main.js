@@ -11,6 +11,7 @@ import './modules/OscillatorModule.js';
 import './modules/ProtozoaModule.js';
 import './modules/SpiralGalaxyModule.js';
 import './modules/VideoPlayerModule.js';
+import './modules/WhitneyModule.js';
 // - - - CORE - - -
 import './modules/AdderMultiplierModule.js';
 import './modules/ColorEncoderModule.js';
