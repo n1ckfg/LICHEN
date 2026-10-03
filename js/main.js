@@ -38,6 +38,7 @@ import './modules/MaelstromModule.js';
 import './modules/PixelVisionModule.js';
 import './modules/RuttEtraModule.js';
 import './modules/SlitscanModule.js';
+import './modules/SlowscanJamModule.js';
 import './modules/SpatialSliceModule.js';
 import './modules/TimeTunnelModule.js';
 import './modules/TVLinesModule.js';

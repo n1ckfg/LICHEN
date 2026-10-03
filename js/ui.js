@@ -15,7 +15,7 @@ const MODULE_CATEGORIES = {
   'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
   'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Yellowtail'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'DeeSeventySix', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'DeeSeventySix', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'RuttEtra', 'Slitscan', 'SlowscanJam', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
   'Archival': ['NAPLPS', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
 };
@@ -86,6 +86,7 @@ const MODULE_COLORS = {
   LuminanceDelay: color_effect_op,
   SpatialSlice: color_effect,
   Slitscan: color_effect_op,
+  SlowscanJam: color_effect_op,
   TimeTunnel: color_effect,
   TVLines: color_effect_op,
   UnrealBloom: color_effect_op,

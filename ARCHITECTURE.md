@@ -34,7 +34,7 @@ Modules can also export control values by setting `this.controlValues['portName'
 
 The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
-A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Slitscan `axis`, SyncGenerator `mode`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
+A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Slitscan `axis`, SlowscanJam `blend`, SyncGenerator `mode`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
 
 A param that sets `widget: 'trigger'` is drawn as a momentary button instead of a knob. It uses the same row as a drop-down: an inlet dot, then the label, then a button where the drop-down's box would be. Declare it as `{ value: 0, min: 0, max: 1, step: 1, label, widget: 'trigger' }`. Clicking the button calls `mod.fireTrigger(name)`. That records the time in `mod.triggeredAt[name]` and then calls `mod.onTrigger(name)`, which modules override to act on the trigger. A control cable fires it too. `ProcessingPipeline` fires the trigger on the cable's rising edge, when the value it applies crosses the param's midpoint (0.5) from below. The button still fires on a click while a cable is connected, since firing never touches the value. Its text is `mod.triggerText(name)`, which is empty by default and cut short with an ellipsis when it is too long. It is drawn fully lit on the first frame after it fires, however slow that frame is, then fades back over 250 ms. As with the drop-down, dragging the unconnected dot does nothing. A trigger's value is saved like any other param, but it only records where the last cable left it.
 
@@ -62,7 +62,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
 - **Interactive**: Conway, GRASS, InkDrops, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
-- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
+- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, RuttEtra, Slitscan, SlowscanJam, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
 - **Archival**: NAPLPS, QTVR, VRML
 - **Output**: Monitor
 
@@ -464,6 +464,48 @@ Both modules implement time-based effects that require random access to a ring b
 
 Both modules clear their atlases on construction so the early frames show progressive fill rather than garbage memory.
 
+## SlowscanJam Module
+
+The SlowscanJam module (`js/modules/SlowscanJamModule.js`, `js/modules/slowscanjam/`, `js/shaders/slowscanjam.js`) passes video through the Cassette Video codec from the SlowscanJam project. Each field of the input is encoded to the stereo signal, decoded straight back, and drawn as scanlines on a fading phosphor screen. The signal carries luma on the left channel, chroma on the right (Cb and Cr on alternating lines), and sync pulses marking the field and every line. It is never played: the app's AudioContext, playback queue and waveform view are gone, and the signal exists only as the sample arrays passed from encoder to decoder.
+
+**Params.** These are the app's controls, with its ranges and defaults:
+
+| Param | Label | Range | Default |
+| --- | --- | --- | --- |
+| `lines` | Lines | 50–200, in steps of 10 | 200 |
+| `fps` | FPS | 1–6, in steps of 0.5 | 6 |
+| `lineWidth` | Line Width | 0.5–5 px | 5 |
+| `brightness` | Brightness | 0.5–2 | 1 |
+| `saturation` | Saturation | 0.5–2 | 1 |
+| `blend` | Blend | Normal, Additive | Normal |
+
+Lines and FPS snap to their steps, so a cable rebuilds the codec only when it crosses one. A rebuild happens at the next field and resets the decoder's sync, as the app's `init()` did. Additive is the app's Blend Mode checkbox: lines add (`ONE, ONE`) instead of covering what is there. With the fade taking 5% every 50 ms, additive fields build up toward white.
+
+**Files:**
+- `slowscanjam/encoder.js` is the app's `SlowscanEncoder`, CPU path, unchanged. The WebGL2 encoder is not ported, because it needs a WebGL2 context of its own per node (browsers cap them) and integer render targets that p5 framebuffers don't offer. The SlowscanJam notes measure the two encoders' signals within about 2e-7 of each other.
+- `slowscanjam/decoder.js` is the app's `SlowscanDecoder`. Its sample loop is unchanged apart from how many samples a line keeps (see below). Its renderer and draw loop live in the module.
+- `slowscanjam/worker.js` runs both, off the main thread.
+
+**A field goes through four stages, one at a time,** and the next starts 1 / FPS seconds after the last, once that one is through:
+1. **Downsample:** the input shrinks to the encoder's source picture, 320 × Lines, with a 4 × 4 box of bilinear taps per texel. The app's source was its 320 × 150 camera canvas. The encoder reads `min(height, lines)` rows from the top, so at fewer than 150 lines the app lost the bottom of its picture. Here the picture is exactly Lines rows tall.
+2. **Readback:** the picture is read into a pixel buffer behind a fence, polled once a frame, as the app's WebGLEncoder read its signal. The main thread never waits on the GPU.
+3. **Codec:** the worker encodes the field, decodes the signal, and replies with each line's ends, height and samples.
+4. **Drawing:** the next frame draws those lines.
+
+Main-thread time per frame was at most 1 ms in each of the three cases measured: the defaults, the defaults at pixel density 2, and 1 fps with 50 lines. An earlier version did everything on the main thread with a synchronous readback, and a field cost 7 ms at the defaults and 39 ms at 1 fps with 50 lines. In the worker, a field takes 5.5 ms and 43 ms. All of these were measured in headless Chrome on an M2 Max.
+
+**Phosphor.** The output buffer is the screen. It is never cleared: every 50 ms a black quad at 5% alpha fades it, then the new lines are drawn, as in the app's `draw()`. It is antialiased with 4 samples, which is what Chrome gives the app's canvas; p5's default of 2 coarsens the line edges. The app drew each line as an instanced triangle strip with a vertex pair per sample, and p5 has no instancing. Here each line is one quad in a fixed `p5.Geometry` of 64 quads (`SSJ_BATCH`), placed by the vertex shader from a uniform array, as Whitney's dots are. The samples go into a float framebuffer's texture, one row per line, written directly with `texSubImage2D`, since p5 can't fill a texture from an array. Each fragment converts the two samples either side of it and blends them, which gives the strip's colours. Positions are in pixels of the logical frame, so pixel density doesn't change the picture.
+
+**Lines longer than 1024 samples.** The app kept at most 1024 samples per line. A line runs `96000 × 2 / (fps × lines)` samples, more than 1024 whenever FPS × Lines is below 187.5, and the app's WebGL renderer ended each line at the last sample kept. At 1 fps with 50 lines it drew only about the left 27% of the picture (1024 of 3840 samples). Here a line keeps twice its nominal length, since sync tracking can stretch a line to 1.5 times that. A line longer than 1024 samples is resampled to 1024 texels on upload, still spanning the whole line, which is about three texels per source pixel.
+
+**Checked against the app.** The comparison ran the app's own classes, extracted from its `index.html`, alongside the port, on the same source picture and with the same seeded `Math.random` (the decoder's noise and the line jitter). It ran in headless Chrome at 640×480.
+- **Defaults:** 0.026% of pixels differ by more than 2 levels, and none by more than 5.
+- **Without MSAA in either, port drawn upside down as the app is:** every pixel is within 2 levels, at three settings (Additive at 1.5 px with Brightness 1.5, 3 fps / 150 lines, and 1 fps / 200 lines).
+
+With MSAA at the other settings, up to 2.6% of pixels differ by more than 2 levels, for two reasons. Neither changes what is decoded:
+- **Orientation:** the app draws upside down into a y-up canvas. The 4× sample pattern isn't symmetric under that flip, so a thin line's edge can cover different samples. In the additive test that brightened or dimmed a few whole lines.
+- **Strip edges:** at sharp colour changes, an edge pixel of the app's strip is shaded by both neighbouring quads, each extrapolating its own colour. With the orientation matched, this left differences of up to 27 levels along the colour-bar edges, which go when MSAA is off.
+
 ## Yellowtail Module
 
 The Yellowtail module (`js/modules/YellowtailModule.js`) implements Golan Levin's interactive kinetic gesture system, ported from a p5.js version.
@@ -486,4 +528,5 @@ The Yellowtail module (`js/modules/YellowtailModule.js`) implements Golan Levin'
 - **No `glCanvas.image()` in `process()`**: p5 draws `image()` through the bound shader whenever that shader has a sampler, not through its own texture shader. Between frames the bound shader is `NodeGraphUI`'s preview-blit shader, because `framebuffer.end()` pops each module's own `shader()` call back off. An `image()` copy therefore draws whatever the UI blitted last, instead of the image. This is what turned Dither's error diffusion solid black. To read an upstream frame, bind it as a sampler uniform. To copy one, draw it through a shader you bind yourself.
 - **Give a hand-built `p5.Geometry` its own `gid`**: `model()` caches a geometry's GPU buffers under `geometry.gid`, and `new p5.Geometry()` leaves it undefined. Two such geometries then share the cache key `undefined`, and the second draws the first's buffers. Whitney sets `geometry.gid = 'Whitney|<n>'` and frees it with `freeGeometry()` in `dispose()`.
 - **Set every sampler**: bind a texture to every sampler uniform a shader declares, even one the current code path won't read. p5 binds a placeholder to an unset sampler, and the first time it creates that placeholder it lands on whichever texture unit is active, blanking another input for that frame. The LUT module binds its input as a stand-in until a LUT loads.
+- **Set samplers again before every draw**: after each draw call p5 points every sampler of the bound shader at an empty texture. A module that draws several times with one shader (several `model()` calls, say) must set its samplers again before each one, or every draw after the first samples nothing. SlowscanJam does this for each batch of lines.
 

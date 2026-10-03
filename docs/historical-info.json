@@ -88,5 +88,11 @@
 		"year": 1980,
 		"title": "<a href='https://en.wikipedia.org/wiki/John_Whitney_(animator)'>Whitney Music Boxes</a>",
 		"body": "Based on the <a href='https://github.com/jbum/Whitney-Music-Box-Examples'>implementation</a> by <a href='https://blog.krazydad.com/2006/04/23/visual-harmony/'>Jim Bumgardner</a>."
+	},
+	{
+		"name": "SlowscanJam",
+		"year": 2020,
+		"title": "<a href='https://en.wikipedia.org/wiki/John_Whitney_(animator)'>Slowscan Video Emulator</a>",
+		"body": "Based on Cassette-Video-Encoder and Cassette-Video-Decoder by <a href='https://slyka.net'>Kris Slyka</a>."
 	}
 ]
