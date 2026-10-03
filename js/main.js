@@ -25,6 +25,7 @@ import './modules/ValueScramblerModule.js';
 import './modules/BooleanLogicModule.js';
 import './modules/BufferSmearModule.js';
 import './modules/DeeSeventySixModule.js';
+import './modules/DisplacerModule.js';
 import './modules/DelayModule.js';
 import './modules/CyberlaceModule.js';
 import './modules/FilmGrainModule.js';
