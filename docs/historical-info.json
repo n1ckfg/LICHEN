@@ -75,12 +75,18 @@
 		"name": "QTVR",
 		"year": 1995,
 		"title": "<a href='https://en.wikipedia.org/wiki/QuickTime_VR'>QuickTime VR</a>",
-		"body": "Based on the p5.js viewer in <a href='https://github.com/n1ckfg/vrml-qtvr-viewer'>vrml-qtvr-viewer</a>."
+		"body": "Based on <a href='https://github.com/n1ckfg/vrml-qtvr-viewer'>vrml-qtvr-viewer</a>."
 	},
 	{
 		"name": "VRML",
 		"year": 1994,
 		"title": "<a href='https://en.wikipedia.org/wiki/VRML'>Virtual Reality Modeling Language</a>",
-		"body": "Based on the p5.js viewer in <a href='https://github.com/n1ckfg/vrml-qtvr-viewer'>vrml-qtvr-viewer</a>, whose parser comes from the <a href='https://threejs.org/'>three.js</a> VRMLLoader."
+		"body": "Based on <a href='https://github.com/n1ckfg/vrml-qtvr-viewer'>vrml-qtvr-viewer</a>, whose parser comes from the <a href='https://threejs.org/'>three.js</a> VRMLLoader."
+	},
+	{
+		"name": "Whitney",
+		"year": 1980,
+		"title": "<a href='https://en.wikipedia.org/wiki/John_Whitney_(animator)'>Whitney Music Boxes</a>",
+		"body": "Based on the <a href='https://github.com/jbum/Whitney-Music-Box-Examples'>implementation</a> by <a href='https://blog.krazydad.com/2006/04/23/visual-harmony/'>Jim Bumgardner</a>."
 	}
 ]

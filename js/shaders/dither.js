@@ -1,3 +1,13 @@
+// The Color drop-down. Grey (uGrey = 1) dithers luminance, carried in all three
+// channels, so each channel lands on the same step; RGB dithers each channel as is.
+const colorMode = `
+uniform float uGrey;
+
+vec3 colorMode(vec3 col) {
+  return uGrey > 0.5 ? vec3(dot(col, vec3(0.299, 0.587, 0.114))) : col;
+}
+`;
+
 export const ditherFrag = `
 precision mediump float;
 
@@ -8,7 +18,7 @@ uniform float mode;
 uniform vec2 uResolution;
 
 varying vec2 vTexCoord;
-
+${colorMode}
 // 8x8 Bayer matrix for ordered dithering
 float getBayerValue(int x, int y) {
   int index = x + y * 8;
@@ -109,18 +119,13 @@ float blueNoise(vec2 p) {
   return fract(n);
 }
 
-float getLuminance(vec3 col) {
-  return dot(col, vec3(0.299, 0.587, 0.114));
-}
-
-float closestStep(float value, float numSteps) {
+vec3 closestStep(vec3 value, float numSteps) {
   return floor(value * numSteps + 0.5) / numSteps;
 }
 
 void main() {
   vec2 uv = vTexCoord.xy;
-  vec3 texColor = texture2D(tex0, uv).rgb;
-  float gray = getLuminance(texColor);
+  vec3 texColor = colorMode(texture2D(tex0, uv).rgb);
 
   vec2 pixelCoord = gl_FragCoord.xy;
   float numSteps = max(levels - 1.0, 1.0);
@@ -136,10 +141,12 @@ void main() {
     threshold = blueNoise(pixelCoord) - 0.5;
   }
 
-  float ditheredGray = gray + threshold * ditherStrength / numSteps;
-  float quantized = closestStep(clamp(ditheredGray, 0.0, 1.0), numSteps);
+  // Each channel is quantized on its own against the same threshold, so a grey
+  // input stays grey, dithered exactly as a single channel would be.
+  vec3 dithered = texColor + threshold * ditherStrength / numSteps;
+  vec3 quantized = closestStep(clamp(dithered, 0.0, 1.0), numSteps);
 
-  gl_FragColor = vec4(vec3(quantized), 1.0);
+  gl_FragColor = vec4(quantized, 1.0);
 }
 `;
 
@@ -172,30 +179,27 @@ uniform float levels;
 uniform vec2 uResolution;
 
 varying vec2 vTexCoord;
-
-float getLuminance(vec3 col) {
-  return dot(col, vec3(0.299, 0.587, 0.114));
-}
-
-float closestStep(float value, float numSteps) {
+${colorMode}
+vec3 closestStep(vec3 value, float numSteps) {
   return floor(value * numSteps + 0.5) / numSteps;
 }
 ${errorThresholdNoise}
 void main() {
   vec2 uv = vTexCoord.xy;
-  vec3 texColor = texture2D(tex0, uv).rgb;
-  float gray = getLuminance(texColor);
+  vec3 texColor = colorMode(texture2D(tex0, uv).rgb);
 
   float numSteps = max(levels - 1.0, 1.0);
-  float quantized = closestStep(clamp(gray + thresholdOffset(numSteps), 0.0, 1.0), numSteps);
-  float error = gray - quantized;
+  vec3 quantized = closestStep(clamp(texColor + thresholdOffset(numSteps), 0.0, 1.0), numSteps);
+  vec3 error = texColor - quantized;
 
-  // Store: RGB = quantized value, A = error (shifted to 0-1 range)
-  gl_FragColor = vec4(vec3(quantized), error * 0.5 + 0.5);
+  // Store: RGB = each channel's error (shifted to 0-1 range)
+  gl_FragColor = vec4(error * 0.5 + 0.5, 1.0);
 }
 `;
 
-// Error diffusion shader - diffusion pass: spread error to neighbors
+// Error diffusion shader - diffusion pass: spread error to neighbors.
+// Every pass but the last stores each channel's new error, as the init pass does;
+// the last (uFinal = 1) writes the quantized colour instead.
 export const ditherErrorDiffuseFrag = `
 precision highp float;
 
@@ -205,63 +209,44 @@ uniform float levels;
 uniform float ditherStrength;
 uniform vec2 uResolution;
 uniform float passIndex;
+uniform float uFinal;
 
 varying vec2 vTexCoord;
-
-float getLuminance(vec3 col) {
-  return dot(col, vec3(0.299, 0.587, 0.114));
+${colorMode}
+vec3 closestStep(vec3 value, float numSteps) {
+  return floor(value * numSteps + 0.5) / numSteps;
 }
 
-float closestStep(float value, float numSteps) {
-  return floor(value * numSteps + 0.5) / numSteps;
+vec3 errorAt(vec2 uv) {
+  return (texture2D(tex0, uv).rgb - 0.5) * 2.0;
 }
 ${errorThresholdNoise}
 void main() {
   vec2 uv = vTexCoord.xy;
   vec2 texel = 1.0 / uResolution;
 
-  // Get current state
-  vec4 current = texture2D(tex0, uv);
-  float quantized = current.r;
-  float storedError = (current.a - 0.5) * 2.0;
-
-  // Get original luminance
-  vec3 origColor = texture2D(texOriginal, uv).rgb;
-  float origGray = getLuminance(origColor);
+  // Get original colour
+  vec3 origColor = colorMode(texture2D(texOriginal, uv).rgb);
 
   // Gather error from neighbors (Floyd-Steinberg weights, reversed for gathering)
   // We gather from pixels that would have diffused TO us
-  float errorFromLeft = (texture2D(tex0, uv - vec2(texel.x, 0.0)).a - 0.5) * 2.0;
-  float errorFromTopRight = (texture2D(tex0, uv + vec2(texel.x, -texel.y)).a - 0.5) * 2.0;
-  float errorFromTop = (texture2D(tex0, uv - vec2(0.0, texel.y)).a - 0.5) * 2.0;
-  float errorFromTopLeft = (texture2D(tex0, uv - vec2(texel.x, texel.y)).a - 0.5) * 2.0;
+  vec3 errorFromLeft = errorAt(uv - vec2(texel.x, 0.0));
+  vec3 errorFromTopRight = errorAt(uv + vec2(texel.x, -texel.y));
+  vec3 errorFromTop = errorAt(uv - vec2(0.0, texel.y));
+  vec3 errorFromTopLeft = errorAt(uv - vec2(texel.x, texel.y));
 
   // Floyd-Steinberg weights: 7/16, 3/16, 5/16, 1/16
-  float gatheredError = errorFromLeft * (7.0/16.0) +
-                        errorFromTopLeft * (3.0/16.0) +
-                        errorFromTop * (5.0/16.0) +
-                        errorFromTopRight * (1.0/16.0);
+  vec3 gatheredError = errorFromLeft * (7.0/16.0) +
+                       errorFromTopLeft * (3.0/16.0) +
+                       errorFromTop * (5.0/16.0) +
+                       errorFromTopRight * (1.0/16.0);
 
   // Apply gathered error to original value and re-quantize
   float numSteps = max(levels - 1.0, 1.0);
-  float adjusted = origGray + gatheredError * ditherStrength;
-  float newQuantized = closestStep(clamp(adjusted + thresholdOffset(numSteps), 0.0, 1.0), numSteps);
-  float newError = adjusted - newQuantized;
+  vec3 adjusted = origColor + gatheredError * ditherStrength;
+  vec3 newQuantized = closestStep(clamp(adjusted + thresholdOffset(numSteps), 0.0, 1.0), numSteps);
+  vec3 newError = adjusted - newQuantized;
 
-  gl_FragColor = vec4(vec3(newQuantized), newError * 0.5 + 0.5);
-}
-`;
-
-// Final render pass for error diffusion
-export const ditherErrorRenderFrag = `
-precision mediump float;
-
-uniform sampler2D tex0;
-
-varying vec2 vTexCoord;
-
-void main() {
-  vec4 color = texture2D(tex0, vTexCoord);
-  gl_FragColor = vec4(vec3(color.r), 1.0);
+  gl_FragColor = uFinal > 0.5 ? vec4(newQuantized, 1.0) : vec4(newError * 0.5 + 0.5, 1.0);
 }
 `;
