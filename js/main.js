@@ -48,6 +48,7 @@ import './modules/VideoToastingModule.js';
 // - - - CANON - - -
 import './modules/ConwayModule.js';
 import './modules/GRASSModule.js';
+import './modules/TwoscilloscopeModule.js';
 import './modules/YellowtailModule.js';
 // - - - UTILITY - - -
 import './modules/BlurModule.js';
@@ -167,7 +168,7 @@ const sketch = (p) => {
   };
 
   p.keyPressed = () => {
-    // When a GRASS, Conway or InkDrops module is fullscreened it owns all keyboard input
+    // When a GRASS, Conway, InkDrops or Twoscilloscope module is fullscreened it owns all keyboard input
     if (ui.fullscreenMonitor !== null) {
       const fsmod = pipeline.graph.nodes.get(ui.fullscreenMonitor);
       if (fsmod && fsmod.type === 'GRASS') {
@@ -201,6 +202,15 @@ const sketch = (p) => {
       }
       if (fsmod && fsmod.type === 'InkDrops') {
         // ESC exits fullscreen; C clears the sheet back to bare paper
+        if (p.key === 'Escape') {
+          ui.fullscreenMonitor = null;
+        } else {
+          fsmod.handleKey(p.key, p.keyCode, p);
+        }
+        return false;
+      }
+      if (fsmod && fsmod.type === 'Twoscilloscope') {
+        // ESC exits fullscreen; the rest are the example's keys
         if (p.key === 'Escape') {
           ui.fullscreenMonitor = null;
         } else {

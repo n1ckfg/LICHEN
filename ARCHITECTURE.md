@@ -34,7 +34,7 @@ Modules can also export control values by setting `this.controlValues['portName'
 
 The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
-A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Slitscan `axis`, SlowscanJam `blend`, SyncGenerator `mode`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
+A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Slitscan `axis`, SlowscanJam `blend`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
 
 A param that sets `widget: 'trigger'` is drawn as a momentary button instead of a knob. It uses the same row as a drop-down: an inlet dot, then the label, then a button where the drop-down's box would be. Declare it as `{ value: 0, min: 0, max: 1, step: 1, label, widget: 'trigger' }`. Clicking the button calls `mod.fireTrigger(name)`. That records the time in `mod.triggeredAt[name]` and then calls `mod.onTrigger(name)`, which modules override to act on the trigger. A control cable fires it too. `ProcessingPipeline` fires the trigger on the cable's rising edge, when the value it applies crosses the param's midpoint (0.5) from below. The button still fires on a click while a cable is connected, since firing never touches the value. Its text is `mod.triggerText(name)`, which is empty by default and cut short with an ellipsis when it is too long. It is drawn fully lit on the first frame after it fires, however slow that frame is, then fades back over 250 ms. As with the drop-down, dragging the unconnected dot does nothing. A trigger's value is saved like any other param, but it only records where the last cable left it.
 
@@ -60,7 +60,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 - **Sources**: Camera, Image, VideoPlayer
 - **Utility**: Blur, Brcosa, Dither, Edges, Levels, LUT, Mosaic, Sharpen, VideoMixer
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
-- **Interactive**: Conway, GRASS, InkDrops, Yellowtail
+- **Interactive**: Conway, GRASS, InkDrops, Twoscilloscope, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, RuttEtra, Slitscan, SlowscanJam, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
 - **Archival**: NAPLPS, QTVR, VRML
@@ -505,6 +505,68 @@ Main-thread time per frame was at most 1 ms in each of the three cases measured:
 With MSAA at the other settings, up to 2.6% of pixels differ by more than 2 levels, for two reasons. Neither changes what is decoded:
 - **Orientation:** the app draws upside down into a y-up canvas. The 4× sample pattern isn't symmetric under that flip, so a thin line's edge can cover different samples. In the additive test that brightened or dimmed a few whole lines.
 - **Strip edges:** at sharp colour changes, an edge pixel of the app's strip is shaded by both neighbouring quads, each extrapolating its own colour. With the orientation matched, this left differences of up to 27 levels along the colour-bar edges, which go when MSAA is off.
+
+## Twoscilloscope Module
+
+The Twoscilloscope module (`js/modules/TwoscilloscopeModule.js`, `js/modules/twoscilloscope/`, `js/shaders/twoscilloscope.js`) is an interactive source ported from `example-latk` in the Twoscilloscope project's p5.js library. Each frame of a Latk drawing (from the Lightning Artist Toolkit) is seen through an orbiting camera and encoded as one loop of XY audio. The loop runs through an effect chain and is drawn back from the altered audio, as the oscilloscope beam or decoded into strokes, each in its stroke's colour. The node starts with the example's `jellyfish.latk`, bundled in `files/latk/`. "Load .latk…" picks another drawing, either a `.latk` file or the JSON inside one, and the button then shows its name. As with VRML, the file itself is not saved in patches.
+
+**Files:**
+- `js/libraries/p5.twoscilloscope.js` is the library, copied unchanged. It is a classic script that puts its classes on `window`, so the module imports it only for that side effect.
+- `twoscilloscope/LatkScopeRenderer.js` is the example's renderer. `project()` and `encode()` are unchanged, but its drawing is replaced (see Rendering).
+- `twoscilloscope/OrbitCamera.js` is the example's camera without its mouse handling, which is now in the module and turns knobs.
+- `twoscilloscope/readLatk.js` reads the drawing, in place of latk.js. latk.js bundles JSZip, and reads a global called `latk` while it parses. This reader finds the JSON through the zip's central directory and inflates it with `DecompressionStream('deflate-raw')`, as VRML does without pako.
+
+**Params.**
+
+| Param | Label | Range | Default | Sets |
+| --- | --- | --- | --- | --- |
+| `view` | View | Beams, Decoded Strokes, Original Lines | Beams | What is drawn, as the example's L key chose |
+| `fps` | FPS | 0–60 | 12 | Latk frames a second, ofxLatk's rate. The clock is accumulated, so turning it doesn't jump the drawing |
+| `yaw` | Yaw | −180–180° | 0 | The camera's orbit |
+| `pitch` | Pitch | −89–89° | 8.6 | The example's 0.15 rad |
+| `distance` | Distance | 0.05–50 | 2.1 | Camera distance in radii of the drawing's bounding box, all frames included. 2.1 is the example's home view, and 0.05 and 50 its zoom limits |
+| `spin` | Spin | −90–90°/s | 0 | Turns the view, added to Yaw, as in VRML |
+| `loopHz` | Loop Hz | 1–100 | 5 | Loops a second. A lower rate gives the drawing more samples |
+| `beamSize` | Beam Size | 0.5–12 px | 3 | The beam's radius |
+| `intensity` | Intensity | 0–4 | 1 | The beam's brightness |
+| `effect` | Effect | see below | Low Pass + Delay | Which effects are on |
+| `fxA`, `fxB` | follow Effect | 0–1 | 0.625, 0.03 | Settings of the effects that are on |
+| `sound` | Sound | Off, On | Off | Plays the altered loop out of the sound card |
+
+**Effects.** The example chains all eleven of the library's effects and opens with two of them on: Low Pass at 1500 Hz, then Channel Delay with Y 0.6 ms late. Its panel had a slider for every setting, its E key soloed the next effect, and N turned them all off. The Effect drop-down covers the same states. Option 0 (Low Pass + Delay) is the opening chain, option 1 (None) is N, and the rest solo one effect each, in the chain's order. Patches save the option as its index, so a new one is appended, never inserted. Two knobs stand in for the panel, and their labels follow the option:
+
+| Effect | Effect A | Effect B |
+| --- | --- | --- |
+| Low Pass + Delay | Low Pass cutoff | Channel Delay Y |
+| Low Pass, High Pass | Cutoff | Resonance |
+| Channel Delay | Delay X | Delay Y |
+| Echo | Time | Feedback |
+| Ring Mod | Freq | Depth |
+| Rotate | Angle | Spin Rate |
+| Drive, Wavefold | Gain | — |
+| Bit Crush | Bits | — |
+| Sample & Hold | Rate | — |
+| Noise | Amount | Noise Seed |
+
+- **Ranges:** each knob runs 0–1 across its setting's slider range in the library's panel. Cutoff, Resonance, Time, Freq, Gain and Rate are logarithmic, the rest linear. The knobs' defaults give the opening chain's 1500 Hz and 0.6 ms.
+- **Defaults:** every setting the knobs aren't turning is at the library's default, and goes back to it when the knobs move on to another option, so the knobs alone decide the chain.
+- **Restarts:** as in the example, `XYTransformer` resets the effects every frame and runs four loops before the one it keeps. Rotate's Spin Rate and Ring Mod's phase therefore bend the shape the same way on every frame, rather than animating it.
+
+**Rendering.** The example drew the beam with OsciMesh into a WEBGL canvas of its own and copied that onto the sketch with `image()`. A second WebGL context per node would run into the browser's cap on contexts, which SlowscanJam also avoids, so the module draws in LICHEN's own context:
+- **Point stream:** the renderer turns each view into points, each with x, y and the colour of the segment to the next point (or none). The module packs them one point per texel into a float framebuffer's texture, written with `texSubImage2D` as SlowscanJam does.
+- **Quads:** one `p5.Geometry` of 4096 quads (`TWO_BATCH`) is drawn as many times as the stream needs. Its vertex shader builds OsciMesh's quad for each segment from the texture.
+- **Beams:** the fragment shader is OsciMesh's erf-integrated gaussian, taking its colour per segment, drawn with `blendMode(ADD)`. The example drew one OsciMesh per colour, joining each run of lit samples to the one before with a segment of brightness 0. A dark segment adds no light, so the stream leaves those out.
+- **Strokes and lines:** a 2-pixel line with round ends, in place of the example's p5 strokes. Original Lines are the renderer's pieces, already cut at the canvas edge, where the example drew each stroke whole and let the canvas cut it. None are left out for being too short for the loop.
+
+**Checked against the example.** The comparison ran in headless Chrome, with the example's canvas resized to 640×480, its clock stopped, and both on the same Latk frames (0, 10 and 40):
+- **Beams:** at pixel density 1, at most 0.015% of pixels differ by more than 2 levels, and none by more than 6. At density 2, none differ by more than 3.
+- **Strokes and lines:** the lit pixels overlap the example's with an IoU of 0.91–0.95 at density 1, and 0.95 at density 2. Each segment is drawn on its own, so where neighbouring segments overlap their soft edges add up, whereas a Canvas2D path is stroked once. Original Lines' segments average about a pixel long, and at density 1 they carry 9% more light than the example's. The decoded strokes are simplified, and their light is within 1.5% of the example's.
+
+**Fullscreen interaction.** Double-click the node preview to enter fullscreen. As with the example's camera, dragging orbits by turning the Yaw and Pitch knobs (0.01 rad per pixel), the wheel zooms by turning Distance, and a double-click goes back to the home view. The example's keys work too: L cycles the view, E solos the next effect, N turns them all off, M toggles Sound, S downloads the decoded strokes as SVG, and W downloads four seconds of the altered loop (X, Y and Z) as WAV. ESC exits. `js/ui.js` routes press, drag, release and wheel as it does for VRML, plus the double-click, and `js/main.js keyPressed` routes the keys. The example's panel (G) and its .latk export (O) are not ported.
+
+**Sound.** With Sound on, an `XYscope` loops the altered audio out of the sound card, X left and Y right, so what you hear is what you see. Browsers start audio only after a click or a key press. The example played as soon as its page was clicked; here Sound starts Off, so that adding a node makes no noise.
+
+**Cost.** At 1280×960 (a retina display) on an M2 Max, a frame costs 3.3–5.5 ms, depending on the view. About 3.5 ms of that is projecting, encoding and running the effects on the CPU, and Decoded Strokes adds about 1.5 ms of decoding. Drawing the beams takes about 0.2 ms.
 
 ## Yellowtail Module
 

@@ -94,5 +94,11 @@
 		"year": 2020,
 		"title": "<a href='https://en.wikipedia.org/wiki/John_Whitney_(animator)'>Slowscan Video Emulator</a>",
 		"body": "Based on Cassette-Video-Encoder and Cassette-Video-Decoder by <a href='https://slyka.net'>Kris Slyka</a>."
+	},
+	{
+		"name": "Twoscilloscope",
+		"year": 2026,
+		"title": "<a href='https://github.com/n1ckfg/Twoscilloscope'>Twoscilloscope</a>",
+		"body": "Vector drawings to oscilloscope audio and back again, by <a href='https://fox-gieg.com'>Nick Fox-Gieg</a>. It joins <a href='https://teddavis.org/xyscope'>XYscope</a> by Ted Davis and <a href='https://github.com/kritzikratzi/Oscilloscope'>Oscilloscope</a> by Hansi Raber at the audio. The drawing is made with the <a href='https://github.com/n1ckfg/latk.js'>Lightning Artist Toolkit</a>."
 	}
 ]
