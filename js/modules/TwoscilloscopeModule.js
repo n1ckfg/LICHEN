@@ -43,8 +43,8 @@ export class TwoscilloscopeModule extends Module {
         value: BEAMS, min: 0, max: 2, step: 1, label: 'View',
         widget: 'dropdown', valueLabels: ['Beams', 'Decoded Strokes', 'Original Lines'],
       },
-      beamSize: { value: 3, min: 0.5, max: 12, step: 0.1, label: 'Beam Size' },
-      intensity: { value: 1, min: 0, max: 4, step: 0.01, label: 'Intensity' },
+      beamSize: { value: 1.5, min: 0.5, max: 12, step: 0.1, label: 'Beam Size' },
+      intensity: { value: 1.5, min: 0, max: 4, step: 0.01, label: 'Intensity' },
       // The opening chain: Low Pass at 1500 Hz, Channel Delay with Y 0.6 ms late
       ...MENU.params(0, knobFor(0, 'a', 1500), knobFor(1, 'b', 0.6)),
       sound: {

@@ -37,7 +37,7 @@ export class SkeletonModule extends Module {
       },
       // Cells across the tracer's grid. camera_trace used 256 x 256; here the
       // grid keeps the frame's shape, so 256 is 256 x 192
-      resolution: { value: 256, min: 64, max: 512, step: 32, label: 'Resolution' },
+      resolution: { value: 256, min: 64, max: 1024, step: 32, label: 'Resolution' },
       // Loops a second on X and Y. A lower rate gives the lines more samples
       loopHz: { value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
     };

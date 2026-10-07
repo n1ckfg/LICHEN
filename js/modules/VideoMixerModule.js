@@ -17,7 +17,7 @@ export class VideoMixerModule extends Module {
         valueLabels: ['Blend', 'Add', 'Subtract', 'Multiply', 'Divide', 'Lighten', 'Darken', 'Difference',
           'Color', 'Overlay', 'Saturation', 'Luminance'],
       },
-      mix: { value: 0.5, min: 0, max: 1, step: 0.01, label: 'Mix' },
+      mix: { value: 1.0, min: 0, max: 1, step: 0.01, label: 'Mix' },
     };
     this.createShader(videoMixerFrag);
     this.createOutputFBO();
