@@ -5,6 +5,7 @@ import {
 } from '../shaders/slowscanjam.js';
 import { registerModule } from '../moduleRegistry.js';
 import { EffectMenu, NONE } from './audiofx/EffectRack.js';
+import { PixelReadback } from './slowscanjam/PixelReadback.js';
 
 // The Effect drop-down: None, then Twoscilloscope's effects, one at a time. The
 // effects run in the worker, between the encoder and the decoder.
@@ -85,8 +86,7 @@ export class SlowscanJamModule extends Module {
 
     this.state = 'idle';     // 'reading', 'coding', or 'failed' if the worker won't run
     this.field = null;       // settings of the field in flight
-    this.pbo = null;
-    this.readSync = null;
+    this.readback = new PixelReadback(glCanvas);
     this.results = [];       // decoded fields waiting to be drawn
 
     this.worker = new Worker(new URL('./slowscanjam/worker.js', import.meta.url), { type: 'module' });
@@ -134,7 +134,7 @@ export class SlowscanJamModule extends Module {
 
     // Every frame, so the knobs' labels follow the Effect drop-down
     this.fx = MENU.resolve(this.params);
-    if (this.state === 'reading') this._pollReadback(glCanvas);
+    if (this.state === 'reading') this._pollReadback();
 
     // A field every 1 / fps seconds, as the app's setTimeout paced them, once
     // the last one is through
@@ -170,46 +170,18 @@ export class SlowscanJamModule extends Module {
     this.renderQuad();
     this.srcFBO.end();
 
-    const gl = glCanvas.drawingContext;
-    if (typeof WebGL2RenderingContext === 'undefined' || !(gl instanceof WebGL2RenderingContext)) {
-      // No pixel buffers in WebGL1: read back now, and wait on the GPU
-      this.srcFBO.loadPixels();
-      this._code(this.srcFBO.pixels.slice());
-      return;
-    }
     // SlowscanJam's WebGLEncoder readback. Rows come back top first, as
-    // getImageData gave them to the original.
-    const prevRead = gl.getParameter(gl.READ_FRAMEBUFFER_BINDING);
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, this.srcFBO.framebuffer);
-    if (!this.pbo) this.pbo = gl.createBuffer();
-    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this.pbo);
-    // Fresh storage each time; reusing it makes Chrome discard the shadow copy
-    // it keeps for fenced readbacks
-    gl.bufferData(gl.PIXEL_PACK_BUFFER, SOURCE_W * lines * 4, gl.STREAM_READ);
-    gl.readPixels(0, 0, SOURCE_W, lines, gl.RGBA, gl.UNSIGNED_BYTE, 0);
-    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-    gl.bindFramebuffer(gl.READ_FRAMEBUFFER, prevRead);
-    this.readSync = gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-    gl.flush();
-    this.state = 'reading';
+    // getImageData gave them to the original. WebGL1 reads at once.
+    const pixels = this.readback.start(this.srcFBO, SOURCE_W, lines);
+    if (pixels) this._code(pixels);
+    else this.state = 'reading';
   }
 
-  // The fence only updates between tasks, so this checks it once a frame
-  _pollReadback(glCanvas) {
-    const gl = glCanvas.drawingContext;
-    const r = gl.clientWaitSync(this.readSync, 0, 0);
-    if (r === gl.TIMEOUT_EXPIRED) return;
-    gl.deleteSync(this.readSync);
-    this.readSync = null;
-    if (r === gl.WAIT_FAILED) {
-      this.state = 'idle';
-      return;
-    }
-    const pixels = new Uint8Array(SOURCE_W * this.field.lines * 4);
-    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, this.pbo);
-    gl.getBufferSubData(gl.PIXEL_PACK_BUFFER, 0, pixels);
-    gl.bindBuffer(gl.PIXEL_PACK_BUFFER, null);
-    this._code(pixels);
+  // Once a frame, until the picture is in
+  _pollReadback() {
+    const pixels = this.readback.poll();
+    if (pixels === false) this.state = 'idle';
+    else if (pixels) this._code(pixels);
   }
 
   _code(pixels) {
@@ -342,15 +314,11 @@ export class SlowscanJamModule extends Module {
   }
 
   dispose() {
-    const gl = this.glCanvas.drawingContext;
     this.worker.terminate();
-    if (this.readSync) gl.deleteSync(this.readSync);
-    if (this.pbo) gl.deleteBuffer(this.pbo);
+    this.readback.dispose();
     if (this.geometry) this.glCanvas.freeGeometry(this.geometry);
     if (this.srcFBO) this.srcFBO.remove();
     if (this.yccFBO) this.yccFBO.remove();
-    this.readSync = null;
-    this.pbo = null;
     this.geometry = null;
     this.srcFBO = null;
     this.yccFBO = null;

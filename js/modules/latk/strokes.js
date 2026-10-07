@@ -74,11 +74,12 @@ export function projectFrame(latk, mvp, w, h) {
 }
 
 // A polyline in px of a w x h canvas, as pieces in the form projectFrame()
-// gives, in one colour ([r, g, b], 8-bit). It is cut where it leaves the canvas,
-// as projectFrame() cuts strokes, and a piece of no length is left out, since a
-// canvas strokes nothing there either.
+// gives, in one colour ([r, g, b], 8-bit), or in none (null), which leaves
+// Twoscilloscope to draw it in its default amber. It is cut where it leaves the
+// canvas, as projectFrame() cuts strokes, and a piece of no length is left out,
+// since a canvas strokes nothing there either.
 export function polylinePieces(points, color, w, h) {
-  const key = (color[0] << 16) | (color[1] << 8) | color[2];
+  const key = color ? (color[0] << 16) | (color[1] << 8) | color[2] : -1;
   const pieces = [];
   let open = false; // whether the next segment continues the last piece
   for (let k = 1; k < points.length; k++) {

@@ -60,6 +60,7 @@ import './modules/LevelsModule.js';
 import './modules/LUTModule.js';
 import './modules/MosaicModule.js';
 import './modules/SharpenModule.js';
+import './modules/SkeletonModule.js';
 import './modules/VideoMixerModule.js';
 // - - - ARCHIVAL - - -
 import './modules/NAPLPSModule.js';

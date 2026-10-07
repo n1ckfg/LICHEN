@@ -36,11 +36,11 @@ A control value is one number a frame, and a parameter cable applies it after ev
 - **Control signals:** a control output can also publish a loop in `this.controlSignals['portName']`, as `{ samples, sampleRate, z, color }`. `samples` is a `Float32Array` in −1..1. `z` (blanking, XYscope's −1 off and 1 on) and `color` (0xRRGGBB a sample) are optional lanes the same length, or `null`. It should still set a numeric `controlValues` entry for the same port, because a knob cable sees only that.
 - **Control input pins:** an input declared `{ name, type: 'control' }` is drawn green, as is a cable into it, and takes a control output's cable. The cable is stored in `connections`, like a video cable, so the topological sort runs the source first, in the same frame. `this.getControlInput(graph, portIndex)` returns `{ value, signal }`: the source's control value and its control signal, or `null` for the signal if it has none. It returns `null` when nothing is cabled to the pin, or when a video output is.
 
-Latk's and NAPLPS's X and Y outputs and Twoscilloscope's X and Y pins are the only ones so far (see Latk Module and NAPLPS Module).
+Latk's, NAPLPS's and Skeleton's X and Y outputs and Twoscilloscope's X and Y pins are the only ones so far (see Latk Module, NAPLPS Module and Skeleton Module).
 
 The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
-A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
+A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Skeleton `trace`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
 
 A param that sets `widget: 'trigger'` is drawn as a momentary button instead of a knob. It uses the same row as a drop-down: an inlet dot, then the label, then a button where the drop-down's box would be. Declare it as `{ value: 0, min: 0, max: 1, step: 1, label, widget: 'trigger' }`. Clicking the button calls `mod.fireTrigger(name)`. That records the time in `mod.triggeredAt[name]` and then calls `mod.onTrigger(name)`, which modules override to act on the trigger. A control cable fires it too. `ProcessingPipeline` fires the trigger on the cable's rising edge, when the value it applies crosses the param's midpoint (0.5) from below. The button still fires on a click while a cable is connected, since firing never touches the value. Its text is `mod.triggerText(name)`, which is empty by default and cut short with an ellipsis when it is too long. It is drawn fully lit on the first frame after it fires, however slow that frame is, then fades back over 250 ms. As with the drop-down, dragging the unconnected dot does nothing. A trigger's value is saved like any other param, but it only records where the last cable left it.
 
@@ -64,7 +64,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 ### Module Categories
 
 - **Sources**: Camera, Image, VideoPlayer
-- **Utility**: Blur, Brcosa, Dither, Edges, Levels, LUT, Mosaic, Sharpen, VideoMixer
+- **Utility**: Blur, Brcosa, Dither, Edges, Levels, LUT, Mosaic, Sharpen, Skeleton, VideoMixer
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
 - **Interactive**: Conway, GRASS, InkDrops, Latk, Twoscilloscope, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
@@ -505,6 +505,7 @@ Lines and FPS snap to their steps, so a cable rebuilds the codec only when it cr
 - `slowscanjam/encoder.js` is the app's `SlowscanEncoder`, CPU path, unchanged. The WebGL2 encoder is not ported, because it needs a WebGL2 context of its own per node (browsers cap them) and integer render targets that p5 framebuffers don't offer. The SlowscanJam notes measure the two encoders' signals within about 2e-7 of each other.
 - `slowscanjam/decoder.js` is the app's `SlowscanDecoder`. Its sample loop is unchanged apart from how many samples a line keeps (see below). Its renderer and draw loop live in the module.
 - `slowscanjam/worker.js` runs both, off the main thread, with the effects between them (see Effects).
+- `slowscanjam/PixelReadback.js` reads the source picture back (see Readback below). Skeleton reads its mask with it too.
 
 **A field goes through four stages, one at a time,** and the next starts 1 / FPS seconds after the last, once that one is through:
 1. **Downsample:** the input shrinks to the encoder's source picture, 320 × Lines, with a 4 × 4 box of bilinear taps per texel. The app's source was its 320 × 150 camera canvas. The encoder reads `min(height, lines)` rows from the top, so at fewer than 150 lines the app lost the bottom of its picture. Here the picture is exactly Lines rows tall.
@@ -558,7 +559,7 @@ The Latk module (`js/modules/LatkModule.js`, `js/modules/latk/`, `js/shaders/lat
 - `latk/strokes.js` holds the example's drawing half:
   - `projectFrame()` is the example's `project()`. It puts the current frame of each layer through the camera, breaks a stroke where it goes behind the camera, and cuts it where it leaves the canvas.
   - `encodeLoop()` is the first half of the example's `encode()`, which turns those pieces into one loop of XY audio (see X and Y).
-  - `XYOutputs` publishes that loop on a module's X and Y outputs each frame, and keeps the beam's place in it for knob cables. NAPLPS uses it too, with `polylinePieces()`, which cuts a polyline at the canvas edge into pieces as `projectFrame()` cuts strokes.
+  - `XYOutputs` publishes that loop on a module's X and Y outputs each frame, and keeps the beam's place in it for knob cables. NAPLPS and Skeleton use it too, with `polylinePieces()`, which cuts a polyline at the canvas edge into pieces as `projectFrame()` cuts strokes. A polyline given no colour gets none on X and Y, so Twoscilloscope draws it in its default amber.
   - `PointStream` packs lines for the segment shader (see Rendering).
 - `latk/SegmentRenderer.js` draws a point stream. Twoscilloscope draws with it too.
 
@@ -665,6 +666,40 @@ Loop Hz is now Latk's, since the source sets the loop's length.
 - **`EffectMenu`** builds a module's drop-down from that module's own options, followed by one option per effect. Twoscilloscope's are Low Pass + Delay and None (`NONE`); SlowscanJam's is None. Patches save the option as its index, so a module's own options never change, and a new effect is appended to `CHAIN`. `params()` gives the drop-down and both knobs as module params. `resolve()` turns their values into plain data, `{ on, set }`, and relabels the knobs for the option. `nextSolo()` and `none` are the example's E and N keys.
 - **`EffectRack`** holds one of each effect, added to an `XYEffectChain`. `apply()` puts every setting back to the library's default, turns on the effects in `on`, and then sets the knobs' settings from `set`. Twoscilloscope's rack is its `XYTransformer`'s chain, which restarts the effects every frame (see Twoscilloscope Module).
 - **`EffectStream`** runs a rack over a signal that runs on from one call to the next, as SlowscanJam's fields do, keeping the effects' state between calls (see SlowscanJam Module). It restarts them when the option changes, so an effect turned back on doesn't replay what it held before. It also restarts them when Noise Seed changes, the one setting an effect reads only on a restart. `process()` can protect part of the signal: given a mask, it feeds the effects only the masked samples, scales them going in and back coming out, clamps them, and leaves the rest as they were.
+
+## Skeleton Module
+
+The Skeleton module (`js/modules/SkeletonModule.js`, `js/modules/skeleton/`, `js/shaders/skeleton.js`) is a utility based on Twoscilloscope's `experiments/camera_trace`, without that example's camera and edge shader. It thins a black and white input to its centre lines, one pixel wide, and follows them into polylines. Its X and Y control outputs carry them as one loop of XY audio, as Latk's do, to drive Twoscilloscope. It has no video output, and its node preview shows the traced lines in green, 2 px wide, as camera_trace drew them. To trace a picture's outlines, patch Edges in front of it.
+
+**Files:**
+- `js/libraries/trace_skeleton_wasm.js` is the skeleton-tracing library's WebAssembly build, by Lingdong Huang, copied unchanged from camera_trace. It is a UMD script with the wasm inlined, so it puts `TraceSkeleton` on the global scope and fetches nothing. In a worker it takes its own URL from `self.location` and never touches `document`.
+- `skeleton/worker.js` traces off the main thread (see Tracing).
+- `slowscanjam/PixelReadback.js` is SlowscanJam's fenced readback, which Skeleton shares.
+
+**Params.**
+
+| Param | Label | Range | Default | Sets |
+| --- | --- | --- | --- | --- |
+| `threshold` | Threshold | 0–1 | 0.5 | The luminance a pixel must pass to be part of a shape |
+| `trace` | Trace | White, Black | White | Which shapes are traced: light on dark, or dark on light |
+| `resolution` | Resolution | 64–512, in steps of 32 | 256 | Cells across the tracer's grid. The grid keeps the frame's shape, so 256 is 256 × 192, where camera_trace used 256 × 256 |
+| `loopHz` | Loop Hz | 1–100 | 5 | Loops a second on X and Y, as Latk's |
+
+**A trace goes through three stages:**
+1. **Mask:** the input shrinks to the grid, one texel a cell (`skeletonMaskFrag`). A cell is white if any of an 8 × 8 grid of taps across it passes the threshold. camera_trace read one pixel per cell, and averaging would lose any line thinner than a cell, such as an Edges outline. The tracer thins whatever this widens.
+2. **Readback:** the mask is read into a pixel buffer behind a fence, polled once a frame, so the main thread never waits on the GPU (`PixelReadback`, as SlowscanJam does). WebGL1 reads at once.
+3. **Tracing:** the worker writes the mask into the wasm heap, one byte a cell, and calls the tracer's `trace()` with a pointer to it. camera_trace built a string of `\0` and `\1`, one character a pixel, for `fromCharString()`, which encoded it into the heap. The pointer gives the same polylines 25–40% sooner. The worker parses the tracer's text into typed arrays, which it transfers back.
+
+A new mask starts every frame, even while the worker traces the last one. The newest waits for the worker, and any older is dropped, so each trace is of the freshest mask. A trace that finishes after the input is unplugged is dropped.
+
+**X and Y.** Each polyline becomes a piece through `polylinePieces()`, with each point at its cell's centre. A cell on its own (a single point) has no length and is left out. Every frame, `XYOutputs` encodes the latest trace into the loop (see Latk's X and Y). The pieces carry no colour, so Twoscilloscope draws them in its default amber. With nothing traced, or nothing cabled in, the loop is all blank, so the beam rests unlit in the middle.
+
+**Checked.** In headless Chrome, on a test mask of a thick ring, a thick bar, a filled disc, a rectangle and a 1 px line, the traces run down the middle of each stroke at 64, 256 and 512 cells, in White and in Black (the mask inverted). The 1 px line is kept even at 64. A disc thins to a point. Twoscilloscope's Original Lines, Beams and Decoded Strokes redraw each trace from X and Y.
+
+**Cost.** In headless Chrome on an M2 Max at 60 fps, at pixel density 1 and 2:
+- **Main thread:** Skeleton's share of a frame has a median of 0.5–0.7 ms and a 95th percentile under 1 ms.
+- **Tracing:** in the worker, a trace takes 3–4 ms at 128 cells. At 256 cells it takes 3.4 ms for Latk's lines and 6–7 ms for the test mask's thick strokes. At 512 cells it takes about 9 ms for Latk's lines and 36 ms for the thick strokes, since thinning peels a shape one cell at a time from each side.
+- **Rate:** there is a new trace every frame wherever one takes under a frame, and 27 a second for thick strokes at 512 cells.
 
 ## Yellowtail Module
 
