@@ -2,6 +2,7 @@ import { Module } from './Module.js';
 import { registerModule } from '../moduleRegistry.js';
 import '../libraries/p5.twoscilloscope.js';   // a classic script: it puts its classes on window
 import { ScopeRenderer } from './twoscilloscope/ScopeRenderer.js';
+import { EffectMenu, EffectRack, NONE, knobFor } from './audiofx/EffectRack.js';
 import { SegmentRenderer } from './latk/SegmentRenderer.js';
 import { latkSegmentVert } from '../shaders/latk.js';
 import { twoscilloscopeBeamFrag } from '../shaders/twoscilloscope.js';
@@ -12,50 +13,11 @@ const LINE_WIDTH = 2;        // the example's strokeWeight, in output pixels
 
 const BEAMS = 0, STROKES = 1;
 
-// The example's effect chain, in its order. Each entry names the settings the
-// Effect A and Effect B knobs turn while it is on. The knobs run 0..1 across a
-// setting's own range, from the library's panel, logarithmically (log: true)
-// where that range spans decades.
-const CHAIN = [
-  { type: 'XYLowPass', label: 'Low Pass', a: { key: 'cutoff', label: 'Cutoff', log: true }, b: { key: 'resonance', label: 'Resonance', log: true } },
-  { type: 'XYChannelDelay', label: 'Channel Delay', a: { key: 'delayX', label: 'Delay X' }, b: { key: 'delayY', label: 'Delay Y' } },
-  { type: 'XYHighPass', label: 'High Pass', a: { key: 'cutoff', label: 'Cutoff', log: true }, b: { key: 'resonance', label: 'Resonance', log: true } },
-  { type: 'XYEcho', label: 'Echo', a: { key: 'time', label: 'Time', log: true }, b: { key: 'feedback', label: 'Feedback' } },
-  { type: 'XYRingMod', label: 'Ring Mod', a: { key: 'freq', label: 'Freq', log: true }, b: { key: 'depth', label: 'Depth' } },
-  { type: 'XYRotate', label: 'Rotate', a: { key: 'angle', label: 'Angle' }, b: { key: 'spin', label: 'Spin Rate' } },
-  { type: 'XYDrive', label: 'Drive', a: { key: 'gain', label: 'Gain', log: true } },
-  { type: 'XYWavefold', label: 'Wavefold', a: { key: 'gain', label: 'Gain', log: true } },
-  { type: 'XYBitCrush', label: 'Bit Crush', a: { key: 'bits', label: 'Bits' } },
-  { type: 'XYSampleHold', label: 'Sample & Hold', a: { key: 'rate', label: 'Rate', log: true } },
-  { type: 'XYNoise', label: 'Noise', a: { key: 'amount', label: 'Amount' }, b: { key: 'seed', label: 'Noise Seed' } },
-];
-
 // The Effect drop-down. Option 0 is the chain the example opens with: Low Pass
 // at 1500 Hz into Channel Delay with Y 0.6 ms late. Option 1 is its n key, and
-// the rest are its e key, soloing one effect at a time. Patches save the option
-// as its index, so a new one is appended, never inserted.
-const OPENING = 0, NO_EFFECTS = 1, FIRST_SOLO = 2;
-const EFFECT_OPTIONS = [
-  { label: 'Low Pass + Delay', on: [0, 1], a: [0, 'a'], b: [1, 'b'] },
-  { label: 'None', on: [] },
-  ...CHAIN.map((spec, i) => ({ label: spec.label, on: [i], a: [i, 'a'], b: spec.b ? [i, 'b'] : null })),
-];
-
-// The library's panel range of one setting
-function settingRange(effect, key) {
-  const item = effect.parameters.items.find((it) => it.key === key);
-  return { min: item.min, max: item.max, int: item.type === 'int' };
-}
-
-// Knob (0..1) -> setting, and back
-function knobToSetting(t, { min, max, int }, log) {
-  const v = log ? min * Math.pow(max / min, t) : min + t * (max - min);
-  return int ? Math.round(v) : v;
-}
-
-function settingToKnob(v, { min, max }, log) {
-  return log ? Math.log(v / min) / Math.log(max / min) : (v - min) / (max - min);
-}
+// the rest are its e key, soloing one effect at a time (see audiofx/EffectRack.js).
+const OPENING = { label: 'Low Pass + Delay', on: [0, 1], a: [0, 'a'], b: [1, 'b'] };
+const MENU = new EffectMenu([OPENING, NONE]);
 
 // Twoscilloscope's example-latk without the drawing: one loop of XY audio,
 // brought in on the X and Y control pins, runs through an audio effect chain
@@ -74,15 +36,8 @@ export class TwoscilloscopeModule extends Module {
     this.historicalInfo = 'Twoscilloscope';
 
     this.scope = new ScopeRenderer();
-    const effects = this.scope.transformer.effects;
-    this.chain = CHAIN.map((spec) => effects.add(new window[spec.type]()));
-    // Every setting's library default, which it goes back to whenever the
-    // knobs aren't turning it, so the knobs alone decide the chain
-    this.chainDefaults = this.chain.map((effect) => Object.fromEntries(
-      effect.parameters.items.filter((it) => it.key !== 'enabled').map((it) => [it.key, effect[it.key]])));
+    this.rack = new EffectRack(this.scope.transformer.effects);
 
-    const cutoff = settingRange(this.chain[0], 'cutoff');
-    const delayY = settingRange(this.chain[1], 'delayY');
     this.params = {
       view: {
         value: BEAMS, min: 0, max: 2, step: 1, label: 'View',
@@ -90,12 +45,8 @@ export class TwoscilloscopeModule extends Module {
       },
       beamSize: { value: 3, min: 0.5, max: 12, step: 0.1, label: 'Beam Size' },
       intensity: { value: 1, min: 0, max: 4, step: 0.01, label: 'Intensity' },
-      effect: {
-        value: OPENING, min: 0, max: EFFECT_OPTIONS.length - 1, step: 1, label: 'Effect',
-        widget: 'dropdown', valueLabels: EFFECT_OPTIONS.map((o) => o.label),
-      },
-      fxA: { value: settingToKnob(1500, cutoff, true), min: 0, max: 1, step: 0.001, label: 'Effect A' },
-      fxB: { value: settingToKnob(0.6, delayY, false), min: 0, max: 1, step: 0.001, label: 'Effect B' },
+      // The opening chain: Low Pass at 1500 Hz, Channel Delay with Y 0.6 ms late
+      ...MENU.params(0, knobFor(0, 'a', 1500), knobFor(1, 'b', 0.6)),
       sound: {
         value: 0, min: 0, max: 1, step: 1, label: 'Sound',
         widget: 'dropdown', valueLabels: ['Off', 'On'],
@@ -118,24 +69,7 @@ export class TwoscilloscopeModule extends Module {
 
   // Which effects are on, and what Effect A and B set on them
   _applyEffects() {
-    const option = EFFECT_OPTIONS[Math.round(this.params.effect.value)] || EFFECT_OPTIONS[OPENING];
-    this.chain.forEach((effect, i) => {
-      Object.assign(effect, this.chainDefaults[i]);
-      effect.enabled = option.on.includes(i);
-    });
-    for (const knob of ['a', 'b']) {
-      const param = this.params[knob === 'a' ? 'fxA' : 'fxB'];
-      const target = option[knob];
-      if (!target) {
-        param.label = knob === 'a' ? 'Effect A' : 'Effect B';
-        continue;
-      }
-      const [index, which] = target;
-      const setting = CHAIN[index][which];
-      const effect = this.chain[index];
-      param.label = setting.label;
-      effect[setting.key] = knobToSetting(param.value, settingRange(effect, setting.key), setting.log);
-    }
+    this.rack.apply(MENU.resolve(this.params));
   }
 
   _setSound(on) {
@@ -228,10 +162,9 @@ export class TwoscilloscopeModule extends Module {
     if (k === 'l') {
       this.setParam('view', (Math.round(this.params.view.value) + 1) % 3);
     } else if (k === 'e') {
-      const option = Math.round(this.params.effect.value);
-      this.setParam('effect', option < FIRST_SOLO || option === EFFECT_OPTIONS.length - 1 ? FIRST_SOLO : option + 1);
+      this.setParam('effect', MENU.nextSolo(Math.round(this.params.effect.value)));
     } else if (k === 'n') {
-      this.setParam('effect', NO_EFFECTS);
+      this.setParam('effect', MENU.none);
     } else if (k === 'm') {
       this.setParam('sound', Math.round(this.params.sound.value) === 1 ? 0 : 1);
     } else if (k === 's') {

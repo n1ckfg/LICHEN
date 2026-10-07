@@ -4,6 +4,12 @@ import {
   slowscanjamDownsampleFrag, slowscanjamLineVert, slowscanjamLineFrag, slowscanjamFadeFrag, SSJ_BATCH,
 } from '../shaders/slowscanjam.js';
 import { registerModule } from '../moduleRegistry.js';
+import { EffectMenu, NONE } from './audiofx/EffectRack.js';
+
+// The Effect drop-down: None, then Twoscilloscope's effects, one at a time. The
+// effects run in the worker, between the encoder and the decoder.
+const MENU = new EffectMenu([NONE]);
+const PROTECTED = 0;
 
 // The SlowscanJam app's phosphor constants
 const CLEAR_INTERVAL = 50;           // ms between fades
@@ -16,12 +22,14 @@ const MAX_DT = 0.1;                  // clamp long stalls so a tab switch doesn'
 let nextGeometryId = 0;
 
 // Passes video through SlowscanJam's Cassette Video codec: each field is
-// encoded to the stereo signal, decoded straight back, and drawn as scanlines
-// on a fading phosphor screen. A field goes through four stages, one at a time:
+// encoded to the stereo signal, run through Twoscilloscope's audio effects,
+// decoded straight back, and drawn as scanlines on a fading phosphor screen.
+// A field goes through four stages, one at a time:
 //   1. downsample: the input shrinks to the encoder's source picture (GPU)
 //   2. reading:    that picture comes back through a pixel buffer and a fence,
 //                  so the main thread never waits on the GPU
-//   3. coding:     a worker encodes it and decodes the signal (worker.js)
+//   3. coding:     a worker encodes it, runs the effects and decodes the
+//                  signal (worker.js)
 //   4. drawing:    the lines that come back are drawn on the next frame
 export class SlowscanJamModule extends Module {
   constructor(glCanvas, id) {
@@ -40,7 +48,16 @@ export class SlowscanJamModule extends Module {
         value: 0, min: 0, max: 1, step: 1, label: 'Blend',
         widget: 'dropdown', valueLabels: ['Normal', 'Additive'],
       },
+      // None, so a patch saved before the effects plays as it did
+      ...MENU.params(0, 0.5, 0.5),
+      // Protected keeps the sync pulses out of the effects; Raw runs the whole
+      // signal through them, and the picture rolls and tears where they break it
+      sync: {
+        value: PROTECTED, min: 0, max: 1, step: 1, label: 'Sync',
+        widget: 'dropdown', valueLabels: ['Protected', 'Raw'],
+      },
     };
+    this.fx = MENU.resolve(this.params);
 
     this.downShader = glCanvas.createShader(vertSrc, slowscanjamDownsampleFrag);
     this.lineShader = glCanvas.createShader(slowscanjamLineVert, slowscanjamLineFrag);
@@ -115,6 +132,8 @@ export class SlowscanJamModule extends Module {
     const dt = Math.min(Math.max(now - this.lastTime, 0), MAX_DT);
     this.lastTime = now;
 
+    // Every frame, so the knobs' labels follow the Effect drop-down
+    this.fx = MENU.resolve(this.params);
     if (this.state === 'reading') this._pollReadback(glCanvas);
 
     // A field every 1 / fps seconds, as the app's setTimeout paced them, once
@@ -140,6 +159,7 @@ export class SlowscanJamModule extends Module {
     }
     this.field = {
       lines, fps: this._snapped(this.params.fps), width: glCanvas.width, height: glCanvas.height, srcW: SOURCE_W,
+      fx: this.fx, protect: Math.round(this.params.sync.value) === PROTECTED,
     };
 
     this.srcFBO.begin();

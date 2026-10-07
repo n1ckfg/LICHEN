@@ -40,7 +40,7 @@ Latk's X and Y outputs and Twoscilloscope's X and Y pins are the only ones so fa
 
 The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
-A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Slitscan `axis`, SlowscanJam `blend`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
+A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
 
 A param that sets `widget: 'trigger'` is drawn as a momentary button instead of a knob. It uses the same row as a drop-down: an inlet dot, then the label, then a button where the drop-down's box would be. Declare it as `{ value: 0, min: 0, max: 1, step: 1, label, widget: 'trigger' }`. Clicking the button calls `mod.fireTrigger(name)`. That records the time in `mod.triggeredAt[name]` and then calls `mod.onTrigger(name)`, which modules override to act on the trigger. A control cable fires it too. `ProcessingPipeline` fires the trigger on the cable's rising edge, when the value it applies crosses the param's midpoint (0.5) from below. The button still fires on a click while a cable is connected, since firing never touches the value. Its text is `mod.triggerText(name)`, which is empty by default and cut short with an ellipsis when it is too long. It is drawn fully lit on the first frame after it fires, however slow that frame is, then fades back over 250 ms. As with the drop-down, dragging the unconnected dot does nothing. A trigger's value is saved like any other param, but it only records where the last cable left it.
 
@@ -472,31 +472,56 @@ Both modules clear their atlases on construction so the early frames show progre
 
 ## SlowscanJam Module
 
-The SlowscanJam module (`js/modules/SlowscanJamModule.js`, `js/modules/slowscanjam/`, `js/shaders/slowscanjam.js`) passes video through the Cassette Video codec from the SlowscanJam project. Each field of the input is encoded to the stereo signal, decoded straight back, and drawn as scanlines on a fading phosphor screen. The signal carries luma on the left channel, chroma on the right (Cb and Cr on alternating lines), and sync pulses marking the field and every line. It is never played: the app's AudioContext, playback queue and waveform view are gone, and the signal exists only as the sample arrays passed from encoder to decoder.
+The SlowscanJam module (`js/modules/SlowscanJamModule.js`, `js/modules/slowscanjam/`, `js/shaders/slowscanjam.js`) passes video through the Cassette Video codec from the SlowscanJam project. Each field of the input is encoded to the stereo signal, run through Twoscilloscope's audio effects, decoded straight back, and drawn as scanlines on a fading phosphor screen. The signal carries luma on the left channel, chroma on the right (Cb and Cr on alternating lines), and sync pulses marking the field and every line. It is never played: the app's AudioContext, playback queue and waveform view are gone, and the signal exists only as the sample arrays passed from encoder to decoder.
 
-**Params.** These are the app's controls, with its ranges and defaults:
+**Params.** The first six are the app's controls, with its defaults:
 
 | Param | Label | Range | Default |
 | --- | --- | --- | --- |
-| `lines` | Lines | 50–200, in steps of 10 | 200 |
-| `fps` | FPS | 1–6, in steps of 0.5 | 6 |
+| `lines` | Lines | 50–320, in steps of 10 | 200 |
+| `fps` | FPS | 1–10, in steps of 0.5 | 6 |
 | `lineWidth` | Line Width | 0.5–5 px | 5 |
 | `brightness` | Brightness | 0.5–2 | 1 |
 | `saturation` | Saturation | 0.5–2 | 1 |
 | `blend` | Blend | Normal, Additive | Normal |
+| `effect` | Effect | None, then Twoscilloscope's eleven effects | None |
+| `fxA`, `fxB` | follow Effect | 0–1 | 0.5, 0.5 |
+| `sync` | Sync | Protected, Raw | Protected |
 
-Lines and FPS snap to their steps, so a cable rebuilds the codec only when it crosses one. A rebuild happens at the next field and resets the decoder's sync, as the app's `init()` did. Additive is the app's Blend Mode checkbox: lines add (`ONE, ONE`) instead of covering what is there. With the fade taking 5% every 50 ms, additive fields build up toward white.
+Lines and FPS snap to their steps, so a cable rebuilds the codec only when it crosses one. A rebuild happens at the next field and resets the decoder's sync, as the app's `init()` did. Additive is the app's Blend Mode checkbox: lines add (`ONE, ONE`) instead of covering what is there. With the fade taking 5% every 50 ms, additive fields build up toward white. A line's picture lasts `2 / (FPS × Lines)` seconds less four pulse lengths, so at FPS × Lines of 2500 or more the encoder has no samples left for the picture (19 a line at 10 fps and 200 lines, against 83 at the defaults).
 
 **Files:**
 - `slowscanjam/encoder.js` is the app's `SlowscanEncoder`, CPU path, unchanged. The WebGL2 encoder is not ported, because it needs a WebGL2 context of its own per node (browsers cap them) and integer render targets that p5 framebuffers don't offer. The SlowscanJam notes measure the two encoders' signals within about 2e-7 of each other.
 - `slowscanjam/decoder.js` is the app's `SlowscanDecoder`. Its sample loop is unchanged apart from how many samples a line keeps (see below). Its renderer and draw loop live in the module.
-- `slowscanjam/worker.js` runs both, off the main thread.
+- `slowscanjam/worker.js` runs both, off the main thread, with the effects between them (see Effects).
 
 **A field goes through four stages, one at a time,** and the next starts 1 / FPS seconds after the last, once that one is through:
 1. **Downsample:** the input shrinks to the encoder's source picture, 320 × Lines, with a 4 × 4 box of bilinear taps per texel. The app's source was its 320 × 150 camera canvas. The encoder reads `min(height, lines)` rows from the top, so at fewer than 150 lines the app lost the bottom of its picture. Here the picture is exactly Lines rows tall.
 2. **Readback:** the picture is read into a pixel buffer behind a fence, polled once a frame, as the app's WebGLEncoder read its signal. The main thread never waits on the GPU.
-3. **Codec:** the worker encodes the field, decodes the signal, and replies with each line's ends, height and samples.
+3. **Codec:** the worker encodes the field, runs the effects, decodes the signal, and replies with each line's ends, height and samples.
 4. **Drawing:** the next frame draws those lines.
+
+**Effects.** The Effect drop-down and the Effect A and B knobs are Twoscilloscope's (see Audio Effects), with None first and then one option per effect. Each field's settings go to the worker with its picture. There the left channel is the effects' X and the right channel their Y, and with None on the signal reaches the decoder untouched. What each does to the picture:
+
+| Effect | Picture |
+| --- | --- |
+| Low Pass | Smears the picture sideways, colour included; Resonance rings at edges |
+| High Pass | Flat areas drift toward grey after each edge |
+| Channel Delay | Shifts colour against brightness. A delay of a line or more moves the colour down the picture, and an odd number of lines swaps Cb and Cr |
+| Echo | Ghosts: to the side under a line's length, then further down, and from earlier fields at a field or more |
+| Ring Mod | Bands of contrast and saturation across the picture, like hum bars, inverting at full Depth |
+| Rotate | Brightness leaks into colour and back; 90° swaps them, 180° gives a negative |
+| Drive | Stronger contrast and saturation |
+| Wavefold | Folds bright and dark tones back (solarization) |
+| Bit Crush | Fewer brightness and colour levels |
+| Sample & Hold | Blocky pixels along each line, staggered from line to line |
+| Noise | Snow and colour speckle |
+
+- **Stream:** the signal runs on from field to field, so an `EffectStream` keeps the effects' state between fields instead of restarting them as Twoscilloscope does: echoes carry over from earlier fields, and noise and Rotate's spin move on. The effects restart when the codec is rebuilt and when the option changes. Knob settings are in hertz and milliseconds, so how far an effect reaches across the picture depends on Lines and FPS. A line takes 1.67 ms at the defaults and 40 ms at 1 fps and 50 lines.
+- **Protected sync:** the sync pulses (±1) share the channels with the picture (±0.5), and the decoder finds them by level. Run through most effects, they move, vanish or appear inside the picture. Protected therefore runs only the picture through the effects, with the pulses and the quiet around them fed in as 0 and put back afterwards. The worker finds the picture from the encoder's layout (`pictureMask()`), leaving out the sample at each end of a line, which the encoder's resampling filter blends with the quiet. The picture goes in doubled, so it spans the effects' full ±1 as Twoscilloscope's loops do, and comes back halved and clamped: luma to the legal ±0.5, chroma to ±0.45. The decoder reads a pulse where luma and chroma are both past half their envelope. That envelope sags to about 0.48 over a 40 ms line, so a picture clamped to ±0.5 in both channels still made false pulses at 1 fps and 50 lines, and chroma held to ±0.45 cannot.
+- **Raw** runs the whole signal through the effects, so the picture rolls, tears and slips sideways wherever they break the sync.
+
+**Checked.** Through the worker in Node, each effect was run at five knob settings, at 200 lines and 6 fps, 50 and 1, 320 and 6, and 100 and 10. With Protected, every line decoded in the same place as with no effect, in all 220 runs. With Raw, 18–34 of the 55 runs at each setting kept fewer than 90% of their lines in place. In headless Chrome on an M2 Max, with seeded `Math.random`, a virtual clock and a colour-bar source, the output with None matches commit 0ceee36 on every pixel, at pixel density 1 and 2, at three settings: the defaults, 50 lines at 1 fps, and Additive at 150 lines and 3 fps. In Node, the effects cost 0.3–1 ms a field at the defaults, and 1.5–4 ms at 1 fps.
 
 Main-thread time per frame was at most 1 ms in each of the three cases measured: the defaults, the defaults at pixel density 2, and 1 fps with 50 lines. An earlier version did everything on the main thread with a synchronous readback, and a field cost 7 ms at the defaults and 39 ms at 1 fps with 50 lines. In the worker, a field takes 5.5 ms and 43 ms. All of these were measured in headless Chrome on an M2 Max.
 
@@ -557,7 +582,8 @@ Strokes are drawn in file order, later over earlier, with no depth test, as `exa
 The Twoscilloscope module (`js/modules/TwoscilloscopeModule.js`, `js/modules/twoscilloscope/`, `js/shaders/twoscilloscope.js`) is the scope half of `example-latk` in the Twoscilloscope project's p5.js library. One loop of XY audio comes in on its X and Y control pins, runs through an effect chain, and is drawn back from the altered audio, as the oscilloscope beam or decoded into strokes. The Latk module's X and Y outputs bring a Latk drawing, encoded as the example encoded it (see Latk Module). With nothing cabled in, it draws nothing.
 
 **Files:**
-- `js/libraries/p5.twoscilloscope.js` is the library, copied unchanged. It is a classic script that puts its classes on `window`, so the module imports it only for that side effect.
+- `js/libraries/p5.twoscilloscope.js` is the library. It is a classic script that puts its classes on the global scope, so the module imports it only for that side effect. It is copied unchanged apart from three lines that let SlowscanJam's worker load it: with no `document`, it skips the warning about p5 and finds its own URL from `location`, and it assigns its classes to `globalThis` instead of `window`.
+- `audiofx/EffectRack.js` holds the effect chain, the Effect drop-down and the knobs, which SlowscanJam shares (see Audio Effects).
 - `twoscilloscope/ScopeRenderer.js` is the second half of the example's `LatkScopeRenderer`, which runs the loop through the effects and turns each view into a point stream. Its first half, projecting and encoding the drawing, is now in `latk/strokes.js`.
 
 **X and Y.** `_readInputs()` makes one loop from the two pins (see Module System):
@@ -599,6 +625,7 @@ Loop Hz is now Latk's, since the source sets the loop's length.
 - **Ranges:** each knob runs 0–1 across its setting's slider range in the library's panel. Cutoff, Resonance, Time, Freq, Gain and Rate are logarithmic, the rest linear. The knobs' defaults give the opening chain's 1500 Hz and 0.6 ms.
 - **Defaults:** every setting the knobs aren't turning is at the library's default, and goes back to it when the knobs move on to another option, so the knobs alone decide the chain.
 - **Restarts:** as in the example, `XYTransformer` resets the effects every frame and runs four loops before the one it keeps. Rotate's Spin Rate and Ring Mod's phase therefore bend the shape the same way on every frame, rather than animating it.
+- **Shared:** the chain, the drop-down and the knobs are in `audiofx/EffectRack.js`. Moving them there changed nothing: every Effect option in Beams, and every view with None and with Low Pass + Delay, match commit 0ceee36 on every pixel, at pixel density 1 and 2 (headless Chrome, Latk frame 0).
 
 **Rendering.** The example drew the beam with OsciMesh into a WEBGL canvas of its own and copied that onto the sketch with `image()`. A second WebGL context per node would run into the browser's cap on contexts, which SlowscanJam also avoids. So the module draws in LICHEN's own context with Latk's `SegmentRenderer`, from the point stream of each view:
 - **Beams:** the fragment shader, `twoscilloscopeBeamFrag`, is OsciMesh's erf-integrated gaussian, taking its colour per segment, drawn with `blendMode(ADD)`. The example drew one OsciMesh per colour, joining each run of lit samples to the one before with a segment of brightness 0. A dark segment adds no light, so the stream leaves those out.
@@ -618,6 +645,14 @@ Loop Hz is now Latk's, since the source sets the loop's length.
 **Sound.** With Sound on, an `XYscope` loops the altered audio out of the sound card, X left and Y right, so what you hear is what you see. Browsers start audio only after a click or a key press. The example played as soon as its page was clicked; here Sound starts Off, so that adding a node makes no noise.
 
 **Cost.** At 1280×960 (a retina display) on an M2 Max, a frame costs 4.3–5.7 ms, depending on the view, with Latk's drawing coming in. Most of that is running the effects on the CPU, and Decoded Strokes adds about 1.5 ms of decoding.
+
+## Audio Effects
+
+`js/modules/audiofx/EffectRack.js` holds the audio effects Twoscilloscope and SlowscanJam share: the eleven effects of `example-latk`'s chain, from p5.twoscilloscope, an Effect drop-down that turns them on, and the Effect A and Effect B knobs that set them. It touches neither the DOM nor p5, so SlowscanJam's worker imports it too.
+- **`CHAIN`** lists the effects in the example's order, and the setting each knob turns while one is on. `knobFor()` gives the knob position for a setting, so a module can set a knob's default from it.
+- **`EffectMenu`** builds a module's drop-down from that module's own options, followed by one option per effect. Twoscilloscope's are Low Pass + Delay and None (`NONE`); SlowscanJam's is None. Patches save the option as its index, so a module's own options never change, and a new effect is appended to `CHAIN`. `params()` gives the drop-down and both knobs as module params. `resolve()` turns their values into plain data, `{ on, set }`, and relabels the knobs for the option. `nextSolo()` and `none` are the example's E and N keys.
+- **`EffectRack`** holds one of each effect, added to an `XYEffectChain`. `apply()` puts every setting back to the library's default, turns on the effects in `on`, and then sets the knobs' settings from `set`. Twoscilloscope's rack is its `XYTransformer`'s chain, which restarts the effects every frame (see Twoscilloscope Module).
+- **`EffectStream`** runs a rack over a signal that runs on from one call to the next, as SlowscanJam's fields do, keeping the effects' state between calls (see SlowscanJam Module). It restarts them when the option changes, so an effect turned back on doesn't replay what it held before. It also restarts them when Noise Seed changes, the one setting an effect reads only on a restart. `process()` can protect part of the signal: given a mask, it feeds the effects only the masked samples, scales them going in and back coming out, clamps them, and leaves the rest as they were.
 
 ## Yellowtail Module
 
