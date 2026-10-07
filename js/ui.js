@@ -11,7 +11,7 @@ void main() {
 
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
-  'Utility': ['Blur', 'Brcosa', 'Channel', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Sharpen', 'Skeleton', 'VideoMixer'],
+  'Utility': ['Blur', 'Brcosa', 'Channel', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'Skeleton', 'VideoMixer'],
   'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
   'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Latk', 'Twoscilloscope', 'Yellowtail'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
@@ -45,6 +45,7 @@ const MODULE_COLORS = {
   Levels: color_utility,
   LUT: color_utility,
   Mosaic: color_utility,
+  Restore: color_utility,
   Sharpen: color_utility,
   Skeleton: color_utility,
   VideoMixer: color_utility,

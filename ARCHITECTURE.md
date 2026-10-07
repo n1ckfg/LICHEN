@@ -40,7 +40,7 @@ Latk's, NAPLPS's and Skeleton's X and Y outputs and Twoscilloscope's X and Y pin
 
 The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
-A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Sharpen `posterize`, Skeleton `trace`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
+A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Restore `model`, `size` and `clamp`, Sharpen `posterize`, Skeleton `trace`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
 
 A param that sets `widget: 'trigger'` is drawn as a momentary button instead of a knob. It uses the same row as a drop-down: an inlet dot, then the label, then a button where the drop-down's box would be. Declare it as `{ value: 0, min: 0, max: 1, step: 1, label, widget: 'trigger' }`. Clicking the button calls `mod.fireTrigger(name)`. That records the time in `mod.triggeredAt[name]` and then calls `mod.onTrigger(name)`, which modules override to act on the trigger. A control cable fires it too. `ProcessingPipeline` fires the trigger on the cable's rising edge, when the value it applies crosses the param's midpoint (0.5) from below. The button still fires on a click while a cable is connected, since firing never touches the value. Its text is `mod.triggerText(name)`, which is empty by default and cut short with an ellipsis when it is too long. It is drawn fully lit on the first frame after it fires, however slow that frame is, then fades back over 250 ms. As with the drop-down, dragging the unconnected dot does nothing. A trigger's value is saved like any other param, but it only records where the last cable left it.
 
@@ -64,7 +64,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 ### Module Categories
 
 - **Sources**: Camera, Image, VideoPlayer
-- **Utility**: Blur, Brcosa, Channel, Dither, Edges, Levels, LUT, Mosaic, Sharpen, Skeleton, VideoMixer
+- **Utility**: Blur, Brcosa, Channel, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, Skeleton, VideoMixer
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
 - **Interactive**: Conway, GRASS, InkDrops, Latk, Twoscilloscope, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
@@ -373,6 +373,54 @@ The Channel module (`js/modules/ChannelModule.js`, `js/shaders/channel.js`) buil
 **Inputs.** A lone input, on any pin, feeds all three channels, as VideoMixer's feeds both of its. Channel then sets that picture's channel gains, and with all three at 1 it passes the picture through unchanged. With two or three cabled in, an unplugged channel is black. With none, the output keeps its last frame, as VideoMixer's does.
 
 **Checked.** In headless Chrome, a lone input on any pin with gains of 1 comes out the same on every pixel. With gains of 0.5, 1.7 and 0, every pixel is within one level of `round(input × gain)`, clamped. The three-input and two-input cases take each channel from its input exactly, with the unplugged channel at 0.
+
+## Restore Module
+
+The Restore module (`js/modules/RestoreModule.js`, `js/modules/anime4k/`, `js/shaders/anime4k/`, `js/shaders/restore.js`) runs the Restore CNNs from bloc97's Anime4K v4.0. They are small convolutional networks trained to rebuild anime line art that blur, resampling and compression have softened. They don't change the frame's size, so Restore is an ordinary utility filter. Because they were trained on line art, they sharpen edges in any picture, and in camera or generative video they can invent line structure.
+
+**Params.**
+
+| Param | Label | Options | Default | Sets |
+| --- | --- | --- | --- | --- |
+| `model` | Model | Restore, Restore Soft | Restore | Anime4K's two families: Restore is tuned for blur and upsampling artifacts, Restore Soft for downsampling artifacts and aliasing |
+| `size` | Size | S, M, L, VL, UL | M | The network's size; each step costs about twice the last (see Cost). Anime4K's Fast presets use M |
+| `clamp` | Clamp | Off, On | On | Anime4K's Clamp_Highlights, which Anime4K recommends always using. It pulls each pixel's luminance down to the input's maximum over the 5 × 5 pixels around it, so edges don't ring or overshoot |
+| `mix` | Mix | 0–1 | 1 | Blends from the input (0) to the restored picture (1) |
+
+Patches save Model and Size as indexes, so a new model (Anime4K's GAN ones, say) is appended, never inserted.
+
+**Files.** Each model is one of Anime4K's mpv user shaders, copied unchanged from its `glsl/Restore/` at commit 7684e95 into `js/shaders/anime4k/` as a JS default export, MIT licence included. A file is a list of passes, each a block of `//!` directives and a `hook()` that reads named textures through mpv's macros. `anime4k/mpvHook.js` turns each pass into a p5 shader:
+- **Textures:** each bound texture becomes a sampler and a size uniform, and the macros read it at the fragment's own uv, offset in texels.
+- **Orientation:** mpv puts +y down the image, as a LICHEN framebuffer does (v = 0 is the top row), so offsets carry over unchanged.
+- **Scope:** it handles what Restore uses and no more. Every pass is its input's size, and any other WIDTH, HEIGHT, WHEN or hook is rejected.
+
+**Running.** The module runs the passes in order, each into its own half-float buffer, which later passes bind by its SAVE name. The features are signed, so 8-bit buffers would lose half of them, and without half-float framebuffers the module passes its input through. With Clamp on, Clamp_Highlights' two statistics passes run first, on the input, and its clamp (a PREKERNEL hook in mpv) after the model. `restoreMixFrag` then mixes into `outputFBO`, keeping the input's alpha. The passes run under `blendMode(REPLACE)`, as Blur's do, since the alpha channel carries a feature like the others.
+
+**Loading.** A model's file is imported the first time any node picks it, since the UL files are 300 KB each, and its compiled passes are shared by every node. As with LUT's presets, the previous model stays on until the new one is ready, and a choice that finishes loading after a newer one is dropped. Until the first model is ready, the output is the input.
+
+**Compiling in the background.** p5 compiles a shader the first time it is bound, and waits for it. With nothing in the GPU's shader cache, that froze the page for 1.0 s on first choosing M, and 6.5 s for UL. macOS keeps compiled Metal shaders, so later sessions took 21–135 ms. `mpvHook.js` therefore compiles with `KHR_parallel_shader_compile`:
+1. It issues every compile and link without asking for a result.
+2. It polls `COMPLETION_STATUS_KHR` every 5 ms.
+3. It gives the finished programs to p5, which skips its own compile when a shader already has one (`Shader.init` in p5 1.9 checks `_glProgram`).
+
+With nothing cached, the main thread then never stalled for more than 5 ms, and the models were ready after 0.5 s (M) and 1.8 s (UL). Without the extension, or if p5's internals change, p5 compiles them itself as before.
+
+**Checked.** An independent numpy implementation reads the weights from the same shader text, line by line, and fails on any line it doesn't recognise. It stores each pass in float16, as the GPU does. The test ran in headless Chrome on an M2 Max: a 640×480 crop of Anime4K's Bird test image, halved and doubled again with bilinear filtering, went from Image into Restore.
+- **Every model:** all ten models with Clamp on are within one level of the numpy result on every pixel, at pixel density 1 and 2. So is M with Clamp off, and with Mix 0.4. Mix 0 gives back the input exactly.
+- **Orientation:** the input reads back the right way up, and the numpy model offsets +y down the image as mpv does, so the match also shows the convolutions run the right way round.
+- **Restoring:** against the clean crop, the degraded input scores 21.06 dB, Restore M 21.89 dB and Restore UL 22.10 dB. Restore Soft, made for other artifacts, gains less: 21.40 dB for M.
+
+**Cost.** In ms per frame on an M2 Max, with Clamp on:
+
+| Size | Density 1 (640×480) | Density 2 (1280×960) |
+| --- | --- | --- |
+| S | 0.55 | 1.35 |
+| M | 0.81 | 2.4 |
+| L | 2.3 | 7.2 |
+| VL | 4.7 | 15–18 |
+| UL | 15 | 54 |
+
+Restore Soft costs the same, and Clamp adds about 0.2 ms at density 1. UL can't hold 60 fps on its own, and at density 2 neither can VL. The first frame drawn with a newly loaded model took up to 21 ms at density 1 and 69 ms at density 2.
 
 ## Edges Module
 
