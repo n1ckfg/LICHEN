@@ -3,6 +3,7 @@ precision mediump float;
 
 uniform sampler2D tex0;
 uniform vec2 texelSize;
+uniform float posterize;
 uniform float posterizeLevels;
 uniform float sharpenAmount;
 
@@ -22,8 +23,11 @@ void main() {
     // input through, and the default 5 is the classic 5 / -1 kernel.
     float neighborWeight = (sharpenAmount - 1.0) * 0.25;
     vec3 sharpenedColor = centerColor * sharpenAmount - (leftColor + rightColor + topColor + bottomColor) * neighborWeight;
-    vec3 posterizedColor = floor(sharpenedColor * posterizeLevels) / posterizeLevels;
+    vec3 color = sharpenedColor;
+    if (posterize > 0.5) {
+        color = floor(sharpenedColor * posterizeLevels) / posterizeLevels;
+    }
 
-    gl_FragColor = vec4(posterizedColor, 1.0);
+    gl_FragColor = vec4(color, 1.0);
 }
 `;

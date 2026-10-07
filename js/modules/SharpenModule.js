@@ -9,7 +9,11 @@ export class SharpenModule extends Module {
     this.outputs = [{ name: 'out', type: 'video' }];
     this.params = {
       sharpenAmount: { value: 5, min: 1, max: 10, step: 0.1, label: 'Sharpen' },
-      posterizeLevels: { value: 16, min: 2, max: 32, step: 1, label: 'Posterize' },
+      posterize: {
+        value: 0, min: 0, max: 1, step: 1, label: 'Posterize',
+        widget: 'dropdown', valueLabels: ['Off', 'On'],
+      },
+      posterizeLevels: { value: 8, min: 2, max: 32, step: 1, label: 'Levels' },
     };
     this.createShader(sharpenFrag);
     this.createOutputFBO();
@@ -24,6 +28,7 @@ export class SharpenModule extends Module {
     this.shader.setUniform('tex0', inputFBO);
     this.shader.setUniform('texelSize', [1.0 / glCanvas.width, 1.0 / glCanvas.height]);
     this.shader.setUniform('sharpenAmount', this.params.sharpenAmount.value);
+    this.shader.setUniform('posterize', Math.round(this.params.posterize.value));
     this.shader.setUniform('posterizeLevels', this.params.posterizeLevels.value);
     this.renderQuad();
     this.outputFBO.end();

@@ -110,6 +110,7 @@
       "y": 741.8502913191967,
       "params": {
         "sharpenAmount": 5,
+        "posterize": 1,
         "posterizeLevels": 16
       },
       "collapsed": false
