@@ -17,7 +17,11 @@ void main() {
     vec3 topColor = texture2D(tex0, uv + vec2(0.0, texelSize.y)).xyz;
     vec3 bottomColor = texture2D(tex0, uv - vec2(0.0, texelSize.y)).xyz;
 
-    vec3 sharpenedColor = centerColor * sharpenAmount - (leftColor + rightColor + topColor + bottomColor);
+    // The four neighbours share (sharpenAmount - 1) of negative weight, so the
+    // kernel always sums to 1 and flat areas keep their brightness: 1 passes the
+    // input through, and the default 5 is the classic 5 / -1 kernel.
+    float neighborWeight = (sharpenAmount - 1.0) * 0.25;
+    vec3 sharpenedColor = centerColor * sharpenAmount - (leftColor + rightColor + topColor + bottomColor) * neighborWeight;
     vec3 posterizedColor = floor(sharpenedColor * posterizeLevels) / posterizeLevels;
 
     gl_FragColor = vec4(posterizedColor, 1.0);
