@@ -64,7 +64,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 ### Module Categories
 
 - **Sources**: Camera, Image, VideoPlayer
-- **Utility**: Blur, Brcosa, Dither, Edges, Levels, LUT, Mosaic, Sharpen, Skeleton, VideoMixer
+- **Utility**: Blur, Brcosa, Channel, Dither, Edges, Levels, LUT, Mosaic, Sharpen, Skeleton, VideoMixer
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
 - **Interactive**: Conway, GRASS, InkDrops, Latk, Twoscilloscope, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
@@ -366,6 +366,14 @@ The Blur module (`js/modules/BlurModule.js`, `js/shaders/blur.js`) blurs its inp
 
 **Cost.** At 1280×960 (a retina display) on an M2 Max, every mode at every radius runs in 0.4–1.5 ms per frame. Kawase is the most expensive at large radii, because of the pass overhead across its pyramid levels. Buffers are half float when the context supports it, so the linear-light darks don't band.
 
+## Channel Module
+
+The Channel module (`js/modules/ChannelModule.js`, `js/shaders/channel.js`) builds a picture from the channels of up to three inputs: red from `r`, green from `g` and blue from `b`, each times its gain (R Gain, G Gain and B Gain, 0–3, default 1), clamped to 0–1. A grey source gives its brightness to the channel it is cabled to. The output is opaque.
+
+**Inputs.** A lone input, on any pin, feeds all three channels, as VideoMixer's feeds both of its. Channel then sets that picture's channel gains, and with all three at 1 it passes the picture through unchanged. With two or three cabled in, an unplugged channel is black. With none, the output keeps its last frame, as VideoMixer's does.
+
+**Checked.** In headless Chrome, a lone input on any pin with gains of 1 comes out the same on every pixel. With gains of 0.5, 1.7 and 0, every pixel is within one level of `round(input × gain)`, clamped. The three-input and two-input cases take each channel from its input exactly, with the unplugged channel at 0.
+
 ## Edges Module
 
 The Edges module (`js/modules/EdgesModule.js`, `js/shaders/edges.js`) is a utility filter porting the four operators from the edge-detection-research project into one shader, selected by the `mode` drop-down:
@@ -559,7 +567,7 @@ The Latk module (`js/modules/LatkModule.js`, `js/modules/latk/`, `js/shaders/lat
 - `latk/strokes.js` holds the example's drawing half:
   - `projectFrame()` is the example's `project()`. It puts the current frame of each layer through the camera, breaks a stroke where it goes behind the camera, and cuts it where it leaves the canvas.
   - `encodeLoop()` is the first half of the example's `encode()`, which turns those pieces into one loop of XY audio (see X and Y).
-  - `XYOutputs` publishes that loop on a module's X and Y outputs each frame, and keeps the beam's place in it for knob cables. NAPLPS and Skeleton use it too, with `polylinePieces()`, which cuts a polyline at the canvas edge into pieces as `projectFrame()` cuts strokes. A polyline given no colour gets none on X and Y, so Twoscilloscope draws it in its default amber.
+  - `XYOutputs` publishes that loop on a module's X and Y outputs each frame, and keeps the beam's place in it for knob cables. NAPLPS and Skeleton use it too, with `polylinePieces()`, which cuts a polyline at the canvas edge into pieces as `projectFrame()` cuts strokes. A polyline given no colour gets none on X and Y, so Twoscilloscope draws it in its default white.
   - `PointStream` packs lines for the segment shader (see Rendering).
 - `latk/SegmentRenderer.js` draws a point stream. Twoscilloscope draws with it too.
 
@@ -604,7 +612,7 @@ The Twoscilloscope module (`js/modules/TwoscilloscopeModule.js`, `js/modules/two
 - **Values only:** a pin with only a 0..1 control value, such as an Oscillator's, holds it across the loop as −1..1. If neither pin brings a loop, the last Trail seconds of values, one a frame, are the loop, as on a scope with long persistence. Two Oscillators draw a Lissajous figure this way.
 - **Unplugged:** a pin with nothing cabled in stays at 0, the centre.
 
-The lit runs in the blanking are the strokes. Each is drawn in the colour of its first sample, or in the library Oscilloscope's default amber (hue 50) without a colour lane. A loop without blanking is one stroke, lit from end to end.
+The lit runs in the blanking are the strokes. Each is drawn in the colour of its first sample, or in white without a colour lane, where the library Oscilloscope's default is amber (hue 50). A loop without blanking is one stroke, lit from end to end.
 
 **Params.**
 
@@ -692,7 +700,7 @@ The Skeleton module (`js/modules/SkeletonModule.js`, `js/modules/skeleton/`, `js
 
 A new mask starts every frame, even while the worker traces the last one. The newest waits for the worker, and any older is dropped, so each trace is of the freshest mask. A trace that finishes after the input is unplugged is dropped.
 
-**X and Y.** Each polyline becomes a piece through `polylinePieces()`, with each point at its cell's centre. A cell on its own (a single point) has no length and is left out. Every frame, `XYOutputs` encodes the latest trace into the loop (see Latk's X and Y). The pieces carry no colour, so Twoscilloscope draws them in its default amber. With nothing traced, or nothing cabled in, the loop is all blank, so the beam rests unlit in the middle.
+**X and Y.** Each polyline becomes a piece through `polylinePieces()`, with each point at its cell's centre. A cell on its own (a single point) has no length and is left out. Every frame, `XYOutputs` encodes the latest trace into the loop (see Latk's X and Y). The pieces carry no colour, so Twoscilloscope draws them in its default white. With nothing traced, or nothing cabled in, the loop is all blank, so the beam rests unlit in the middle.
 
 **Checked.** In headless Chrome, on a test mask of a thick ring, a thick bar, a filled disc, a rectangle and a 1 px line, the traces run down the middle of each stroke at 64, 256 and 512 cells, in White and in Black (the mask inverted). The 1 px line is kept even at 64. A disc thins to a point. Twoscilloscope's Original Lines, Beams and Decoded Strokes redraw each trace from X and Y.
 

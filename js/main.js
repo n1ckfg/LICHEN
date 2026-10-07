@@ -54,6 +54,7 @@ import './modules/YellowtailModule.js';
 // - - - UTILITY - - -
 import './modules/BlurModule.js';
 import './modules/BrcosaModule.js';
+import './modules/ChannelModule.js';
 import './modules/DitherModule.js';
 import './modules/EdgesModule.js';
 import './modules/LevelsModule.js';

@@ -14,11 +14,11 @@
 import '../../libraries/p5.twoscilloscope.js';   // a classic script: it puts its classes on window
 import { PointStream, Z_OFF, Z_ON } from '../latk/strokes.js';
 
-const { Twoscilloscope, XYTransformer, XYSoundBuffer, XYDecoder } = window;
+const { XYTransformer, XYSoundBuffer, XYDecoder } = window;
 
-// The colour of a loop that brings none: the library Oscilloscope's default hue
-const [DEFAULT_R, DEFAULT_G, DEFAULT_B] = Twoscilloscope.hsbToRgb(50 / 360, 1, 1).map((c) => Math.floor(255 * c));
-const DEFAULT_KEY = (DEFAULT_R << 16) | (DEFAULT_G << 8) | DEFAULT_B;
+// The colour of a loop that brings none: white, where the library
+// Oscilloscope's default is amber (hue 50)
+const DEFAULT_KEY = 0xffffff;
 
 export class ScopeRenderer {
 
