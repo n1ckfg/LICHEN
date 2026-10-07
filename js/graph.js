@@ -192,6 +192,12 @@ export class ConnectionGraph {
       mod.y = nodeData.y;
       mod.collapsed = nodeData.collapsed || false;
       if (nodeData.params) {
+        // A param added since the patch was saved would keep the constructor's
+        // draw, so it goes back to its declared value and the patch looks as
+        // it did.
+        for (const [k, v] of Object.entries(mod.declared ?? {})) {
+          if (!(k in nodeData.params)) mod.setParam(k, v);
+        }
         for (const [k, v] of Object.entries(nodeData.params)) {
           mod.setParam(k, v);
         }

@@ -2,17 +2,35 @@ import { Module } from './Module.js';
 import { booleanLogicFrag } from '../shaders/boolean-logic.js';
 import { registerModule } from '../moduleRegistry.js';
 
+// Patches save op as its index, so new operators are appended, never inserted.
+// The shader reads each odd one as the even one before it, inverted.
+const OPS = ['XOR', 'XNOR', 'AND', 'NAND', 'OR', 'NOR'];
+
 export class BooleanLogicModule extends Module {
   constructor(glCanvas, id) {
     super('BooleanLogic', glCanvas, id);
     this.inputs = [{ name: 'in', type: 'video' }];
     this.outputs = [{ name: 'out', type: 'video' }];
+    // The defaults are the constants the shader had before they were knobs.
+    // The seed picks the pattern; Speed and Intensity are master controls, so
+    // it leaves them alone.
     this.params = {
       speed: { value: 1.0, min: 0, max: 5, step: 0.01, label: 'Speed' },
       intensity: { value: 1.0, min: 0, max: 1, step: 0.01, label: 'Intensity' },
+      op: { value: 0, min: 0, max: OPS.length - 1, step: 1, label: 'Op', widget: 'dropdown', valueLabels: OPS, random: true },
+      scale: { value: 1, min: 0, max: 8, step: 0.05, label: 'Scale', random: [0.5, 4] },
+      driftX: { value: 50, min: -200, max: 200, step: 1, label: 'Drift X', random: [-100, 100] },
+      driftY: { value: -30, min: -200, max: 200, step: 1, label: 'Drift Y', random: [-100, 100] },
+      driftXY: { value: 0, min: -200, max: 200, step: 1, label: 'Drift XY', random: [-100, 100] },
+      reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
     this.createShader(booleanLogicFrag);
     this.createOutputFBO();
+
+    // Every new node starts from its own seed. Patch loads and duplicates
+    // then restore the saved params and seed over this one.
+    this.randomize();
+
     this.startTime = performance.now();
   }
 
@@ -29,8 +47,21 @@ export class BooleanLogicModule extends Module {
     this.shader.setUniform('time', time);
     this.shader.setUniform('speed', this.params.speed.value);
     this.shader.setUniform('intensity', this.params.intensity.value);
+    this.shader.setUniform('op', this.params.op.value);
+    this.shader.setUniform('scale', this.params.scale.value);
+    this.shader.setUniform('driftX', this.params.driftX.value);
+    this.shader.setUniform('driftY', this.params.driftY.value);
+    this.shader.setUniform('driftXY', this.params.driftXY.value);
     this.renderQuad();
     this.outputFBO.end();
+  }
+
+  onTrigger(name) {
+    if (name === 'reseed') this.randomize();
+  }
+
+  triggerText(name) {
+    return name === 'reseed' ? this.seed : '';
   }
 }
 

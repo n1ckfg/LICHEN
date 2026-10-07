@@ -30,6 +30,8 @@ export class Module {
     this.historicalInfo = null;
     // Hex seed the random params were last drawn from; null until randomize()
     this.seed = null;
+    // Param name -> value before the first randomize(); null until then
+    this.declared = null;
     // Trigger param name -> performance.now() it last fired, for the button flash
     this.triggeredAt = {};
   }
@@ -115,6 +117,10 @@ export class Module {
       if (param.random) ss.addAxis(name, seedCandidates(param));
     }
     if (ss.axes.length === 0) return [];
+    // Keep the values the first draw replaces. In a module that draws in its
+    // constructor these are the declared ones, which ConnectionGraph.fromJSON
+    // puts back for a param added since the patch was saved.
+    this.declared ??= Object.fromEntries(Object.entries(this.params).map(([k, p]) => [k, p.value]));
     this.seed = seed ?? StringSeed.generateSeed(ss.requiredSeedBytes());
     const results = ss.resolve(this.seed);
     for (const r of results) this.setParam(r.axis, r.choice);
