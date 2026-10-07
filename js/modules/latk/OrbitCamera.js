@@ -1,9 +1,9 @@
 // The camera the Latk drawing is seen through, from Twoscilloscope's
 // example-latk, in place of ofEasyCam.
 //
-// The scope has to project every stroke onto the canvas itself, so this camera
-// keeps its own matrices and everything is drawn through them by hand, rather
-// than through p5's WEBGL camera. Y is up, as ofxLatk and Latk for Processing
+// Twoscilloscope's scope has to project every stroke onto the canvas itself,
+// so this camera keeps its own matrices and everything is drawn through them
+// by hand, rather than through p5's WEBGL camera. Latk draws the same way. Y is up, as ofxLatk and Latk for Processing
 // have it, and at yaw 0 it is in front of the drawing, looking down -Z.
 //
 // The example's mouse handling is gone: in LICHEN, dragging and the wheel turn

@@ -7,39 +7,16 @@
 // untouched, so that still holds after them, and each stroke is drawn from
 // its own samples in its own colour.
 //
-// project() and encode() are the example's. Its drawing is not: the example
-// drew with OsciMesh into a WEBGL canvas of its own, and with p5 lines. Here
-// each view becomes a point stream (see below), which TwoscilloscopeModule
-// draws in LICHEN's own GL context with one shader.
+// project() and encode() are the example's, though project() now lives in
+// latk/strokes.js as projectFrame(), shared with the Latk module. The drawing
+// is not the example's: it drew with OsciMesh into a WEBGL canvas of its own, and
+// with p5 lines. Here each view becomes a point stream (see latk/strokes.js),
+// which the module draws in LICHEN's own GL context.
 import '../../libraries/p5.twoscilloscope.js';   // a classic script: it puts its classes on window
-import { OrbitCamera } from './OrbitCamera.js';
+import { projectFrame, PointStream } from '../latk/strokes.js';
 
 const { XYTransformer, XYSoundBuffer, XYDecoder } = window;
 
-// Cuts the segment a-b to the canvas (Liang-Barsky). Returns null if none of
-// it is inside, or [t0, t1], where the inside part starts and ends.
-function clipSegment(ax, ay, bx, by, w, h) {
-  const dx = bx - ax, dy = by - ay;
-  const p = [-dx, dx, -dy, dy];
-  const q = [ax, w - ax, ay, h - ay];
-  let t0 = 0, t1 = 1;
-  for (let i = 0; i < 4; i++) {
-    if (p[i] === 0) {
-      // parallel to this edge, so all in or all out
-      if (q[i] < 0) return null;
-      continue;
-    }
-    const t = q[i] / p[i];
-    if (p[i] < 0) t0 = Math.max(t0, t);
-    else t1 = Math.min(t1, t);
-    if (t0 > t1) return null;
-  }
-  return [t0, t1];
-}
-
-// A point stream is what the shader draws: four floats a point, x and y in
-// scope units (-1..1 across the canvas, +Y up), then the colour of the segment
-// from this point to the next, as 0xRRGGBB, or -1 where there is none, then 0.
 export class LatkScopeRenderer {
 
   constructor(sampleRate = 44100) {
@@ -79,8 +56,7 @@ export class LatkScopeRenderer {
     this.strokePieces = []; // the piece each stroke was decoded from
     this.strokesDirty = true;
 
-    this.stream = new Float32Array(4 * 4096);
-    this.streamCount = 0;
+    this.stream = new PointStream();
   }
 
   getFreq() {
@@ -110,46 +86,7 @@ export class LatkScopeRenderer {
   }
 
   project(latk, mvp) {
-    this.pieces = [];
-    const w = this.canvasW, h = this.canvasH;
-
-    for (const layer of latk.layers) {
-      const frame = layer.frames[layer.counter];
-      if (!frame) continue;
-
-      for (const stroke of frame.strokes) {
-        // 8-bit, as ofxLatk keeps them
-        const color = [Math.floor(255 * stroke.color[0]), Math.floor(255 * stroke.color[1]), Math.floor(255 * stroke.color[2])];
-        const key = (color[0] << 16) | (color[1] << 8) | color[2];
-        let open = false; // whether the next segment continues the last piece
-        let lastValid = false;
-        let lastX = 0, lastY = 0;
-        for (const p of stroke.points) {
-          // Behind the camera or outside its depth range: break the stroke here.
-          const screen = OrbitCamera.project(mvp, p.co[0], p.co[1], p.co[2], w, h);
-          const t = screen.valid && lastValid ? clipSegment(lastX, lastY, screen.x, screen.y, w, h) : null;
-          if (t) {
-            // The canvas is the scope's canvas, and past its edges the audio
-            // would clip, so cut the stroke where it leaves the canvas.
-            const ax = lastX + (screen.x - lastX) * t[0], ay = lastY + (screen.y - lastY) * t[0];
-            const bx = lastX + (screen.x - lastX) * t[1], by = lastY + (screen.y - lastY) * t[1];
-            if (!open || t[0] > 0) {
-              this.pieces.push({ points: [{ x: ax, y: ay }], color, key, length: 0, start: 0, lit: 0 });
-            }
-            const piece = this.pieces[this.pieces.length - 1];
-            piece.points.push({ x: bx, y: by });
-            piece.length += Math.hypot(bx - ax, by - ay);
-            open = t[1] === 1;
-          } else {
-            open = false;
-          }
-          lastX = screen.x;
-          lastY = screen.y;
-          lastValid = screen.valid;
-        }
-      }
-    }
-
+    this.pieces = projectFrame(latk, mvp, this.canvasW, this.canvasH);
     this.projected = this.pieces;
     this.stats.pathLength = 0;
     for (const piece of this.pieces) this.stats.pathLength += piece.length;
@@ -244,38 +181,17 @@ export class LatkScopeRenderer {
 
   // ---------------------------------------------------------------- point streams
 
-  _reserve(count) {
-    if (this.stream.length < count * 4) this.stream = new Float32Array(Math.max(count, this.stream.length / 2) * 4);
-    this.streamCount = 0;
-    return this.stream;
-  }
-
-  // A polyline in canvas px, its segments in one colour
-  _addPolyline(points, key, closed) {
-    const s = this.stream;
-    const w = this.canvasW, h = this.canvasH;
-    const total = points.length + (closed ? 1 : 0);
-    for (let j = 0; j < total; j++) {
-      const p = points[j % points.length];
-      const o = this.streamCount++ * 4;
-      s[o] = p.x / w * 2 - 1;
-      s[o + 1] = 1 - p.y / h * 2;
-      s[o + 2] = j < total - 1 ? key : -1;
-      s[o + 3] = 0;
-    }
-  }
-
   // The altered audio, as the oscilloscope beam draws it: every sample of the
   // loop, with each piece's lit run in the piece's colour. The example drew
   // one OsciMesh per colour, joining each run to the one before with a line it
   // kept dark. A dark line adds no light, so here the joins are left out.
   beamStream() {
-    this.streamCount = 0;
+    this.stream.count = 0;
     this.beamExposure = 1;
     const n = this.x.length;
     if (n !== this.cycleFrames) return;
 
-    const s = this._reserve(n);
+    const s = this.stream.reset(n);
     const x = this.x, y = this.y;
     for (let i = 0; i < n; i++) {
       s[i * 4] = x[i];
@@ -283,7 +199,7 @@ export class LatkScopeRenderer {
       s[i * 4 + 2] = -1;
       s[i * 4 + 3] = 0;
     }
-    this.streamCount = n;
+    this.stream.count = n;
 
     // Scope units: -1..1 up the canvas, and as far across it as its shape
     // allows, so the beam stays round in any window.
@@ -341,9 +257,9 @@ export class LatkScopeRenderer {
     const strokes = this.getStrokes();
     let count = 0;
     for (const line of strokes) count += line.points.length + 1;
-    this._reserve(count);
+    this.stream.reset(count);
     for (let i = 0; i < strokes.length; i++) {
-      this._addPolyline(strokes[i].points, this.strokePieces[i].key, strokes[i].closed);
+      this.stream.addPolyline(strokes[i].points, this.strokePieces[i].key, strokes[i].closed, this.canvasW, this.canvasH);
     }
   }
 
@@ -351,10 +267,7 @@ export class LatkScopeRenderer {
   // example drew each stroke whole and let the canvas cut it off; these are the
   // same strokes cut at the canvas edge, and none are left out for the loop.
   lineStream() {
-    let count = 0;
-    for (const piece of this.projected) count += piece.points.length;
-    this._reserve(count);
-    for (const piece of this.projected) this._addPolyline(piece.points, piece.key, false);
+    this.stream.addPieces(this.projected, this.canvasW, this.canvasH);
   }
 
 }

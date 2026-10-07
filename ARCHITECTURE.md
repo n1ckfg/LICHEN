@@ -60,7 +60,7 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 - **Sources**: Camera, Image, VideoPlayer
 - **Utility**: Blur, Brcosa, Dither, Edges, Levels, LUT, Mosaic, Sharpen, VideoMixer
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
-- **Interactive**: Conway, GRASS, InkDrops, Twoscilloscope, Yellowtail
+- **Interactive**: Conway, GRASS, InkDrops, Latk, Twoscilloscope, Yellowtail
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, RuttEtra, Slitscan, SlowscanJam, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
 - **Archival**: NAPLPS, QTVR, VRML
@@ -506,26 +506,51 @@ With MSAA at the other settings, up to 2.6% of pixels differ by more than 2 leve
 - **Orientation:** the app draws upside down into a y-up canvas. The 4× sample pattern isn't symmetric under that flip, so a thin line's edge can cover different samples. In the additive test that brightened or dimmed a few whole lines.
 - **Strip edges:** at sharp colour changes, an edge pixel of the app's strip is shaded by both neighbouring quads, each extrapolating its own colour. With the orientation matched, this left differences of up to 27 levels along the colour-bar edges, which go when MSAA is off.
 
+## Latk Module
+
+The Latk module (`js/modules/LatkModule.js`, `js/modules/latk/`, `js/shaders/latk.js`) is an interactive source. It plays back a Latk drawing (from the Lightning Artist Toolkit) and draws each frame as lines in its strokes' colours, seen through an orbiting camera. It is Twoscilloscope's player without the oscilloscope. The node starts with `jellyfish.latk`, bundled in `files/latk/` from Twoscilloscope's `example-latk`. "Load .latk…" picks another drawing, either a `.latk` file or the JSON inside one, and the button then shows its name. As with VRML, the file itself is not saved in patches.
+
+**Files:**
+- `latk/readLatk.js` reads the drawing, in place of latk.js. latk.js bundles JSZip, and reads a global called `latk` while it parses. This reader finds the JSON through the zip's central directory and inflates it with `DecompressionStream('deflate-raw')`, as VRML does without pako.
+- `latk/OrbitCamera.js` is `example-latk`'s camera without its mouse handling, which is now in the module and turns knobs.
+- `latk/strokes.js` holds `projectFrame()`, which is `example-latk`'s `project()`: it puts the current frame of each layer through the camera, breaks a stroke where it goes behind the camera, and cuts it where it leaves the canvas. It also holds `PointStream`, which packs the result for the shader (see Rendering).
+
+**Params.**
+
+| Param | Label | Range | Default | Sets |
+| --- | --- | --- | --- | --- |
+| `fps` | FPS | 0–60 | 12 | Latk frames a second, ofxLatk's rate. The clock is accumulated, so turning it doesn't jump the drawing |
+| `yaw` | Yaw | −180–180° | 0 | The camera's orbit |
+| `pitch` | Pitch | −89–89° | 8.6 | `example-latk`'s 0.15 rad |
+| `distance` | Distance | 0.05–50 | 2.1 | Camera distance in radii of the drawing's bounding box, all frames included. 2.1 is `example-latk`'s home view, and 0.05 and 50 its zoom limits |
+| `spin` | Spin | −90–90°/s | 0 | Turns the view, added to Yaw, as in VRML |
+| `width` | Width | 0.5–10 px | 2 | Line width. 2 is `example-latk`'s `strokeWeight` |
+
+**Rendering.** The strokes are projected on the CPU, through `OrbitCamera`'s own matrices, and drawn as 2D lines with one shader:
+- **Point stream:** `PointStream` turns the projected strokes into points, each with x, y and the colour of the segment to the next point (or none). The module packs them one point per texel into a float framebuffer's texture, written with `texSubImage2D` as SlowscanJam does.
+- **Quads:** one `p5.Geometry` of 4096 quads (`LATK_BATCH`) is drawn as many times as the stream needs. Its vertex shader, `latkSegmentVert`, builds a quad round each segment from the texture. The quad is OsciMesh's from p5.twoscilloscope.
+- **Lines:** `latkLineFrag` fills the quad with a line `width` pixels wide, with round ends, and an edge smoothed over one physical pixel. Each segment is drawn on its own, so where neighbouring segments overlap their soft edges add up, slightly more than a Canvas2D path, which is stroked once (see Twoscilloscope's checks).
+
+Strokes are drawn in file order, later over earlier, with no depth test, as `example-latk` drew them. At width 2, the output is pixel for pixel the same as Twoscilloscope's Original Lines view, at pixel density 1 and 2. At 1280×960 (a retina display) on an M2 Max, a frame costs about 0.3 ms.
+
+**Twoscilloscope is a subclass.** `TwoscilloscopeModule` extends `LatkModule`, the only module that extends another. Its constructor passes its own type name to `LatkModule`'s, and swaps in its own params, keeping Latk's camera and FPS knobs but not Width. It overrides `process()` to set up the effects and sound first, and `drawFrame()` to draw the scope's views in place of the lines. It draws through `drawLines()` and `drawSegments()`, Latk's line drawing, which takes any shader built on `latkSegmentVert`.
+
+**Fullscreen interaction.** Double-click the node preview to enter fullscreen. As with `example-latk`'s camera, dragging orbits by turning the Yaw and Pitch knobs (0.01 rad per pixel), the wheel zooms by turning Distance, and a double-click goes back to the home view. ESC exits. `js/ui.js` routes press, drag, release and wheel as it does for VRML, plus the double-click.
+
 ## Twoscilloscope Module
 
-The Twoscilloscope module (`js/modules/TwoscilloscopeModule.js`, `js/modules/twoscilloscope/`, `js/shaders/twoscilloscope.js`) is an interactive source ported from `example-latk` in the Twoscilloscope project's p5.js library. Each frame of a Latk drawing (from the Lightning Artist Toolkit) is seen through an orbiting camera and encoded as one loop of XY audio. The loop runs through an effect chain and is drawn back from the altered audio, as the oscilloscope beam or decoded into strokes, each in its stroke's colour. The node starts with the example's `jellyfish.latk`, bundled in `files/latk/`. "Load .latk…" picks another drawing, either a `.latk` file or the JSON inside one, and the button then shows its name. As with VRML, the file itself is not saved in patches.
+The Twoscilloscope module (`js/modules/TwoscilloscopeModule.js`, `js/modules/twoscilloscope/`, `js/shaders/twoscilloscope.js`) is an interactive source ported from `example-latk` in the Twoscilloscope project's p5.js library. Each frame of a Latk drawing (from the Lightning Artist Toolkit) is seen through an orbiting camera and encoded as one loop of XY audio. The loop runs through an effect chain and is drawn back from the altered audio, as the oscilloscope beam or decoded into strokes, each in its stroke's colour. It extends the Latk module, which loads the drawing, plays it back, aims the camera and draws lines (see Latk Module).
 
 **Files:**
 - `js/libraries/p5.twoscilloscope.js` is the library, copied unchanged. It is a classic script that puts its classes on `window`, so the module imports it only for that side effect.
-- `twoscilloscope/LatkScopeRenderer.js` is the example's renderer. `project()` and `encode()` are unchanged, but its drawing is replaced (see Rendering).
-- `twoscilloscope/OrbitCamera.js` is the example's camera without its mouse handling, which is now in the module and turns knobs.
-- `twoscilloscope/readLatk.js` reads the drawing, in place of latk.js. latk.js bundles JSZip, and reads a global called `latk` while it parses. This reader finds the JSON through the zip's central directory and inflates it with `DecompressionStream('deflate-raw')`, as VRML does without pako.
+- `twoscilloscope/LatkScopeRenderer.js` is the example's renderer. `encode()` is unchanged, and `project()` is unchanged too, but it now lives in `latk/strokes.js` as `projectFrame()`. The drawing is replaced (see Rendering).
 
 **Params.**
 
 | Param | Label | Range | Default | Sets |
 | --- | --- | --- | --- | --- |
 | `view` | View | Beams, Decoded Strokes, Original Lines | Beams | What is drawn, as the example's L key chose |
-| `fps` | FPS | 0–60 | 12 | Latk frames a second, ofxLatk's rate. The clock is accumulated, so turning it doesn't jump the drawing |
-| `yaw` | Yaw | −180–180° | 0 | The camera's orbit |
-| `pitch` | Pitch | −89–89° | 8.6 | The example's 0.15 rad |
-| `distance` | Distance | 0.05–50 | 2.1 | Camera distance in radii of the drawing's bounding box, all frames included. 2.1 is the example's home view, and 0.05 and 50 its zoom limits |
-| `spin` | Spin | −90–90°/s | 0 | Turns the view, added to Yaw, as in VRML |
+| `fps`, `yaw`, `pitch`, `distance`, `spin` | | | | Latk's (see Latk Module) |
 | `loopHz` | Loop Hz | 1–100 | 5 | Loops a second. A lower rate gives the drawing more samples |
 | `beamSize` | Beam Size | 0.5–12 px | 3 | The beam's radius |
 | `intensity` | Intensity | 0–4 | 1 | The beam's brightness |
@@ -552,17 +577,15 @@ The Twoscilloscope module (`js/modules/TwoscilloscopeModule.js`, `js/modules/two
 - **Defaults:** every setting the knobs aren't turning is at the library's default, and goes back to it when the knobs move on to another option, so the knobs alone decide the chain.
 - **Restarts:** as in the example, `XYTransformer` resets the effects every frame and runs four loops before the one it keeps. Rotate's Spin Rate and Ring Mod's phase therefore bend the shape the same way on every frame, rather than animating it.
 
-**Rendering.** The example drew the beam with OsciMesh into a WEBGL canvas of its own and copied that onto the sketch with `image()`. A second WebGL context per node would run into the browser's cap on contexts, which SlowscanJam also avoids, so the module draws in LICHEN's own context:
-- **Point stream:** the renderer turns each view into points, each with x, y and the colour of the segment to the next point (or none). The module packs them one point per texel into a float framebuffer's texture, written with `texSubImage2D` as SlowscanJam does.
-- **Quads:** one `p5.Geometry` of 4096 quads (`TWO_BATCH`) is drawn as many times as the stream needs. Its vertex shader builds OsciMesh's quad for each segment from the texture.
-- **Beams:** the fragment shader is OsciMesh's erf-integrated gaussian, taking its colour per segment, drawn with `blendMode(ADD)`. The example drew one OsciMesh per colour, joining each run of lit samples to the one before with a segment of brightness 0. A dark segment adds no light, so the stream leaves those out.
-- **Strokes and lines:** a 2-pixel line with round ends, in place of the example's p5 strokes. Original Lines are the renderer's pieces, already cut at the canvas edge, where the example drew each stroke whole and let the canvas cut it. None are left out for being too short for the loop.
+**Rendering.** The example drew the beam with OsciMesh into a WEBGL canvas of its own and copied that onto the sketch with `image()`. A second WebGL context per node would run into the browser's cap on contexts, which SlowscanJam also avoids. So the module draws in LICHEN's own context, with Latk's renderer: the renderer turns each view into a point stream, which Latk's segment shader draws (see Latk Module).
+- **Beams:** the fragment shader, `twoscilloscopeBeamFrag`, is OsciMesh's erf-integrated gaussian, taking its colour per segment, drawn with `blendMode(ADD)`. The example drew one OsciMesh per colour, joining each run of lit samples to the one before with a segment of brightness 0. A dark segment adds no light, so the stream leaves those out.
+- **Strokes and lines:** Latk's lines, 2 pixels wide, in place of the example's p5 strokes. Original Lines are the renderer's pieces, already cut at the canvas edge, where the example drew each stroke whole and let the canvas cut it. None are left out for being too short for the loop.
 
 **Checked against the example.** The comparison ran in headless Chrome, with the example's canvas resized to 640×480, its clock stopped, and both on the same Latk frames (0, 10 and 40):
 - **Beams:** at pixel density 1, at most 0.015% of pixels differ by more than 2 levels, and none by more than 6. At density 2, none differ by more than 3.
 - **Strokes and lines:** the lit pixels overlap the example's with an IoU of 0.91–0.95 at density 1, and 0.95 at density 2. Each segment is drawn on its own, so where neighbouring segments overlap their soft edges add up, whereas a Canvas2D path is stroked once. Original Lines' segments average about a pixel long, and at density 1 they carry 9% more light than the example's. The decoded strokes are simplified, and their light is within 1.5% of the example's.
 
-**Fullscreen interaction.** Double-click the node preview to enter fullscreen. As with the example's camera, dragging orbits by turning the Yaw and Pitch knobs (0.01 rad per pixel), the wheel zooms by turning Distance, and a double-click goes back to the home view. The example's keys work too: L cycles the view, E solos the next effect, N turns them all off, M toggles Sound, S downloads the decoded strokes as SVG, and W downloads four seconds of the altered loop (X, Y and Z) as WAV. ESC exits. `js/ui.js` routes press, drag, release and wheel as it does for VRML, plus the double-click, and `js/main.js keyPressed` routes the keys. The example's panel (G) and its .latk export (O) are not ported.
+**Fullscreen interaction.** The mouse works as in Latk. The example's keys work too: L cycles the view, E solos the next effect, N turns them all off, M toggles Sound, S downloads the decoded strokes as SVG, and W downloads four seconds of the altered loop (X, Y and Z) as WAV. ESC exits. `js/main.js keyPressed` routes the keys. The example's panel (G) and its .latk export (O) are not ported.
 
 **Sound.** With Sound on, an `XYscope` loops the altered audio out of the sound card, X left and Y right, so what you hear is what you see. Browsers start audio only after a click or a key press. The example played as soon as its page was clicked; here Sound starts Off, so that adding a node makes no noise.
 
@@ -588,7 +611,7 @@ The Yellowtail module (`js/modules/YellowtailModule.js`) implements Golan Levin'
 - **Pixel Density**: framebuffers are allocated at the graphics' pixel density, so on a retina display `gl_FragCoord` runs over twice as many pixels as `glCanvas.width` / `glCanvas.height` report. A shader that works in `gl_FragCoord` space — or that derives a texel step from a resolution — must be given `Module.fragResolution()` rather than the logical size, and any pixel-valued uniform the shader compares against `gl_FragCoord` must be scaled by `Module.pixelDensity` (Conway's spawn position, radius and cell size; GridGuys' target). Getting this wrong confines the output to one quadrant, and in a feedback shader it also reads off the clamped edge. Shaders that address themselves through `vTexCoord` are unaffected, which is most of them — only `conway`, `dither`, `gridguys-simulation`, `inkdrops` and `spiralgalaxy` read `gl_FragCoord` (`cyberlace` uses it for a `mod(…, 2.0)` dither that is deliberately one physical pixel wide).
 - **Framebuffer Orientation**: `NodeGraphUI` blits an FBO to the P2D canvas through a shader that flips `v`, so within a framebuffer `gl_FragCoord.y = 0` is the *top* of the displayed image. A pass that reads a buffer it also writes (feedback, ping-pong) must address it with the unflipped `gl_FragCoord.xy / resolution`: `v = y / H` is by definition the row being written, and reading through a flipped uv mirrors the buffer on every iteration. `InkDrops` and `SpiralGalaxy` both carry notes on this.
 - **No `glCanvas.image()` in `process()`**: p5 draws `image()` through the bound shader whenever that shader has a sampler, not through its own texture shader. Between frames the bound shader is `NodeGraphUI`'s preview-blit shader, because `framebuffer.end()` pops each module's own `shader()` call back off. An `image()` copy therefore draws whatever the UI blitted last, instead of the image. This is what turned Dither's error diffusion solid black. To read an upstream frame, bind it as a sampler uniform. To copy one, draw it through a shader you bind yourself.
-- **Give a hand-built `p5.Geometry` its own `gid`**: `model()` caches a geometry's GPU buffers under `geometry.gid`, and `new p5.Geometry()` leaves it undefined. Two such geometries then share the cache key `undefined`, and the second draws the first's buffers. Whitney sets `geometry.gid = 'Whitney|<n>'` and frees it with `freeGeometry()` in `dispose()`.
+- **Give a hand-built `p5.Geometry` its own `gid`**: `model()` caches a geometry's GPU buffers under `geometry.gid`, and `new p5.Geometry()` leaves it undefined. Two such geometries then share the cache key `undefined`, and the second draws the first's buffers. Whitney sets `geometry.gid = 'Whitney|<n>'` and frees it with `freeGeometry()` in `dispose()`. Latk does the same, with its type name, so a Twoscilloscope's geometry is `'Twoscilloscope|<n>'`.
 - **Set every sampler**: bind a texture to every sampler uniform a shader declares, even one the current code path won't read. p5 binds a placeholder to an unset sampler, and the first time it creates that placeholder it lands on whichever texture unit is active, blanking another input for that frame. The LUT module binds its input as a stand-in until a LUT loads.
 - **Set samplers again before every draw**: after each draw call p5 points every sampler of the bound shader at an empty texture. A module that draws several times with one shader (several `model()` calls, say) must set its samplers again before each one, or every draw after the first samples nothing. SlowscanJam does this for each batch of lines.
 

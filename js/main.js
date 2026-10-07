@@ -48,6 +48,7 @@ import './modules/VideoToastingModule.js';
 // - - - CANON - - -
 import './modules/ConwayModule.js';
 import './modules/GRASSModule.js';
+import './modules/LatkModule.js';
 import './modules/TwoscilloscopeModule.js';
 import './modules/YellowtailModule.js';
 // - - - UTILITY - - -

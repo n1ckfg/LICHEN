@@ -1,22 +1,14 @@
-import { Module } from './Module.js';
+import { LatkModule } from './LatkModule.js';
 import { registerModule } from '../moduleRegistry.js';
 import '../libraries/p5.twoscilloscope.js';   // a classic script: it puts its classes on window
 import { LatkScopeRenderer } from './twoscilloscope/LatkScopeRenderer.js';
-import { OrbitCamera } from './twoscilloscope/OrbitCamera.js';
-import { readLatk } from './twoscilloscope/readLatk.js';
-import {
-  twoscilloscopeVert, twoscilloscopeBeamFrag, twoscilloscopeLineFrag, TWO_BATCH,
-} from '../shaders/twoscilloscope.js';
+import { latkSegmentVert } from '../shaders/latk.js';
+import { twoscilloscopeBeamFrag } from '../shaders/twoscilloscope.js';
 
 const { Twoscilloscope, XYscope, XYDecoder, WavFile } = window;
 
 const SAMPLE_RATE = 44100;
-const MAX_DT = 0.1;          // clamp long stalls so a tab switch doesn't jump the clocks
 const LINE_WIDTH = 2;        // the example's strokeWeight, in output pixels
-const POINT_TEX_W = 2048;    // point stream texels per row
-const ORBIT_RATE = 0.01;     // the example's drag rate, radians per pixel
-const ZOOM_RATE = 0.001;     // and its wheel: distance x exp(delta x ZOOM_RATE)
-const DEFAULT_FILE = new URL('../../files/latk/jellyfish.latk', import.meta.url);
 
 const BEAMS = 0, STROKES = 1;
 
@@ -65,17 +57,15 @@ function settingToKnob(v, { min, max }, log) {
   return log ? Math.log(v / min) / Math.log(max / min) : (v - min) / (max - min);
 }
 
-let nextGeometryId = 0;
-
 // Twoscilloscope's example-latk: a 3D Latk animation, seen through an orbiting
 // camera, is encoded frame by frame as one loop of XY audio, run through an
 // audio effect chain, and drawn back from the altered audio, as the
 // oscilloscope beam or decoded into strokes, each in its stroke's colour.
-// Sound plays the altered loop out of the sound card.
-export class TwoscilloscopeModule extends Module {
+// Sound plays the altered loop out of the sound card. Loading, playback, the
+// camera and the lines come from LatkModule.
+export class TwoscilloscopeModule extends LatkModule {
   constructor(glCanvas, id) {
-    super('Twoscilloscope', glCanvas, id);
-    this.outputs = [{ name: 'out', type: 'video' }];
+    super(glCanvas, id, 'Twoscilloscope');
     this.historicalInfo = 'Twoscilloscope';
 
     this.scope = new LatkScopeRenderer(SAMPLE_RATE);
@@ -86,6 +76,8 @@ export class TwoscilloscopeModule extends Module {
     this.chainDefaults = this.chain.map((effect) => Object.fromEntries(
       effect.parameters.items.filter((it) => it.key !== 'enabled').map((it) => [it.key, effect[it.key]])));
 
+    // Latk's knobs, without Width: the lines here are the example's
+    const { fps, yaw, pitch, distance, spin } = this.params;
     const cutoff = settingRange(this.chain[0], 'cutoff');
     const delayY = settingRange(this.chain[1], 'delayY');
     this.params = {
@@ -93,15 +85,7 @@ export class TwoscilloscopeModule extends Module {
         value: BEAMS, min: 0, max: 2, step: 1, label: 'View',
         widget: 'dropdown', valueLabels: ['Beams', 'Decoded Strokes', 'Original Lines'],
       },
-      fps: { value: 12, min: 0, max: 60, step: 1, label: 'FPS' },   // ofxLatk's 12 frames a second
-      yaw: { value: 0, min: -180, max: 180, step: 1, label: 'Yaw' },
-      pitch: { value: OrbitCamera.HOME_PITCH * 180 / Math.PI, min: -89, max: 89, step: 1, label: 'Pitch' },
-      // In radii of the drawing, so it fits whatever its size
-      distance: {
-        value: OrbitCamera.HOME_DISTANCE, min: OrbitCamera.MIN_DISTANCE, max: OrbitCamera.MAX_DISTANCE, step: 0.01,
-        label: 'Distance',
-      },
-      spin: { value: 0, min: -90, max: 90, step: 1, label: 'Spin' },
+      fps, yaw, pitch, distance, spin,
       loopHz: { value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
       beamSize: { value: 3, min: 0.5, max: 12, step: 0.1, label: 'Beam Size' },
       intensity: { value: 1, min: 0, max: 4, step: 0.01, label: 'Intensity' },
@@ -118,112 +102,12 @@ export class TwoscilloscopeModule extends Module {
     };
     this._applyEffects();
 
-    this.beamShader = glCanvas.createShader(twoscilloscopeVert, twoscilloscopeBeamFrag);
-    this.lineShader = glCanvas.createShader(twoscilloscopeVert, twoscilloscopeLineFrag);
-    this.geometry = this._buildGeometry();
-    this.createOutputFBO();
-    // The point stream, one point per texel. Float, since it holds positions and
-    // 24-bit colours, and sized up on demand.
-    this.pointFBO = glCanvas.createFramebuffer({
-      width: POINT_TEX_W, height: 8, density: 1, depth: false,
-      format: glCanvas.FLOAT, textureFiltering: glCanvas.NEAREST,
-    });
-    this.warnedNoFloat = false;
-
-    this.cam = new OrbitCamera();
-    this.latk = null;         // { layers } once a drawing is in
-    this.fileName = '';       // shown on the load button
-    this.frameClock = 0;      // Latk frames still to advance
-    this.spinYaw = 0;         // degrees turned by Spin, added to the Yaw knob
-    this.dragX = null;        // last fullscreen drag position, null when not dragging
-    this.dragY = null;
-    this.lastTime = performance.now() / 1000;
+    this.beamShader = glCanvas.createShader(latkSegmentVert, twoscilloscopeBeamFrag);
 
     // Loops the altered audio out of the sound card while Sound is on. XYscope's
     // own defaults are the example's setup(): 44.1 kHz in blocks of 512.
     this.player = new XYscope();
     this.soundOn = false;
-
-    this._createFileInput();
-    this._loadDefault();
-  }
-
-  // One quad per segment in a batch. The vertex shader places every quad, so
-  // this is built once and never re-uploaded.
-  _buildGeometry() {
-    const geometry = new p5.Geometry(1, 1, function () {
-      for (let q = 0; q < TWO_BATCH; q++) {
-        const base = this.vertices.length;
-        this.vertices.push(
-          new p5.Vector(-1, -1, q), new p5.Vector(1, -1, q),
-          new p5.Vector(1, 1, q), new p5.Vector(-1, 1, q));
-        this.faces.push([base, base + 1, base + 2], [base, base + 2, base + 3]);
-      }
-    });
-    // p5 caches a geometry's GPU buffers under its gid (see Development Conventions)
-    geometry.gid = `Twoscilloscope|${nextGeometryId++}`;
-    return geometry;
-  }
-
-  _createFileInput() {
-    this.fileInput = document.createElement('input');
-    this.fileInput.type = 'file';
-    this.fileInput.accept = '.latk,.json';
-    this.fileInput.style.display = 'none';
-    document.body.appendChild(this.fileInput);
-    this.fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) this.loadFile(file);
-    });
-  }
-
-  pickFile() {
-    this.fileInput.click();
-  }
-
-  async loadFile(file) {
-    try {
-      this._setDrawing(await readLatk(await file.arrayBuffer()), file.name);
-    } catch (e) {
-      // Keep whatever drawing was loaded before
-      alert(`Could not load ${file.name}: ${e.message}`);
-    }
-    this.fileInput.value = '';   // so picking the same file again still fires 'change'
-  }
-
-  // The example's jellyfish, until a file is picked
-  async _loadDefault() {
-    try {
-      const res = await fetch(DEFAULT_FILE);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const layers = await readLatk(await res.arrayBuffer());
-      if (!this.latk) this._setDrawing(layers, 'jellyfish.latk');
-    } catch (e) {
-      console.error('Twoscilloscope: could not load jellyfish.latk', e);
-    }
-  }
-
-  // The camera looks at the whole drawing, every frame of it, as the example's
-  // frameDrawing() did
-  _setDrawing(layers, fileName) {
-    const min = [Infinity, Infinity, Infinity];
-    const max = [-Infinity, -Infinity, -Infinity];
-    for (const layer of layers) {
-      for (const frame of layer.frames) {
-        for (const stroke of frame.strokes) {
-          for (const p of stroke.points) {
-            for (let i = 0; i < 3; i++) {
-              min[i] = Math.min(min[i], p.co[i]);
-              max[i] = Math.max(max[i], p.co[i]);
-            }
-          }
-        }
-      }
-    }
-    if (min[0] <= max[0]) this.cam.fit(min, max);
-    this.latk = { layers };
-    this.fileName = fileName;
-    this.frameClock = 0;
   }
 
   // Which effects are on, and what Effect A and B set on them
@@ -262,151 +146,34 @@ export class TwoscilloscopeModule extends Module {
   }
 
   process(graph, glCanvas) {
-    const now = performance.now() / 1000;
-    const dt = Math.min(Math.max(now - this.lastTime, 0), MAX_DT);
-    this.lastTime = now;
-    this.spinYaw = wrapDegrees(this.spinYaw + dt * this.params.spin.value);
     this._setSound(Math.round(this.params.sound.value) === 1);
     this._applyEffects();
-
-    this.outputFBO.begin();
-    glCanvas.background(0);
-    if (this.latk) {
-      // ofxLatk's playback clock, accumulated so turning FPS doesn't jump it
-      this.frameClock += dt * Math.max(0, this.params.fps.value);
-      const steps = Math.floor(this.frameClock);
-      this.frameClock -= steps;
-      for (const layer of this.latk.layers) {
-        if (layer.frames.length > 0) layer.counter = (layer.counter + steps) % layer.frames.length;
-      }
-
-      const cam = this.cam;
-      cam.yaw = wrapDegrees(this.params.yaw.value + this.spinYaw) * Math.PI / 180;
-      cam.pitch = this.params.pitch.value * Math.PI / 180;
-      cam.distance = this.params.distance.value * cam.radius;
-
-      // The whole round trip, every frame: strokes -> audio -> effects -> strokes
-      const scope = this.scope;
-      scope.loopFreq = this.params.loopHz.value;
-      scope.beamSize = this.params.beamSize.value;
-      scope.update(this.latk, cam, glCanvas.width, glCanvas.height);
-      if (this.soundOn) this._feedPlayer();
-
-      this._draw(glCanvas, Math.round(this.params.view.value));
-    }
-    this.outputFBO.end();
+    super.process(graph, glCanvas);
   }
 
-  _draw(glCanvas, view) {
+  drawFrame(glCanvas) {
+    // The whole round trip, every frame: strokes -> audio -> effects -> strokes
     const scope = this.scope;
-    if (view === BEAMS) scope.beamStream();
-    else if (view === STROKES) scope.strokeStream();
-    else scope.lineStream();
-    const n = scope.streamCount;
-    if (n < 2 || !this._upload(glCanvas, scope.stream, n)) return;
+    scope.loopFreq = this.params.loopHz.value;
+    scope.beamSize = this.params.beamSize.value;
+    scope.update(this.latk, this.cam, glCanvas.width, glCanvas.height);
+    if (this.soundOn) this._feedPlayer();
 
-    const H = glCanvas.height;
-    const pxToScope = 2 / H;   // one output pixel, in scope units
-    const s = view === BEAMS ? this.beamShader : this.lineShader;
-    glCanvas.noStroke();
-    glCanvas.shader(s);
-    s.setUniform('uTexSize', [this.pointFBO.width, this.pointFBO.height]);
-    s.setUniform('uLast', n - 1);
-    s.setUniform('uAspect', glCanvas.width / H);
+    const view = Math.round(this.params.view.value);
     if (view === BEAMS) {
+      scope.beamStream();
       // The beams add up, as OsciMesh's did
-      const size = this.params.beamSize.value * pxToScope;
-      s.setUniform('uSize', size);
-      s.setUniform('uIntensity', this.params.intensity.value * scope.beamExposure);
-      glCanvas.blendMode(glCanvas.ADD);
+      const size = this.params.beamSize.value * 2 / glCanvas.height;
+      const intensity = this.params.intensity.value * scope.beamExposure;
+      this.drawSegments(glCanvas, this.beamShader, scope.stream, glCanvas.ADD, (s) => {
+        s.setUniform('uSize', size);
+        s.setUniform('uIntensity', intensity);
+      });
     } else {
-      const halfWidth = LINE_WIDTH / 2 * pxToScope;
-      const feather = pxToScope / this.pixelDensity;
-      s.setUniform('uSize', halfWidth + feather);
-      s.setUniform('uHalfWidth', halfWidth);
-      s.setUniform('uFeather', feather);
-      glCanvas.blendMode(glCanvas.BLEND);
+      if (view === STROKES) scope.strokeStream();
+      else scope.lineStream();
+      this.drawLines(glCanvas, scope.stream, LINE_WIDTH);
     }
-    for (let base = 0; base < n - 1; base += TWO_BATCH) {
-      // p5 points every sampler at an empty texture after each draw, so this
-      // has to be set again for every batch
-      s.setUniform('uPoints', this.pointFBO);
-      s.setUniform('uBase', base);
-      glCanvas.model(this.geometry);
-    }
-    glCanvas.blendMode(glCanvas.BLEND);
-  }
-
-  // p5 has no way to fill a texture from an array, so this writes straight into
-  // pointFBO's colour texture, putting back the binding and unpack state it
-  // touches, as SlowscanJam does
-  _upload(glCanvas, data, n) {
-    const fbo = this.pointFBO;
-    // Without float textures p5 falls back to 8 bits, which can't hold the stream
-    if (fbo.format === glCanvas.UNSIGNED_BYTE) {
-      if (!this.warnedNoFloat) console.warn('Twoscilloscope: this browser has no float framebuffers');
-      this.warnedNoFloat = true;
-      return false;
-    }
-    const rows = Math.ceil(n / POINT_TEX_W);
-    if (rows > fbo.height) fbo.resize(POINT_TEX_W, 1 << Math.ceil(Math.log2(rows)));
-
-    const gl = glCanvas.drawingContext;
-    const prevTex = gl.getParameter(gl.TEXTURE_BINDING_2D);
-    const prevFlip = gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
-    const prevPremul = gl.getParameter(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
-    gl.bindTexture(gl.TEXTURE_2D, fbo.colorTexture);
-    const full = Math.floor(n / POINT_TEX_W);
-    const rest = n - full * POINT_TEX_W;
-    if (full > 0) {
-      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, POINT_TEX_W, full, gl.RGBA, gl.FLOAT,
-        data.subarray(0, full * POINT_TEX_W * 4));
-    }
-    if (rest > 0) {
-      gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, full, rest, 1, gl.RGBA, gl.FLOAT,
-        data.subarray(full * POINT_TEX_W * 4, n * 4));
-    }
-    gl.bindTexture(gl.TEXTURE_2D, prevTex);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, prevFlip);
-    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, prevPremul);
-    return true;
-  }
-
-  // ---------------------------------------------------------------- fullscreen
-
-  // Dragging orbits, as the example's camera did, by turning the Yaw and Pitch knobs
-  handleMouseDown(mx, my, canvasW, canvasH, button) {
-    this.dragX = mx;
-    this.dragY = my;
-  }
-
-  handleMouseDrag(mx, my, canvasW, canvasH) {
-    if (this.dragX === null) return;
-    const k = ORBIT_RATE * 180 / Math.PI;
-    this.setParam('yaw', wrapDegrees(this.params.yaw.value - (mx - this.dragX) * k));
-    this.setParam('pitch', this.params.pitch.value + (my - this.dragY) * k);
-    this.dragX = mx;
-    this.dragY = my;
-  }
-
-  handleMouseUp() {
-    this.dragX = null;
-    this.dragY = null;
-  }
-
-  // The wheel zooms by turning the Distance knob
-  handleWheel(delta) {
-    this.setParam('distance', this.params.distance.value * Math.exp(delta * ZOOM_RATE));
-  }
-
-  // A double-click goes back to the start, as the example's did
-  handleDoubleClick() {
-    this.setParam('yaw', 0);
-    this.setParam('pitch', OrbitCamera.HOME_PITCH * 180 / Math.PI);
-    this.setParam('distance', OrbitCamera.HOME_DISTANCE);
-    this.spinYaw = 0;
   }
 
   // The example's keys: l view, e solo next effect, n no effects, m sound,
@@ -435,17 +202,8 @@ export class TwoscilloscopeModule extends Module {
 
   dispose() {
     this.player.closeAudioOut();
-    if (this.geometry) this.glCanvas.freeGeometry(this.geometry);
-    if (this.pointFBO) this.pointFBO.remove();
-    if (this.fileInput) this.fileInput.remove();
-    this.geometry = null;
-    this.pointFBO = null;
     super.dispose();
   }
-}
-
-function wrapDegrees(deg) {
-  return ((deg + 180) % 360 + 360) % 360 - 180;
 }
 
 registerModule('Twoscilloscope', TwoscilloscopeModule);

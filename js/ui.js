@@ -13,7 +13,7 @@ const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
   'Utility': ['Blur', 'Brcosa', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Sharpen', 'VideoMixer'],
   'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
-  'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Twoscilloscope', 'Yellowtail'],
+  'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Latk', 'Twoscilloscope', 'Yellowtail'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'DeeSeventySix', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'RuttEtra', 'Slitscan', 'SlowscanJam', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
   'Archival': ['NAPLPS', 'QTVR', 'VRML'],
@@ -58,6 +58,7 @@ const MODULE_COLORS = {
   Conway: color_interactive,
   InkDrops: color_interactive,
   GRASS: color_grass,
+  Latk: color_interactive,
   Twoscilloscope: color_interactive,
   Yellowtail: color_interactive,
   // - - - SANDIN - - -
@@ -359,7 +360,7 @@ export class NodeGraphUI {
       monitorSection += 124; // Extra space for param padding + FPS counter + record/fullscreen/load+save+link buttons
     }
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
-      mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Twoscilloscope';
+      mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Twoscilloscope';
     const fileBtnSection = hasFileBtn ? 24 : 0;
     return HEADER_HEIGHT + portSection + paramSection + previewSection + monitorSection + fileBtnSection + 12;
   }
@@ -899,7 +900,7 @@ export class NodeGraphUI {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS' && mod.type !== 'Image' && mod.type !== 'LUT' &&
-        mod.type !== 'QTVR' && mod.type !== 'VRML' && mod.type !== 'Twoscilloscope') continue;
+        mod.type !== 'QTVR' && mod.type !== 'VRML' && mod.type !== 'Latk' && mod.type !== 'Twoscilloscope') continue;
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramCount = Object.keys(mod.params).length;
@@ -1714,9 +1715,9 @@ export class NodeGraphUI {
       }
     }
 
-    // File picker button (VideoPlayer, NAPLPS, Image, LUT, QTVR, VRML, Twoscilloscope)
+    // File picker button (VideoPlayer, NAPLPS, Image, LUT, QTVR, VRML, Latk, Twoscilloscope)
     if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
-        mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Twoscilloscope') {
+        mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Twoscilloscope') {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
@@ -1736,7 +1737,7 @@ export class NodeGraphUI {
         : mod.type === 'LUT' ? (mod.lutName ? fitText(p, mod.lutName, MODULE_WIDTH - 32) : 'Load LUT...')
         : mod.type === 'QTVR' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load Panorama...')
         : mod.type === 'VRML' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .wrl...')
-        : mod.type === 'Twoscilloscope' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .latk...')
+        : mod.type === 'Latk' || mod.type === 'Twoscilloscope' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .latk...')
         : 'Load Video...';
       p.text(btnLabel, mod.x + MODULE_WIDTH / 2, btnY + 10);
     }
@@ -1748,9 +1749,9 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      // Conway / InkDrops / QTVR / VRML / Twoscilloscope: handle the click instead of exiting fullscreen
+      // Conway / InkDrops / QTVR / VRML / Latk / Twoscilloscope: handle the click instead of exiting fullscreen
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' ||
-                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Twoscilloscope')) {
+                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Twoscilloscope')) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
         return;
@@ -2128,11 +2129,11 @@ export class NodeGraphUI {
   }
 
   mouseDragged(mx, my) {
-    // Conway: handle mouse drawing in fullscreen (QTVR / VRML / Twoscilloscope: turn the view)
+    // Conway: handle mouse drawing in fullscreen (QTVR / VRML / Latk / Twoscilloscope: turn the view)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Twoscilloscope')) {
+                  mod.type === 'Latk' || mod.type === 'Twoscilloscope')) {
         mod.handleMouseDrag(mx, my, this.p.width, this.p.height);
         return;
       }
@@ -2190,7 +2191,7 @@ export class NodeGraphUI {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Twoscilloscope')) {
+                  mod.type === 'Latk' || mod.type === 'Twoscilloscope')) {
         mod.handleMouseUp();
         return;
       }
@@ -2348,11 +2349,11 @@ export class NodeGraphUI {
   }
 
   mouseWheel(delta) {
-    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML / Twoscilloscope: zoom)
+    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML / Latk / Twoscilloscope: zoom)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Twoscilloscope')) {
+                  mod.type === 'Latk' || mod.type === 'Twoscilloscope')) {
         mod.handleWheel(delta);
         return;
       }
@@ -2373,10 +2374,10 @@ export class NodeGraphUI {
     // (i.e. the first click exited it), don't immediately re-enter.
     if (performance.now() - this._fullscreenExitTime < 400) return;
 
-    // Twoscilloscope: a double-click in fullscreen resets the camera
+    // Latk / Twoscilloscope: a double-click in fullscreen resets the camera
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && mod.type === 'Twoscilloscope') {
+      if (mod && (mod.type === 'Latk' || mod.type === 'Twoscilloscope')) {
         mod.handleDoubleClick();
         return;
       }

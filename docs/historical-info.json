@@ -96,6 +96,11 @@
 		"body": "Based on Cassette-Video-Encoder and Cassette-Video-Decoder by <a href='https://slyka.net'>Kris Slyka</a>."
 	},
 	{
+		"name": "Latk",
+		"title": "<a href='https://github.com/n1ckfg/latk.js'>Lightning Artist Toolkit</a>",
+		"body": "Tools for animated 3D drawings, by <a href='https://fox-gieg.com'>Nick Fox-Gieg</a>, developed with support from the Canada Council for the Arts, Eyebeam Art + Technology Center, Ontario Arts Council and Toronto Arts Council."
+	},
+	{
 		"name": "Twoscilloscope",
 		"year": 2026,
 		"title": "<a href='https://github.com/n1ckfg/Twoscilloscope'>Twoscilloscope</a>",
