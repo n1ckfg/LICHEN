@@ -2,19 +2,35 @@ import { Module } from './Module.js';
 import { passthroughFrag } from '../shaders/passthrough.js';
 import { registerModule } from '../moduleRegistry.js';
 import { NapDecoder } from './naplps/naplps.js';
+import { polylinePieces, XYOutputs } from './latk/strokes.js';
 
+const SAMPLE_RATE = 44100;   // of the X and Y outputs, as Latk's
+const MAX_DT = 0.1;          // clamp long stalls so a tab switch doesn't jump the beam
+const ARC_SEGMENTS = 72;     // a circle's sides on X and Y
+
+// Plays back a NAPLPS (.nap) file, revealing each command's points in turn. Its
+// X and Y outputs carry what is drawn as one loop of XY audio, as Latk's do,
+// to drive Twoscilloscope.
 export class NAPLPSModule extends Module {
   constructor(glCanvas, id) {
     super('NAPLPS', glCanvas, id);
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [
+      { name: 'out', type: 'video' },
+      { name: 'x', type: 'control' },
+      { name: 'y', type: 'control' },
+    ];
     this.historicalInfo = "NAPLPS";
     this.params = {
       speed: { value: 1, min: 0.1, max: 10, step: 0.1, label: 'Speed' },
+      // Loops a second on X and Y. A lower rate gives the drawing more samples
+      loopHz: { value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
     };
     this.decoder = null;
     this.drawCmds = [];
     this.pg = null;
     this.napReady = false;
+    this.xy = new XYOutputs(SAMPLE_RATE);
+    this.lastTime = performance.now() / 1000;
     this.createShader(passthroughFrag);
     this.createOutputFBO();
     this._createFileInput();
@@ -68,26 +84,38 @@ export class NAPLPSModule extends Module {
   }
 
   process(graph, glCanvas) {
-    if (!this.decoder || !this.napReady || !this.pg) return;
+    const now = performance.now() / 1000;
+    const dt = Math.min(Math.max(now - this.lastTime, 0), MAX_DT);
+    this.lastTime = now;
 
-    // Adjust progressive draw speed based on param
-    const interval = Math.max(1, Math.round(66 / this.params.speed.value));
-    for (let dc of this.drawCmds) {
-      dc.progressiveDrawInterval = interval;
+    let pieces = [];
+    if (this.decoder && this.napReady && this.pg) {
+      // Adjust progressive draw speed based on param
+      const interval = Math.max(1, Math.round(66 / this.params.speed.value));
+      for (let dc of this.drawCmds) {
+        dc.progressiveDrawInterval = interval;
+      }
+
+      // Draw NAPLPS content to the 2D graphics buffer
+      pieces = this._drawToGraphics();
+
+      // Render the 2D buffer to the WebGL output FBO
+      this.outputFBO.begin();
+      glCanvas.clear();
+      glCanvas.shader(this.shader);
+      this.shader.setUniform('tex0', this.pg);
+      this.renderQuad();
+      this.outputFBO.end();
     }
 
-    // Draw NAPLPS content to the 2D graphics buffer
-    this._drawToGraphics();
-
-    // Render the 2D buffer to the WebGL output FBO
-    this.outputFBO.begin();
-    glCanvas.clear();
-    glCanvas.shader(this.shader);
-    this.shader.setUniform('tex0', this.pg);
-    this.renderQuad();
-    this.outputFBO.end();
+    // What was drawn as one loop of XY audio on the X and Y outputs. Before a
+    // file is in, the loop is all blank, so the beam rests unlit in the middle.
+    this.xy.publish(this, pieces, glCanvas.width, glCanvas.height, dt, this.params.loopHz.value);
   }
 
+  // Draws every command into the 2D buffer, and returns the outlines of what it
+  // drew as pieces for the X and Y outputs (see latk/strokes.js). The beam can't
+  // fill, so filled shapes are traced as outlines, and text is left out.
   _drawToGraphics() {
     const pg = this.pg;
     const p = this.glCanvas._pInst;
@@ -100,6 +128,7 @@ export class NAPLPSModule extends Module {
 
     // Track current color state
     let currentColor = pg.color(255, 255, 255);
+    const pieces = [];
 
     // Process each draw command
     for (let i = 0; i < this.drawCmds.length; i++) {
@@ -119,17 +148,23 @@ export class NAPLPSModule extends Module {
         }
       }
 
-      currentColor = this._drawCmd(pg, dc, w, h, currentColor, p);
+      currentColor = this._drawCmd(pg, dc, w, h, currentColor, p, pieces);
     }
+    return pieces;
   }
 
-  _drawCmd(pg, dc, w, h, currentColor, p) {
+  // Draws one command, adding its outline to pieces in the current colour
+  _drawCmd(pg, dc, w, h, currentColor, p, pieces) {
     const cmd = dc.cmd;
     const points = dc.points;
 
     // Apply current color
     pg.fill(currentColor);
     pg.stroke(currentColor);
+    const [r, g, b] = currentColor.levels;
+    const outline = (pts) => {
+      for (const piece of polylinePieces(pts, [r, g, b], w, h)) pieces.push(piece);
+    };
 
     switch (cmd.opcode.id) {
       case 'Shift-In':
@@ -147,32 +182,32 @@ export class NAPLPSModule extends Module {
       case 'SET & LINE REL':
       case 'POLY OUTLINED':
       case 'SET & POLY OUTLINED':
-        this._drawPoints(pg, points, w, h, false, p);
+        this._drawPoints(pg, points, w, h, false, p, outline);
         break;
 
       case 'POLY FILLED':
       case 'SET & POLY FILLED':
-        this._drawPoints(pg, points, w, h, true, p);
+        this._drawPoints(pg, points, w, h, true, p, outline);
         break;
 
       case 'ARC OUTLINED':
       case 'SET & ARC OUTLINED':
-        this._drawArc(pg, cmd.points, w, h, false, p);
+        this._drawArc(pg, cmd.points, w, h, false, p, outline);
         break;
 
       case 'ARC FILLED':
       case 'SET & ARC FILLED':
-        this._drawArc(pg, cmd.points, w, h, true, p);
+        this._drawArc(pg, cmd.points, w, h, true, p, outline);
         break;
 
       case 'RECT OUTLINED':
       case 'SET & RECT OUTLINED':
-        this._drawRect(pg, cmd.points, w, h, false, p);
+        this._drawRect(pg, cmd.points, w, h, false, p, outline);
         break;
 
       case 'RECT FILLED':
       case 'SET & RECT FILLED':
-        this._drawRect(pg, cmd.points, w, h, true, p);
+        this._drawRect(pg, cmd.points, w, h, true, p, outline);
         break;
 
       case 'SET COLOR':
@@ -189,7 +224,7 @@ export class NAPLPSModule extends Module {
     return currentColor;
   }
 
-  _drawPoints(pg, points, w, h, isFill, p) {
+  _drawPoints(pg, points, w, h, isFill, p, outline) {
     if (points.length === 0) return;
 
     if (!isFill) {
@@ -205,9 +240,14 @@ export class NAPLPSModule extends Module {
       pg.vertex(points[0].x * w, points[0].y * h);
     }
     pg.endShape(p.CLOSE);
+
+    // The shape's outline, closed back to its first point as drawn
+    const pts = points.map((pt) => ({ x: pt.x * w, y: pt.y * h }));
+    pts.push(pts[0]);
+    outline(pts);
   }
 
-  _drawRect(pg, points, w, h, isFill, p) {
+  _drawRect(pg, points, w, h, isFill, p, outline) {
     if (!isFill) {
       pg.noFill();
     }
@@ -219,10 +259,11 @@ export class NAPLPSModule extends Module {
       const y2 = points[1].y * h;
       pg.rectMode(p.CORNER);
       pg.rect(x1, y1, x2 - x1, y2 - y1);
+      outline([{ x: x1, y: y1 }, { x: x2, y: y1 }, { x: x2, y: y2 }, { x: x1, y: y2 }, { x: x1, y: y1 }]);
     }
   }
 
-  _drawArc(pg, points, w, h, isFill, p) {
+  _drawArc(pg, points, w, h, isFill, p, outline) {
     if (!isFill) {
       pg.noFill();
     }
@@ -234,6 +275,17 @@ export class NAPLPSModule extends Module {
       const y2 = points[1].y * h;
       pg.ellipseMode(p.CORNER);
       pg.ellipse(x1, y1, x2 - x1, x2 - x1);
+
+      // p5 takes a negative size as positive, so the circle is always the
+      // box from (x1, y1) down and to the right
+      const r = Math.abs(x2 - x1) / 2;
+      const cx = x1 + r, cy = y1 + r;
+      const pts = [];
+      for (let i = 0; i <= ARC_SEGMENTS; i++) {
+        const a = i / ARC_SEGMENTS * 2 * Math.PI;
+        pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+      }
+      outline(pts);
     }
   }
 

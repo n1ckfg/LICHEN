@@ -1,6 +1,7 @@
 // Latk strokes on the canvas: projecting them through the camera, encoding
 // them as a loop of XY audio for the Latk module's X and Y outputs, and
-// packing them as a point stream for the segment shader.
+// packing them as a point stream for the segment shader. NAPLPS publishes its
+// drawing on X and Y outputs of its own the same way (polylinePieces, XYOutputs).
 import { OrbitCamera } from './OrbitCamera.js';
 
 // Cuts the segment a-b to the canvas (Liang-Barsky). Returns null if none of
@@ -70,6 +71,34 @@ export function projectFrame(latk, mvp, w, h) {
   }
 
   return pieces;
+}
+
+// A polyline in px of a w x h canvas, as pieces in the form projectFrame()
+// gives, in one colour ([r, g, b], 8-bit). It is cut where it leaves the canvas,
+// as projectFrame() cuts strokes, and a piece of no length is left out, since a
+// canvas strokes nothing there either.
+export function polylinePieces(points, color, w, h) {
+  const key = (color[0] << 16) | (color[1] << 8) | color[2];
+  const pieces = [];
+  let open = false; // whether the next segment continues the last piece
+  for (let k = 1; k < points.length; k++) {
+    const a = points[k - 1], b = points[k];
+    const t = clipSegment(a.x, a.y, b.x, b.y, w, h);
+    if (!t) {
+      open = false;
+      continue;
+    }
+    const ax = a.x + (b.x - a.x) * t[0], ay = a.y + (b.y - a.y) * t[0];
+    const bx = a.x + (b.x - a.x) * t[1], by = a.y + (b.y - a.y) * t[1];
+    if (!open || t[0] > 0) {
+      pieces.push({ points: [{ x: ax, y: ay }], color, key, length: 0, start: 0, lit: 0 });
+    }
+    const piece = pieces[pieces.length - 1];
+    piece.points.push({ x: bx, y: by });
+    piece.length += Math.hypot(bx - ax, by - ay);
+    open = t[1] === 1;
+  }
+  return pieces.filter((piece) => piece.length > 0);
 }
 
 // XYscope's blanking levels on the Z channel
@@ -157,6 +186,33 @@ export function encodeLoop(pieces, n, w, h) {
   while (i < n) write(w / 2, h / 2, false);
 
   return { x, y, z, color, pieces, dropped };
+}
+
+// A module's X and Y control outputs, as Latk's (see Module System in
+// ARCHITECTURE.md). Each frame, publish() encodes the pieces as one loop of
+// sampleRate / loopHz samples and sets it as the control signals x and y, both
+// carrying the loop's blanking (z) and colours (color). With no pieces the loop
+// is all blank, so the beam rests unlit in the middle. A knob cabled to X or Y
+// sees where the beam is at this moment, as the loop plays at loopHz, as 0..1.
+export class XYOutputs {
+  constructor(sampleRate = 44100) {
+    this.sampleRate = sampleRate;
+    this.phase = 0;     // where the beam is in the loop
+  }
+
+  publish(mod, pieces, w, h, dt, loopHz) {
+    // A whole number of samples, so XYscope plays it back one table entry per sample
+    const n = Math.max(2, Math.round(this.sampleRate / Math.max(0.1, loopHz)));
+    const loop = encodeLoop(pieces, n, w, h);
+    const lanes = { sampleRate: this.sampleRate, z: loop.z, color: loop.color };
+    mod.controlSignals.x = { samples: loop.x, ...lanes };
+    mod.controlSignals.y = { samples: loop.y, ...lanes };
+
+    this.phase = (this.phase + dt * this.sampleRate / n) % 1;
+    const i = Math.floor(this.phase * n);
+    mod.controlValues.x = (loop.x[i] + 1) / 2;
+    mod.controlValues.y = (loop.y[i] + 1) / 2;
+  }
 }
 
 // What the segment shader draws: four floats a point, x and y in scope units

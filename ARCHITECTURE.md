@@ -36,7 +36,7 @@ A control value is one number a frame, and a parameter cable applies it after ev
 - **Control signals:** a control output can also publish a loop in `this.controlSignals['portName']`, as `{ samples, sampleRate, z, color }`. `samples` is a `Float32Array` in −1..1. `z` (blanking, XYscope's −1 off and 1 on) and `color` (0xRRGGBB a sample) are optional lanes the same length, or `null`. It should still set a numeric `controlValues` entry for the same port, because a knob cable sees only that.
 - **Control input pins:** an input declared `{ name, type: 'control' }` is drawn green, as is a cable into it, and takes a control output's cable. The cable is stored in `connections`, like a video cable, so the topological sort runs the source first, in the same frame. `this.getControlInput(graph, portIndex)` returns `{ value, signal }`: the source's control value and its control signal, or `null` for the signal if it has none. It returns `null` when nothing is cabled to the pin, or when a video output is.
 
-Latk's X and Y outputs and Twoscilloscope's X and Y pins are the only ones so far (see Latk Module).
+Latk's and NAPLPS's X and Y outputs and Twoscilloscope's X and Y pins are the only ones so far (see Latk Module and NAPLPS Module).
 
 The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
@@ -118,6 +118,17 @@ The NAPLPS module (`js/modules/NAPLPSModule.js`) decodes North American Presenta
 
 **Decoding:** Relies on the external `js/modules/naplps/naplps.js` decoder logic. It accepts file drops through a hidden HTML file input, creating draw commands progressively with a configurable playback speed.
 **Rendering path:** Commands are executed into a 2D `p5.Graphics` buffer using p5 drawing commands (`pg.rect`, `pg.vertex`, etc.), tracking color and progressive drawing state, which is then mapped to the module's WebGL `outputFBO` via the passthrough shader.
+
+**Params.** Speed sets how fast each command's points are revealed. Loop Hz (1–100, default 5) is the loops a second on X and Y, as Latk's: a lower rate gives the drawing more samples.
+
+**X and Y.** Like Latk, NAPLPS has X and Y control outputs, which carry what it draws each frame as one loop of XY audio to drive Twoscilloscope (see Latk Module). As each command is drawn, its outline goes into the loop in the command's colour:
+- **Polygons, lines and points:** the points revealed so far, closed back to the first, as they are drawn.
+- **Rectangles:** their four sides.
+- **Arcs:** the full circle, in 72 sides, since the module draws every arc as a circle. The box runs down and to the right of the first point whatever the sign of its size, as p5 draws it.
+- **Filled shapes:** the beam can't fill, so they are traced as outlines.
+- **Left out:** text, and anything with no length (a single point), which a canvas doesn't stroke either.
+
+Outlines are cut at the canvas edge, as Latk's strokes are. `images/test.nap` is 1,595 filled polygons, which give 1,566 outlines once those with no length are left out. All of them fit in a loop at the default 5 Hz. A busier file loses its shortest outlines first (see Latk's X and Y). Before a file loads, the loop is all blank, so the beam rests unlit in the middle. Adding the outputs left the video unchanged: in headless Chrome, `test.nap` plays back on every pixel as it did before, at three points in its reveal. Twoscilloscope's Original Lines, fed from X and Y, lay over the video's polygons, rectangles and arcs in `test.nap` and in TEIA_TELIDON_ETC's `beer.nap`, `email2.nap` and `memra2.nap`.
 
 ## QTVR and VRML Modules
 
@@ -547,6 +558,7 @@ The Latk module (`js/modules/LatkModule.js`, `js/modules/latk/`, `js/shaders/lat
 - `latk/strokes.js` holds the example's drawing half:
   - `projectFrame()` is the example's `project()`. It puts the current frame of each layer through the camera, breaks a stroke where it goes behind the camera, and cuts it where it leaves the canvas.
   - `encodeLoop()` is the first half of the example's `encode()`, which turns those pieces into one loop of XY audio (see X and Y).
+  - `XYOutputs` publishes that loop on a module's X and Y outputs each frame, and keeps the beam's place in it for knob cables. NAPLPS uses it too, with `polylinePieces()`, which cuts a polyline at the canvas edge into pieces as `projectFrame()` cuts strokes.
   - `PointStream` packs lines for the segment shader (see Rendering).
 - `latk/SegmentRenderer.js` draws a point stream. Twoscilloscope draws with it too.
 

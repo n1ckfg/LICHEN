@@ -2,7 +2,7 @@ import { Module } from './Module.js';
 import { registerModule } from '../moduleRegistry.js';
 import { OrbitCamera } from './latk/OrbitCamera.js';
 import { readLatk } from './latk/readLatk.js';
-import { projectFrame, encodeLoop, PointStream } from './latk/strokes.js';
+import { projectFrame, PointStream, XYOutputs } from './latk/strokes.js';
 import { SegmentRenderer } from './latk/SegmentRenderer.js';
 
 const SAMPLE_RATE = 44100;   // of the X and Y outputs
@@ -43,7 +43,7 @@ export class LatkModule extends Module {
     this.segments = new SegmentRenderer(glCanvas, 'Latk');
     this.createOutputFBO();
     this.stream = new PointStream();
-    this.loopPhase = 0;       // where the beam is in the loop, for the X and Y control values
+    this.xy = new XYOutputs(SAMPLE_RATE);
 
     this.cam = new OrbitCamera();
     this.latk = null;         // { layers } once a drawing is in
@@ -150,25 +150,10 @@ export class LatkModule extends Module {
     }
     this.outputFBO.end();
 
-    this._encode(pieces, w, h, dt);
-  }
-
-  // The frame as one loop of XY audio on the X and Y outputs, both carrying its
-  // blanking (z) and stroke colours (color). Before a drawing is in, the loop is
-  // all blank, so the beam rests unlit in the middle.
-  _encode(pieces, w, h, dt) {
-    // A whole number of samples, so XYscope plays it back one table entry per sample
-    const n = Math.max(2, Math.round(SAMPLE_RATE / Math.max(0.1, this.params.loopHz.value)));
-    const loop = encodeLoop(pieces, n, w, h);
-    const lanes = { sampleRate: SAMPLE_RATE, z: loop.z, color: loop.color };
-    this.controlSignals.x = { samples: loop.x, ...lanes };
-    this.controlSignals.y = { samples: loop.y, ...lanes };
-
-    // A knob cabled to X or Y sees where the beam is now, as the loop plays at Loop Hz
-    this.loopPhase = (this.loopPhase + dt * SAMPLE_RATE / n) % 1;
-    const i = Math.floor(this.loopPhase * n);
-    this.controlValues.x = (loop.x[i] + 1) / 2;
-    this.controlValues.y = (loop.y[i] + 1) / 2;
+    // The frame as one loop of XY audio on the X and Y outputs, both carrying
+    // its blanking and stroke colours. Before a drawing is in, the loop is all
+    // blank, so the beam rests unlit in the middle.
+    this.xy.publish(this, pieces, w, h, dt, this.params.loopHz.value);
   }
 
   // ---------------------------------------------------------------- fullscreen
