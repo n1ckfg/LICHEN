@@ -384,17 +384,24 @@ The Restore module (`js/modules/RestoreModule.js`, `js/modules/anime4k/`, `js/sh
 | --- | --- | --- | --- | --- |
 | `model` | Model | Restore, Restore Soft | Restore | Anime4K's two families: Restore is tuned for blur and upsampling artifacts, Restore Soft for downsampling artifacts and aliasing |
 | `size` | Size | S, M, L, VL, UL | M | The network's size; each step costs about twice the last (see Cost). Anime4K's Fast presets use M |
-| `clamp` | Clamp | Off, On | On | Anime4K's Clamp_Highlights, which Anime4K recommends always using. It pulls each pixel's luminance down to the input's maximum over the 5 × 5 pixels around it, so edges don't ring or overshoot |
-| `mix` | Mix | 0–1 | 1 | Blends from the input (0) to the restored picture (1) |
+| `clamp` | Clamp | Off, On | On | Anime4K's Clamp_Highlights, which Anime4K recommends always using. After Amount, it pulls each pixel's luminance down to the input's maximum over the 5 × 5 pixels around it, so edges don't ring or overshoot |
+| `mix` | Amount | 0–4 | 2 | How far the picture moves from the input (0) toward the restored picture (1), and past it above 1 |
 
 Patches save Model and Size as indexes, so a new model (Anime4K's GAN ones, say) is appended, never inserted.
+
+**Amount.** Each network ends by adding its output to the input (`return result + MAIN_tex(MAIN_pos)`), so what it computes is a small correction to the picture. At 1 that correction is all Restore does, which is hard to see. On a 640×480 photo, M changed pixels by a mean of 3.9 levels, against 19.7 for Sharpen at its default 5. On the same photo upscaled 2× (a retina display) it changed them by 1.8. Amount scales the correction: the output is `input + Amount × (restored − input)`. The key is still `mix`, as it was when the knob stopped at 1, so older patches load unchanged.
+- **Amount 2 and 4:** these change the photo by a mean of 7.6 and 13.6 levels.
+- **No added noise:** the correction is near zero in flat areas, so it adds no noise there. On the photo's sky, high-frequency noise stays at 0.5 levels at Amount 3, where Sharpen 5 raises it to 3.2.
+- **Why the default is 2:** the networks under-correct. On the photo halved and doubled with bilinear filtering, M scored 25.01 dB against the clean photo at Amount 1, and 25.16 dB at 2.
+
+Two other ways of strengthening it were tried in numpy and dropped. Running the network at half or quarter resolution changed the picture a little less than Amount 1 (means of 3.1 and 3.3), and softened fine detail. Running it twice in a row changed it about as much as Amount 2, at twice the cost.
 
 **Files.** Each model is one of Anime4K's mpv user shaders, copied unchanged from its `glsl/Restore/` at commit 7684e95 into `js/shaders/anime4k/` as a JS default export, MIT licence included. A file is a list of passes, each a block of `//!` directives and a `hook()` that reads named textures through mpv's macros. `anime4k/mpvHook.js` turns each pass into a p5 shader:
 - **Textures:** each bound texture becomes a sampler and a size uniform, and the macros read it at the fragment's own uv, offset in texels.
 - **Orientation:** mpv puts +y down the image, as a LICHEN framebuffer does (v = 0 is the top row), so offsets carry over unchanged.
 - **Scope:** it handles what Restore uses and no more. Every pass is its input's size, and any other WIDTH, HEIGHT, WHEN or hook is rejected.
 
-**Running.** The module runs the passes in order, each into its own half-float buffer, which later passes bind by its SAVE name. The features are signed, so 8-bit buffers would lose half of them, and without half-float framebuffers the module passes its input through. With Clamp on, Clamp_Highlights' two statistics passes run first, on the input, and its clamp (a PREKERNEL hook in mpv) after the model. `restoreMixFrag` then mixes into `outputFBO`, keeping the input's alpha. The passes run under `blendMode(REPLACE)`, as Blur's do, since the alpha channel carries a feature like the others.
+**Running.** The module runs the passes in order, each into its own half-float buffer, which later passes bind by its SAVE name. The features are signed, so 8-bit buffers would lose half of them, and without half-float framebuffers the module passes its input through. With Clamp on, Clamp_Highlights' two statistics passes run first, on the input. `restoreMixFrag` then applies Amount and writes `outputFBO`, keeping the input's alpha. With Clamp on, it also does Clamp_Highlights' clamp, reading the statistics. In mpv the clamp is the file's PREKERNEL pass, after the model. Here it comes after Amount, so a large Amount can't bring back the overshoot it removes. The file is still copied unchanged, and its PREKERNEL pass is compiled but never run. The passes run under `blendMode(REPLACE)`, as Blur's do, since the alpha channel carries a feature like the others.
 
 **Loading.** A model's file is imported the first time any node picks it, since the UL files are 300 KB each, and its compiled passes are shared by every node. As with LUT's presets, the previous model stays on until the new one is ready, and a choice that finishes loading after a newer one is dropped. Until the first model is ready, the output is the input.
 
@@ -409,6 +416,10 @@ With nothing cached, the main thread then never stalled for more than 5 ms, and 
 - **Every model:** all ten models with Clamp on are within one level of the numpy result on every pixel, at pixel density 1 and 2. So is M with Clamp off, and with Mix 0.4. Mix 0 gives back the input exactly.
 - **Orientation:** the input reads back the right way up, and the numpy model offsets +y down the image as mpv does, so the match also shows the convolutions run the right way round.
 - **Restoring:** against the clean crop, the degraded input scores 21.06 dB, Restore M 21.89 dB and Restore UL 22.10 dB. Restore Soft, made for other artifacts, gains less: 21.40 dB for M.
+
+These checks ran when Mix stopped at 1 and the clamp ran as a pass before it. Amount was checked in headless Chromium on a Raspberry Pi, through SwiftShader, with a 640×480 photo going into Restore M through a passthrough source:
+- **Against numpy:** Amount 0, 1, 2 and 4 with Clamp on, and 2 with Clamp off, are within one level of the numpy result on every pixel, at pixel density 1 and 2. The numpy result applies Amount, then the clamp. Amount 0 gives back the input exactly.
+- **Against the old version:** at Amount 1, the output matches the version before Amount on all but 0.16% of pixels, which are one level off. Mix 0 matches exactly.
 
 **Cost.** In ms per frame on an M2 Max, with Clamp on:
 

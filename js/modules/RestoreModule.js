@@ -42,7 +42,9 @@ export class RestoreModule extends Module {
         value: 1, min: 0, max: 1, step: 1, label: 'Clamp',
         widget: 'dropdown', valueLabels: ['Off', 'On'],
       },
-      mix: { value: 1, min: 0, max: 1, step: 0.01, label: 'Mix' },
+      // The networks add a small correction to the input; past 1 this scales it
+      // up. Still saved as mix, so a patch from when it stopped at 1 loads as it was.
+      mix: { value: 2, min: 0, max: 4, step: 0.01, label: 'Amount' },
     };
     this.createShader(restoreMixFrag);
     this.createOutputFBO();
@@ -94,8 +96,9 @@ export class RestoreModule extends Module {
 
   // Run the passes in order. MAIN starts as the input; each pass writes its own
   // buffer and saves it under its SAVE name (MAIN if it has none), where later
-  // passes bind it. REPLACE so p5's default blend can't fold the alpha channel,
-  // which holds a feature like the others, into the colour; end() pops it back.
+  // passes bind it. Returns the buffers by name. REPLACE so p5's default blend
+  // can't fold the alpha channel, which holds a feature like the others, into
+  // the colour; end() pops it back.
   _run(passes, input) {
     const g = this.glCanvas;
     const size = this.fragResolution();
@@ -114,7 +117,7 @@ export class RestoreModule extends Module {
       fbo.end();
       tex[pass.save || 'MAIN'] = fbo;
     });
-    return tex.MAIN;
+    return tex;
   }
 
   process(graph, glCanvas) {
@@ -123,28 +126,29 @@ export class RestoreModule extends Module {
     if (this.hasFloat) this._syncModel();
 
     let restored = null;
+    let stats = null;
     if (this.restorePasses) {
       let passes = this.restorePasses;
-      // Clamp_Highlights measures the input before the model, then pulls the
-      // model's overshoot back under the input's local maximum (its PREKERNEL pass)
-      if (Math.round(this.params.clamp.value) === 1 && this.clampPasses) {
-        passes = [
-          ...this.clampPasses.filter(p => p.hook === 'MAIN'),
-          ...passes,
-          ...this.clampPasses.filter(p => p.hook === 'PREKERNEL'),
-        ];
-      }
-      restored = this._run(passes, inputFBO);
+      // Clamp_Highlights' statistics passes measure the input before the model.
+      // Its clamp (the PREKERNEL pass) is done by restoreMixFrag instead, after
+      // the Amount gain, so the gain can't bring back the overshoot it removes.
+      const clamp = Math.round(this.params.clamp.value) === 1 && this.clampPasses;
+      if (clamp) passes = [...this.clampPasses.filter(p => p.hook === 'MAIN'), ...passes];
+      const tex = this._run(passes, inputFBO);
+      restored = tex.MAIN;
+      if (clamp) stats = tex.STATSMAX;
     }
 
     this.outputFBO.begin();
     glCanvas.clear();
     glCanvas.shader(this.shader);
     this.shader.setUniform('tex0', inputFBO);
-    // uRestored always gets a real texture, the input until a model is ready
-    // (see Set every sampler in ARCHITECTURE.md)
+    // uRestored and uStats always get a real texture, the input until a model
+    // is ready (see Set every sampler in ARCHITECTURE.md)
     this.shader.setUniform('uRestored', restored || inputFBO);
+    this.shader.setUniform('uStats', stats || inputFBO);
     this.shader.setUniform('uMix', restored ? this.params.mix.value : 0);
+    this.shader.setUniform('uClamp', stats ? 1 : 0);
     this.renderQuad();
     this.outputFBO.end();
   }
