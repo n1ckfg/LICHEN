@@ -19,6 +19,9 @@ export class Module {
     this.outputs = [];
     this.params = {};
     this.controlValues = {};
+    // Control output name -> a loop of samples, for control input pins (see
+    // getControlInput). Knob cables still see only controlValues.
+    this.controlSignals = {};
     this.shader = null;
     this.outputFBO = null;
     this.glCanvas = glCanvas;
@@ -83,6 +86,20 @@ export class Module {
   getControlValue(portIndex) {
     const output = this.outputs[portIndex];
     return this.controlValues[output?.name] ?? 0;
+  }
+
+  // What the control output cabled to input pin portIndex carries this frame:
+  // { value, signal }, where value is its 0..1 control value and signal its loop
+  // of samples, or null if it has none. null when nothing, or a video output, is
+  // cabled there. The cable is in graph.connections, so the source has already
+  // processed this frame.
+  getControlInput(graph, portIndex) {
+    const conn = graph.getInputConnections(this.id).find(c => c.toPort === portIndex);
+    if (!conn) return null;
+    const src = graph.nodes.get(conn.fromId);
+    const output = src?.outputs[conn.fromPort];
+    if (!output || output.type !== 'control') return null;
+    return { value: src.controlValues[output.name] ?? 0, signal: src.controlSignals[output.name] ?? null };
   }
 
   getParam(name) {

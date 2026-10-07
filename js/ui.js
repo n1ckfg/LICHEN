@@ -360,7 +360,7 @@ export class NodeGraphUI {
       monitorSection += 124; // Extra space for param padding + FPS counter + record/fullscreen/load+save+link buttons
     }
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
-      mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Twoscilloscope';
+      mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk';
     const fileBtnSection = hasFileBtn ? 24 : 0;
     return HEADER_HEIGHT + portSection + paramSection + previewSection + monitorSection + fileBtnSection + 12;
   }
@@ -900,7 +900,7 @@ export class NodeGraphUI {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS' && mod.type !== 'Image' && mod.type !== 'LUT' &&
-        mod.type !== 'QTVR' && mod.type !== 'VRML' && mod.type !== 'Latk' && mod.type !== 'Twoscilloscope') continue;
+        mod.type !== 'QTVR' && mod.type !== 'VRML' && mod.type !== 'Latk') continue;
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramCount = Object.keys(mod.params).length;
@@ -1142,7 +1142,9 @@ export class NodeGraphUI {
       if (!fromMod || !toMod) continue;
       const from = this.getOutputPortPos(fromMod, conn.fromPort);
       const to = this.getInputPortPos(toMod, conn.toPort);
-      this._drawCable(p, from.x, from.y, to.x, to.y, [100, 180, 255]);
+      // A cable into a control input pin is green, as control cables to knobs are
+      const isControl = toMod.inputs[conn.toPort]?.type === 'control';
+      this._drawCable(p, from.x, from.y, to.x, to.y, isControl ? [100, 255, 130] : [100, 180, 255]);
     }
 
     // Draw control cables (green)
@@ -1356,7 +1358,7 @@ export class NodeGraphUI {
           this._hoveredPort.nodeId === id &&
           this._hoveredPort.portType === 'input' &&
           this._hoveredPort.portIndex === i;
-        p.fill(68, 136, 255);
+        p.fill(mod.inputs[i].type === 'control' ? [100, 255, 130] : [68, 136, 255]);
         p.stroke(isHovered ? [255, 255, 0] : 255);
         p.strokeWeight(isHovered ? 2.5 : 1.5);
         p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
@@ -1445,7 +1447,7 @@ export class NodeGraphUI {
         this._hoveredPort.nodeId === id &&
         this._hoveredPort.portType === 'input' &&
         this._hoveredPort.portIndex === i;
-      p.fill(68, 136, 255);
+      p.fill(mod.inputs[i].type === 'control' ? [100, 255, 130] : [68, 136, 255]);
       p.stroke(isHovered ? [255, 255, 0] : 255);
       p.strokeWeight(isHovered ? 2.5 : 1.5);
       p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
@@ -1715,9 +1717,9 @@ export class NodeGraphUI {
       }
     }
 
-    // File picker button (VideoPlayer, NAPLPS, Image, LUT, QTVR, VRML, Latk, Twoscilloscope)
+    // File picker button (VideoPlayer, NAPLPS, Image, LUT, QTVR, VRML, Latk)
     if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
-        mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Twoscilloscope') {
+        mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk') {
       const portRows = Math.max(mod.inputs.length, mod.outputs.length);
       const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
       const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
@@ -1737,7 +1739,7 @@ export class NodeGraphUI {
         : mod.type === 'LUT' ? (mod.lutName ? fitText(p, mod.lutName, MODULE_WIDTH - 32) : 'Load LUT...')
         : mod.type === 'QTVR' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load Panorama...')
         : mod.type === 'VRML' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .wrl...')
-        : mod.type === 'Latk' || mod.type === 'Twoscilloscope' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .latk...')
+        : mod.type === 'Latk' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .latk...')
         : 'Load Video...';
       p.text(btnLabel, mod.x + MODULE_WIDTH / 2, btnY + 10);
     }
@@ -1749,9 +1751,9 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      // Conway / InkDrops / QTVR / VRML / Latk / Twoscilloscope: handle the click instead of exiting fullscreen
+      // Conway / InkDrops / QTVR / VRML / Latk: handle the click instead of exiting fullscreen
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' ||
-                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Twoscilloscope')) {
+                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk')) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
         return;
@@ -2129,11 +2131,11 @@ export class NodeGraphUI {
   }
 
   mouseDragged(mx, my) {
-    // Conway: handle mouse drawing in fullscreen (QTVR / VRML / Latk / Twoscilloscope: turn the view)
+    // Conway: handle mouse drawing in fullscreen (QTVR / VRML / Latk: turn the view)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Twoscilloscope')) {
+                  mod.type === 'Latk')) {
         mod.handleMouseDrag(mx, my, this.p.width, this.p.height);
         return;
       }
@@ -2191,7 +2193,7 @@ export class NodeGraphUI {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Twoscilloscope')) {
+                  mod.type === 'Latk')) {
         mod.handleMouseUp();
         return;
       }
@@ -2349,11 +2351,11 @@ export class NodeGraphUI {
   }
 
   mouseWheel(delta) {
-    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML / Latk / Twoscilloscope: zoom)
+    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML / Latk: zoom)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Twoscilloscope')) {
+                  mod.type === 'Latk')) {
         mod.handleWheel(delta);
         return;
       }
@@ -2374,10 +2376,10 @@ export class NodeGraphUI {
     // (i.e. the first click exited it), don't immediately re-enter.
     if (performance.now() - this._fullscreenExitTime < 400) return;
 
-    // Latk / Twoscilloscope: a double-click in fullscreen resets the camera
+    // Latk: a double-click in fullscreen resets the camera
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Latk' || mod.type === 'Twoscilloscope')) {
+      if (mod && mod.type === 'Latk') {
         mod.handleDoubleClick();
         return;
       }

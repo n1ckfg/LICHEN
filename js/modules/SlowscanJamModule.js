@@ -31,8 +31,8 @@ export class SlowscanJamModule extends Module {
     this.historicalInfo = "SlowscanJam";
     // The SlowscanJam app's controls, with its ranges and defaults
     this.params = {
-      lines: { value: 200, min: 50, max: 200, step: 10, label: 'Lines' },
-      fps: { value: 6, min: 1, max: 6, step: 0.5, label: 'FPS' },
+      lines: { value: 200, min: 50, max: 320, step: 10, label: 'Lines' },
+      fps: { value: 6, min: 1, max: 10, step: 0.5, label: 'FPS' },
       lineWidth: { value: 5, min: 0.5, max: 5, step: 0.5, label: 'Line Width' },
       brightness: { value: 1, min: 0.5, max: 2, step: 0.1, label: 'Brightness' },
       saturation: { value: 1, min: 0.5, max: 2, step: 0.1, label: 'Saturation' },

@@ -1,13 +1,13 @@
-import { LatkModule } from './LatkModule.js';
+import { Module } from './Module.js';
 import { registerModule } from '../moduleRegistry.js';
 import '../libraries/p5.twoscilloscope.js';   // a classic script: it puts its classes on window
-import { LatkScopeRenderer } from './twoscilloscope/LatkScopeRenderer.js';
+import { ScopeRenderer } from './twoscilloscope/ScopeRenderer.js';
+import { SegmentRenderer } from './latk/SegmentRenderer.js';
 import { latkSegmentVert } from '../shaders/latk.js';
 import { twoscilloscopeBeamFrag } from '../shaders/twoscilloscope.js';
 
 const { Twoscilloscope, XYscope, XYDecoder, WavFile } = window;
 
-const SAMPLE_RATE = 44100;
 const LINE_WIDTH = 2;        // the example's strokeWeight, in output pixels
 
 const BEAMS = 0, STROKES = 1;
@@ -57,18 +57,23 @@ function settingToKnob(v, { min, max }, log) {
   return log ? Math.log(v / min) / Math.log(max / min) : (v - min) / (max - min);
 }
 
-// Twoscilloscope's example-latk: a 3D Latk animation, seen through an orbiting
-// camera, is encoded frame by frame as one loop of XY audio, run through an
-// audio effect chain, and drawn back from the altered audio, as the
-// oscilloscope beam or decoded into strokes, each in its stroke's colour.
-// Sound plays the altered loop out of the sound card. Loading, playback, the
-// camera and the lines come from LatkModule.
-export class TwoscilloscopeModule extends LatkModule {
+// Twoscilloscope's example-latk without the drawing: one loop of XY audio,
+// brought in on the X and Y control pins, runs through an audio effect chain
+// and is drawn back from the altered audio, as the oscilloscope beam or
+// decoded into strokes. Sound plays the altered loop out of the sound card.
+//
+// The Latk module's X and Y outputs bring its drawing as the example encoded
+// it, blanking and stroke colours included. Any other control output works
+// too: one that brings only a 0..1 value each frame is drawn as a trail of
+// its last Trail seconds.
+export class TwoscilloscopeModule extends Module {
   constructor(glCanvas, id) {
-    super(glCanvas, id, 'Twoscilloscope');
+    super('Twoscilloscope', glCanvas, id);
+    this.inputs = [{ name: 'x', type: 'control' }, { name: 'y', type: 'control' }];
+    this.outputs = [{ name: 'out', type: 'video' }];
     this.historicalInfo = 'Twoscilloscope';
 
-    this.scope = new LatkScopeRenderer(SAMPLE_RATE);
+    this.scope = new ScopeRenderer();
     const effects = this.scope.transformer.effects;
     this.chain = CHAIN.map((spec) => effects.add(new window[spec.type]()));
     // Every setting's library default, which it goes back to whenever the
@@ -76,8 +81,6 @@ export class TwoscilloscopeModule extends LatkModule {
     this.chainDefaults = this.chain.map((effect) => Object.fromEntries(
       effect.parameters.items.filter((it) => it.key !== 'enabled').map((it) => [it.key, effect[it.key]])));
 
-    // Latk's knobs, without Width: the lines here are the example's
-    const { fps, yaw, pitch, distance, spin } = this.params;
     const cutoff = settingRange(this.chain[0], 'cutoff');
     const delayY = settingRange(this.chain[1], 'delayY');
     this.params = {
@@ -85,8 +88,6 @@ export class TwoscilloscopeModule extends LatkModule {
         value: BEAMS, min: 0, max: 2, step: 1, label: 'View',
         widget: 'dropdown', valueLabels: ['Beams', 'Decoded Strokes', 'Original Lines'],
       },
-      fps, yaw, pitch, distance, spin,
-      loopHz: { value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
       beamSize: { value: 3, min: 0.5, max: 12, step: 0.1, label: 'Beam Size' },
       intensity: { value: 1, min: 0, max: 4, step: 0.01, label: 'Intensity' },
       effect: {
@@ -99,10 +100,15 @@ export class TwoscilloscopeModule extends LatkModule {
         value: 0, min: 0, max: 1, step: 1, label: 'Sound',
         widget: 'dropdown', valueLabels: ['Off', 'On'],
       },
+      // Seconds of a frame-rate control input drawn at once
+      trail: { value: 1, min: 0.1, max: 10, step: 0.1, label: 'Trail' },
     };
     this._applyEffects();
 
+    this.segments = new SegmentRenderer(glCanvas, 'Twoscilloscope');
     this.beamShader = glCanvas.createShader(latkSegmentVert, twoscilloscopeBeamFrag);
+    this.createOutputFBO();
+    this.history = [];        // { t, x, y } a frame, while only 0..1 values come in
 
     // Loops the altered audio out of the sound card while Sound is on. XYscope's
     // own defaults are the example's setup(): 44.1 kHz in blocks of 512.
@@ -148,31 +154,70 @@ export class TwoscilloscopeModule extends LatkModule {
   process(graph, glCanvas) {
     this._setSound(Math.round(this.params.sound.value) === 1);
     this._applyEffects();
-    super.process(graph, glCanvas);
+    const input = this._readInputs(graph);
+
+    this.outputFBO.begin();
+    glCanvas.background(0);
+    if (input) {
+      // The whole round trip, every frame: audio -> effects -> strokes
+      this.scope.beamSize = this.params.beamSize.value;
+      this.scope.update(input, glCanvas.width, glCanvas.height);
+      this._draw(glCanvas, Math.round(this.params.view.value));
+    } else {
+      this.scope.clear();
+    }
+    this.outputFBO.end();
+    if (this.soundOn) this._feedPlayer();
   }
 
-  drawFrame(glCanvas) {
-    // The whole round trip, every frame: strokes -> audio -> effects -> strokes
-    const scope = this.scope;
-    scope.loopFreq = this.params.loopHz.value;
-    scope.beamSize = this.params.beamSize.value;
-    scope.update(this.latk, this.cam, glCanvas.width, glCanvas.height);
-    if (this.soundOn) this._feedPlayer();
+  // X and Y as one loop for the scope: { x, y, z, color, sampleRate }, or null
+  // with nothing cabled in. A loop on either pin sets the length, and brings
+  // its blanking and colours (X's, if both bring a loop). An unplugged pin
+  // stays at 0, the centre.
+  _readInputs(graph) {
+    const xIn = this.getControlInput(graph, 0);
+    const yIn = this.getControlInput(graph, 1);
+    const looped = [xIn, yIn].find((c) => c && c.signal && c.signal.samples.length >= 2);
+    if (looped) {
+      this.history = [];
+      const { samples, sampleRate, z, color } = looped.signal;
+      const n = samples.length;
+      return { x: lane(xIn, n), y: lane(yIn, n), z: z ?? null, color: color ?? null, sampleRate };
+    }
+    if (!xIn && !yIn) {
+      this.history = [];
+      return null;
+    }
 
-    const view = Math.round(this.params.view.value);
+    // Only 0..1 values each frame: draw the last Trail seconds of them, as a
+    // scope with a long persistence would
+    const now = performance.now() / 1000;
+    const trail = this.params.trail.value;
+    this.history.push({ t: now, x: xIn ? xIn.value * 2 - 1 : 0, y: yIn ? yIn.value * 2 - 1 : 0 });
+    while (now - this.history[0].t > trail) this.history.shift();
+    const n = this.history.length;
+    return {
+      x: Float32Array.from(this.history, (h) => h.x),
+      y: Float32Array.from(this.history, (h) => h.y),
+      z: null, color: null, sampleRate: n / trail,
+    };
+  }
+
+  _draw(glCanvas, view) {
+    const scope = this.scope;
     if (view === BEAMS) {
       scope.beamStream();
       // The beams add up, as OsciMesh's did
       const size = this.params.beamSize.value * 2 / glCanvas.height;
       const intensity = this.params.intensity.value * scope.beamExposure;
-      this.drawSegments(glCanvas, this.beamShader, scope.stream, glCanvas.ADD, (s) => {
+      this.segments.drawSegments(this.beamShader, scope.stream, glCanvas.ADD, (s) => {
         s.setUniform('uSize', size);
         s.setUniform('uIntensity', intensity);
       });
     } else {
       if (view === STROKES) scope.strokeStream();
       else scope.lineStream();
-      this.drawLines(glCanvas, scope.stream, LINE_WIDTH);
+      this.segments.drawLines(scope.stream, LINE_WIDTH, this.pixelDensity);
     }
   }
 
@@ -202,8 +247,25 @@ export class TwoscilloscopeModule extends LatkModule {
 
   dispose() {
     this.player.closeAudioOut();
+    this.segments.dispose();
     super.dispose();
   }
+}
+
+// One pin's samples over a loop of n: its own loop, stretched to n if it is
+// another length, its 0..1 value held across the loop, or 0 when unplugged
+function lane(input, n) {
+  if (!input) return new Float32Array(n);
+  const s = input.signal?.samples;
+  if (!s || s.length < 2) return new Float32Array(n).fill(input.value * 2 - 1);
+  if (s.length === n) return s;
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const at = i * (s.length - 1) / (n - 1);
+    const i0 = Math.min(Math.floor(at), s.length - 2);
+    out[i] = s[i0] + (s[i0 + 1] - s[i0]) * (at - i0);
+  }
+  return out;
 }
 
 registerModule('Twoscilloscope', TwoscilloscopeModule);
