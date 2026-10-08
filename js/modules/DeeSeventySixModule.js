@@ -21,8 +21,8 @@ export class DeeSeventySixModule extends Module {
     };
     this.createShader(deeSeventySixFrag);
     this.createOutputFBO();
-    this.accumFBO = glCanvas.createFramebuffer();
-    this.grainFBO = glCanvas.createFramebuffer();
+    this.accumFBO = this.createFramebuffer();
+    this.grainFBO = this.createFramebuffer();
     this.accumShader = glCanvas.createShader(vertSrc, deeSeventySixAccumFrag);
     this.copyShader = glCanvas.createShader(vertSrc, passthroughFrag);
     this.progress = 0;

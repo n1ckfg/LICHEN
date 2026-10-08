@@ -60,7 +60,8 @@ export class TwoscilloscopeModule extends Module {
 
     this.segments = new SegmentRenderer(glCanvas, 'Twoscilloscope');
     this.beamShader = glCanvas.createShader(latkSegmentVert, twoscilloscopeBeamFrag);
-    this.createOutputFBO();
+    // The beams and lines are geometry, so the output keeps p5's MSAA (see Framebuffers in ARCHITECTURE.md)
+    this.outputFBO = glCanvas.createFramebuffer();
     this.history = [];        // { t, x, y } a frame, while only 0..1 values come in
 
     // Loops the altered audio out of the sound card while Sound is on. XYscope's

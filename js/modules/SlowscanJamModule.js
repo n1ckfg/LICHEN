@@ -77,8 +77,8 @@ export class SlowscanJamModule extends Module {
 
     // The decoded lines' samples, one row per line. Float, so the AGC-normalized
     // levels arrive as the decoder left them, and sized up on demand.
-    this.yccFBO = glCanvas.createFramebuffer({
-      width: 128, height: 128, density: 1, depth: false,
+    this.yccFBO = this.createFramebuffer({
+      width: 128, height: 128, density: 1,
       format: glCanvas.FLOAT, textureFiltering: glCanvas.NEAREST,
     });
     this.yccData = new Float32Array(128 * 128 * 4);
@@ -155,7 +155,7 @@ export class SlowscanJamModule extends Module {
   _startField(input, glCanvas) {
     const lines = this._snapped(this.params.lines);
     if (!this.srcFBO) {
-      this.srcFBO = glCanvas.createFramebuffer({ width: SOURCE_W, height: lines, density: 1, depth: false });
+      this.srcFBO = this.createFramebuffer({ width: SOURCE_W, height: lines, density: 1 });
     } else if (this.srcFBO.height !== lines) {
       this.srcFBO.resize(SOURCE_W, lines);
     }

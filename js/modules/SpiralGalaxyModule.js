@@ -52,8 +52,8 @@ export class SpiralGalaxyModule extends Module {
   _makeWorld(offset) {
     return {
       offset,
-      read: this.glCanvas.createFramebuffer(),
-      draw: this.glCanvas.createFramebuffer(),
+      read: this.createFramebuffer(),
+      draw: this.createFramebuffer(),
       age: 0,
       epoch: null,
     };

@@ -30,8 +30,8 @@ export class ConwayModule extends Module {
     this.simulationShader = glCanvas.createShader(this._getVertSrc(), conwaySimulationFrag);
     this.renderShader = glCanvas.createShader(this._getVertSrc(), conwayRenderFrag);
 
-    this.fboA = glCanvas.createFramebuffer();
-    this.fboB = glCanvas.createFramebuffer();
+    this.fboA = this.createFramebuffer();
+    this.fboB = this.createFramebuffer();
     this.currentBuffer = 0;
 
     this._clearFBO(this.fboA, glCanvas);

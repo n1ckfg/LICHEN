@@ -78,7 +78,8 @@ export class RuttEtraModule extends Module {
 
     // Create passthrough shader and FBO
     this.createShader(passthroughFrag);
-    this.createOutputFBO();
+    // The scan lines are geometry, so the output keeps p5's MSAA and depth (see Framebuffers in ARCHITECTURE.md)
+    this.outputFBO = glCanvas.createFramebuffer();
 
     // Geometry cache
     this.lastScanStep = -1;

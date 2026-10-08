@@ -104,16 +104,16 @@ export class BlurModule extends Module {
       t.fbo.resize(w, h);
     } else {
       const g = this.glCanvas;
-      const opts = { width: w, height: h, density: 1, channels: g.RGBA, depth: false };
+      const opts = { width: w, height: h, density: 1, channels: g.RGBA };
       let fbo = null;
       if (this.hasFloat) {
         try {
-          fbo = g.createFramebuffer(Object.assign({ format: g.HALF_FLOAT }, opts));
+          fbo = this.createFramebuffer(Object.assign({ format: g.HALF_FLOAT }, opts));
         } catch (e) {
           this.hasFloat = false;
         }
       }
-      t = { fbo: fbo || g.createFramebuffer(opts) };
+      t = { fbo: fbo || this.createFramebuffer(opts) };
       this.targets.set(name, t);
     }
     t.w = w;

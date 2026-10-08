@@ -91,7 +91,7 @@ export class RestoreModule extends Module {
   _buffer(i) {
     if (!this.buffers[i]) {
       const g = this.glCanvas;
-      this.buffers[i] = g.createFramebuffer({ format: g.HALF_FLOAT, textureFiltering: g.NEAREST, depth: false });
+      this.buffers[i] = this.createFramebuffer({ format: g.HALF_FLOAT, textureFiltering: g.NEAREST });
     }
     return this.buffers[i];
   }

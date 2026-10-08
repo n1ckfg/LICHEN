@@ -44,8 +44,18 @@ export class Module {
     this.shader = this.glCanvas.createShader(vertSrc, fragSrc);
   }
 
+  // A framebuffer for full-screen shader passes. Unasked, p5 gives a
+  // framebuffer 2x MSAA and a depth buffer in Chrome and Safari, which a quad
+  // covering the whole frame never uses, at about nine times the memory and a
+  // resolve on every end(). A module that draws geometry, whose edges MSAA
+  // smooths, calls glCanvas.createFramebuffer() itself (see Framebuffers in
+  // ARCHITECTURE.md).
+  createFramebuffer(options = {}) {
+    return this.glCanvas.createFramebuffer({ antialias: false, depth: false, ...options });
+  }
+
   createOutputFBO() {
-    this.outputFBO = this.glCanvas.createFramebuffer();
+    this.outputFBO = this.createFramebuffer();
   }
 
   getInput(graph, portIndex) {

@@ -50,7 +50,8 @@ export class WhitneyModule extends Module {
     };
 
     this.dotShader = glCanvas.createShader(whitneyVert, whitneyFrag);
-    this.createOutputFBO();
+    // The dots are geometry, so the output keeps p5's MSAA (see Framebuffers in ARCHITECTURE.md)
+    this.outputFBO = glCanvas.createFramebuffer();
     this.geometry = this._buildGeometry();
 
     this.since = new Array(MUSIC_BOX_DOTS).fill(0);

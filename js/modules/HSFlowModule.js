@@ -36,12 +36,12 @@ export class HSFlowModule extends Module {
     this.copyShader = glCanvas.createShader(vertSrc, passthroughFrag);
 
     // FBOs for multi-pass video feedback pipeline
-    this.prevFrameFBO = glCanvas.createFramebuffer();
-    this.flowVectorFBO = glCanvas.createFramebuffer();
-    this.smoothedFlowFBO = glCanvas.createFramebuffer();
-    this.prevSmoothedFlowFBO = glCanvas.createFramebuffer();
-    this.feedbackFBO = glCanvas.createFramebuffer();
-    this.tempReposFBO = glCanvas.createFramebuffer();
+    this.prevFrameFBO = this.createFramebuffer();
+    this.flowVectorFBO = this.createFramebuffer();
+    this.smoothedFlowFBO = this.createFramebuffer();
+    this.prevSmoothedFlowFBO = this.createFramebuffer();
+    this.feedbackFBO = this.createFramebuffer();
+    this.tempReposFBO = this.createFramebuffer();
     
     // Initialize FBOs to prevent undefined behavior on first frame
     [this.prevFrameFBO, this.flowVectorFBO, this.smoothedFlowFBO, this.prevSmoothedFlowFBO, this.feedbackFBO, this.tempReposFBO].forEach(fbo => {

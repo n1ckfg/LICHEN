@@ -33,8 +33,8 @@ export class DitherModule extends Module {
     this.errorDiffuseShader = glCanvas.createShader(this._getVertSrc(), ditherErrorDiffuseFrag);
 
     // Ping-pong FBOs for error diffusion
-    this.fboA = glCanvas.createFramebuffer();
-    this.fboB = glCanvas.createFramebuffer();
+    this.fboA = this.createFramebuffer();
+    this.fboB = this.createFramebuffer();
   }
 
   _getVertSrc() {

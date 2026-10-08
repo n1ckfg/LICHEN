@@ -19,7 +19,7 @@ export class DelayModule extends Module {
     };
     this.createShader(delayFrag);
     this.createOutputFBO();
-    this.feedbackFBO = glCanvas.createFramebuffer();
+    this.feedbackFBO = this.createFramebuffer();
     this.copyShader = glCanvas.createShader(vertSrc, passthroughFrag);
   }
 

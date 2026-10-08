@@ -38,11 +38,11 @@ export class UnrealBloomModule extends Module {
     let resy = Math.round(glCanvas.height / 2);
 
     // Need to use the options object for createFramebuffer in p5.js
-    this.renderTargetBright = glCanvas.createFramebuffer({ width: resx, height: resy });
+    this.renderTargetBright = this.createFramebuffer({ width: resx, height: resy });
 
     for (let i = 0; i < this.nMips; i++) {
-      this.renderTargetsHorizontal.push(glCanvas.createFramebuffer({ width: resx, height: resy }));
-      this.renderTargetsVertical.push(glCanvas.createFramebuffer({ width: resx, height: resy }));
+      this.renderTargetsHorizontal.push(this.createFramebuffer({ width: resx, height: resy }));
+      this.renderTargetsVertical.push(this.createFramebuffer({ width: resx, height: resy }));
       
       resx = Math.max(1, Math.round(resx / 2));
       resy = Math.max(1, Math.round(resy / 2));

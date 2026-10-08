@@ -171,12 +171,12 @@ export class ProtozoaModule extends Module {
     const opts = { width: w, height: h, density: 1, channels: g.RGBA };
     if (this.hasFloat) {
       try {
-        return g.createFramebuffer(Object.assign({ format: g.HALF_FLOAT }, opts));
+        return this.createFramebuffer(Object.assign({ format: g.HALF_FLOAT }, opts));
       } catch (e) {
         this.hasFloat = false;
       }
     }
-    return g.createFramebuffer(opts);
+    return this.createFramebuffer(opts);
   }
 
   // One full-screen pass into `target`. REPLACE because the display pass writes

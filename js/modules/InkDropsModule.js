@@ -196,14 +196,14 @@ export class InkDropsModule extends Module {
     if (webgl2 && gl && gl.getExtension &&
         (gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'))) {
       try {
-        const fbo = glCanvas.createFramebuffer({ channels: glCanvas.RGBA, format: glCanvas.HALF_FLOAT });
+        const fbo = this.createFramebuffer({ channels: glCanvas.RGBA, format: glCanvas.HALF_FLOAT });
         this.hasFloat = true;
         return fbo;
       } catch (e) {
         this.hasFloat = false;
       }
     }
-    return glCanvas.createFramebuffer({ channels: glCanvas.RGBA });
+    return this.createFramebuffer({ channels: glCanvas.RGBA });
   }
 
   // Re-cast both palettes whenever the colour knobs move.

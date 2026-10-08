@@ -31,8 +31,8 @@ export class SlitscanModule extends Module {
     const atlasW = tileW * COLS;
     const atlasH = tileH * ROWS;
 
-    this.atlasA = glCanvas.createFramebuffer({ width: atlasW, height: atlasH });
-    this.atlasB = glCanvas.createFramebuffer({ width: atlasW, height: atlasH });
+    this.atlasA = this.createFramebuffer({ width: atlasW, height: atlasH });
+    this.atlasB = this.createFramebuffer({ width: atlasW, height: atlasH });
     this.atlasA.begin(); glCanvas.clear(); this.atlasA.end();
     this.atlasB.begin(); glCanvas.clear(); this.atlasB.end();
 

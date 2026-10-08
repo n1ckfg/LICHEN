@@ -41,8 +41,8 @@ export class GridGuysModule extends Module {
     );
 
     // Create ping-pong framebuffers for simulation state
-    this.fboA = glCanvas.createFramebuffer();
-    this.fboB = glCanvas.createFramebuffer();
+    this.fboA = this.createFramebuffer();
+    this.fboB = this.createFramebuffer();
     this.currentBuffer = 0;
 
     // Clear both FBOs

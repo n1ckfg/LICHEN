@@ -18,7 +18,7 @@ export class BufferSmearModule extends Module {
     };
     this.createShader(bufferSmearFrag);
     this.createOutputFBO();
-    this.feedbackFBO = glCanvas.createFramebuffer();
+    this.feedbackFBO = this.createFramebuffer();
     this.copyShader = glCanvas.createShader(vertSrc, passthroughFrag);
     this.startTime = performance.now();
   }

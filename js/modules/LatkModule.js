@@ -43,7 +43,8 @@ export class LatkModule extends Module {
     };
 
     this.segments = new SegmentRenderer(glCanvas, 'Latk');
-    this.createOutputFBO();
+    // The lines are geometry, so the output keeps p5's MSAA (see Framebuffers in ARCHITECTURE.md)
+    this.outputFBO = glCanvas.createFramebuffer();
     this.stream = new PointStream();
     this.xy = new XYOutputs(SAMPLE_RATE);
 

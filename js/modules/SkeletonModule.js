@@ -47,8 +47,9 @@ export class SkeletonModule extends Module {
     this.maskShader = glCanvas.createShader(vertSrc, skeletonMaskFrag);
     this.maskFBO = null;
     this.readback = new PixelReadback(glCanvas);
-    // The node's preview: the traced lines, since X and Y have no picture
-    this.createOutputFBO();
+    // The node's preview: the traced lines, since X and Y have no picture.
+    // They are geometry, so it keeps p5's MSAA (see Framebuffers in ARCHITECTURE.md)
+    this.outputFBO = glCanvas.createFramebuffer();
     this.segments = new SegmentRenderer(glCanvas, 'Skeleton');
     this.stream = new PointStream();
     this.xy = new XYOutputs(SAMPLE_RATE);
@@ -114,7 +115,7 @@ export class SkeletonModule extends Module {
     const cols = this._cols();
     const rows = Math.max(1, Math.round(cols * glCanvas.height / glCanvas.width));
     if (!this.maskFBO) {
-      this.maskFBO = glCanvas.createFramebuffer({ width: cols, height: rows, density: 1, depth: false });
+      this.maskFBO = this.createFramebuffer({ width: cols, height: rows, density: 1 });
     } else if (this.maskFBO.width !== cols || this.maskFBO.height !== rows) {
       this.maskFBO.resize(cols, rows);
     }

@@ -9,6 +9,26 @@ void main() {
 }
 `;
 
+// A node's preview, drawn into its tile of glCanvas at the size it shows on
+// screen, as the 2D canvas would draw a full-size copy of it: sampled at the
+// same points, and an edge pixel faded by how much of it the preview covers
+// (see Node Previews in ARCHITECTURE.md). vTexCoord.y runs up from the bottom
+// of the tile and a framebuffer's v down from the top of its picture, which
+// blitFrag's 1 - v undoes in one go only when the tile is the whole picture.
+const previewFrag = `
+precision highp float;
+varying vec2 vTexCoord;
+uniform sampler2D tex0;
+uniform vec2 uTile;   // the tile's size, in device pixels
+uniform vec2 uOffset; // the preview's top-left corner, in device pixels from the tile's
+uniform vec2 uSize;   // the preview's size, in device pixels
+void main() {
+  vec2 px = vec2(vTexCoord.x, 1.0 - vTexCoord.y) * uTile; // from the tile's top-left
+  vec2 cover = clamp(min(px + 0.5, uOffset + uSize) - max(px - 0.5, uOffset), 0.0, 1.0);
+  gl_FragColor = texture2D(tex0, (px - uOffset) / uSize) * min(cover.x, cover.y);
+}
+`;
+
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
   'Utility': ['Blur', 'Brcosa', 'Channel', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'Skeleton', 'VideoMixer'],
@@ -166,6 +186,10 @@ export class NodeGraphUI {
     this.selectedNodes = new Set();
     this.fullscreenMonitor = null;
     this._blitShader = null;
+    this._previewShader = null;
+    this._previewSlots = new Map(); // module -> its tile this frame, or null when off screen
+    this._previewPages = [];       // tiles that share glCanvas at once, in drawing order
+    this._previewPage = -1;        // the page glCanvas holds now, or -1 for none
     this._activeParamInput = null; // currently active inline text input
     this._dropdownMenu = null;     // { el, nodeId, paramName, highlighted } for the open dropdown param
     this._drawTime = 0;            // performance.now() of this frame's draw() and the one before,
@@ -211,6 +235,12 @@ export class NodeGraphUI {
   // Render a Framebuffer onto the P2D main canvas by blitting through glCanvas
   _drawFBO(fbo, x, y, w, h) {
     if (!fbo) return;
+    this._blitFBO(fbo);
+    this.p.image(this.pipeline.glCanvas, x, y, w, h);
+  }
+
+  // Fill glCanvas with a Framebuffer, for a copy at full size
+  _blitFBO(fbo) {
     const g = this.pipeline.glCanvas;
     if (!this._blitShader) {
       this._blitShader = g.createShader(vertSrc, blitFrag);
@@ -219,7 +249,115 @@ export class NodeGraphUI {
     this._blitShader.setUniform('tex0', fbo);
     g.noStroke();
     g.rect(-g.width / 2, -g.height / 2, g.width, g.height);
-    this.p.image(g, x, y, w, h);
+    this._previewPage = -1;
+  }
+
+  // Where a node shows its picture, in world units: { fbo, x, y, w, h }, or
+  // null for none. fbo is null while a Monitor has no input.
+  _previewRect(mod) {
+    if (mod.collapsed) return null;
+    const portRows = Math.max(mod.inputs.length, mod.outputs.length);
+    const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+    const paramSection = Object.keys(mod.params).length * PARAM_ROW_HEIGHT;
+    const top = mod.y + HEADER_HEIGHT + portSection;
+    if (mod.type === 'Monitor') {
+      // Extra padding below params
+      return { fbo: mod.displayTexture, x: mod.x + 4, y: top + paramSection + 12, w: MONITOR_PREVIEW_W, h: MONITOR_PREVIEW_H };
+    }
+    if (mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail') {
+      return { fbo: mod.outputFBO, x: mod.x + 4, y: top, w: MONITOR_PREVIEW_W, h: MONITOR_PREVIEW_H };
+    }
+    if (!mod.outputFBO) return null;
+    return { fbo: mod.outputFBO, x: mod.x + (MODULE_WIDTH - PREVIEW_W) / 2, y: top + paramSection + 4, w: PREVIEW_W, h: PREVIEW_H };
+  }
+
+  // Copying glCanvas onto the 2D canvas costs about a millisecond each time
+  // glCanvas has changed, so every preview this frame is first drawn into its
+  // own tile of glCanvas, at its size on screen, and then copied from there.
+  // A tile is the device pixels whose centres the preview covers, as drawImage
+  // fills them, cut to the canvas. Tiles that don't all fit go on later pages,
+  // in drawing order, each drawn when the first of its tiles is needed.
+  _planPreviews(mods) {
+    const ctx = this.p.drawingContext;
+    const m = ctx.getTransform();
+    const gl = this.pipeline.glCanvas.drawingContext;
+    const bw = gl.drawingBufferWidth, bh = gl.drawingBufferHeight;
+    this._previewSlots.clear();
+    this._previewPages = [];
+    this._previewPage = -1;
+    let page = null, ax = 0, ay = 0, rowH = 0;
+    for (const mod of mods) {
+      const r = this._previewRect(mod);
+      if (!r || !r.fbo) continue;
+      const x = m.a * r.x + m.e, y = m.d * r.y + m.f, w = m.a * r.w, h = m.d * r.h;
+      const c0 = Math.max(0, Math.ceil(x - 0.5)), c1 = Math.min(ctx.canvas.width, Math.ceil(x + w - 0.5));
+      const r0 = Math.max(0, Math.ceil(y - 0.5)), r1 = Math.min(ctx.canvas.height, Math.ceil(y + h - 0.5));
+      const tw = c1 - c0, th = r1 - r0;
+      if (tw <= 0 || th <= 0) {
+        this._previewSlots.set(mod, null);
+        continue;
+      }
+      // A tile bigger than glCanvas is copied on its own (see _drawPreview)
+      if (tw > bw || th > bh) continue;
+      if (ax + tw > bw) {
+        ax = 0;
+        ay += rowH;
+        rowH = 0;
+      }
+      if (!page || ay + th > bh) {
+        page = [];
+        this._previewPages.push(page);
+        ax = ay = rowH = 0;
+      }
+      const slot = { page: this._previewPages.length - 1, fbo: r.fbo, ax, ay, tw, th, dx: c0, dy: r0, ox: x - c0, oy: y - r0, w, h };
+      page.push(slot);
+      this._previewSlots.set(mod, slot);
+      ax += tw;
+      rowH = Math.max(rowH, th);
+    }
+  }
+
+  _drawPreviewPage(index) {
+    const g = this.pipeline.glCanvas;
+    const gl = g.drawingContext;
+    if (!this._previewShader) {
+      this._previewShader = g.createShader(vertSrc, previewFrag);
+    }
+    const sh = this._previewShader;
+    g.shader(sh);
+    g.noStroke();
+    // A tile replaces what was there, alpha included
+    g.blendMode(g.REPLACE);
+    for (const s of this._previewPages[index]) {
+      // GL counts rows from the bottom
+      gl.viewport(s.ax, gl.drawingBufferHeight - s.ay - s.th, s.tw, s.th);
+      try {
+        sh.setUniform('tex0', s.fbo);
+        sh.setUniform('uTile', [s.tw, s.th]);
+        sh.setUniform('uOffset', [s.ox, s.oy]);
+        sh.setUniform('uSize', [s.w, s.h]);
+        g.rect(-g.width / 2, -g.height / 2, g.width, g.height);
+      } catch (e) { /* FBO may not be ready yet */ }
+    }
+    gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+    g.blendMode(g.BLEND);
+    this._previewPage = index;
+  }
+
+  // Copy a node's preview, planned by _planPreviews, onto the 2D canvas
+  _drawPreview(mod, r) {
+    const slot = this._previewSlots.get(mod);
+    if (slot === null) return; // off screen
+    if (slot === undefined) {
+      this._drawFBO(r.fbo, r.x, r.y, r.w, r.h);
+      return;
+    }
+    if (this._previewPage !== slot.page) this._drawPreviewPage(slot.page);
+    const ctx = this.p.drawingContext;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.pipeline.glCanvas.elt, slot.ax, slot.ay, slot.tw, slot.th, slot.dx, slot.dy, slot.tw, slot.th);
+    ctx.restore();
   }
 
   _createPalette() {
@@ -1193,22 +1331,23 @@ export class NodeGraphUI {
       }
     }
 
+    // Dying nodes fade out over FADE_DURATION
+    const FADE_DURATION = 300; // ms
+    const now = performance.now();
+    for (const [id, dying] of this._dyingNodes) {
+      if (now - dying.startTime >= FADE_DURATION) this._finalizeDyingNode(id);
+    }
+    this._planPreviews([...graph.nodes.values(), ...[...this._dyingNodes.values()].map(d => d.mod)]);
+
     // Draw modules
     for (const [id, mod] of graph.nodes) {
       this._drawModule(p, mod, id);
     }
 
     // Draw dying nodes with fade-out
-    const FADE_DURATION = 300; // ms
-    const now = performance.now();
     for (const [id, dying] of this._dyingNodes) {
-      const elapsed = now - dying.startTime;
-      if (elapsed >= FADE_DURATION) {
-        this._finalizeDyingNode(id);
-      } else {
-        const opacity = 1 - (elapsed / FADE_DURATION);
-        this._drawModule(p, dying.mod, id, opacity);
-      }
+      const opacity = 1 - ((now - dying.startTime) / FADE_DURATION);
+      this._drawModule(p, dying.mod, id, opacity);
     }
 
     // Draw selection box
@@ -1591,24 +1730,27 @@ export class NodeGraphUI {
       }
     }
 
+    const preview = this._previewRect(mod);
+
     // Monitor preview
     if (mod.type === 'Monitor') {
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
-      const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
-      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12; // Extra padding below params
+      const py = preview.y;
       p.fill(0);
       p.stroke(60);
       p.strokeWeight(1);
       p.rect(mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
       if (mod.displayTexture) {
-        this._drawFBO(mod.displayTexture, mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H);
+        this._drawPreview(mod, preview);
+        // The second-screen window and the recording copy glCanvas whole, so it needs the picture at full size
+        const ext = mod.hasExtWindow && mod.hasExtWindow();
+        const rec = mod._recordingCanvas && mod.isRecording && mod.isRecording();
+        if (ext || rec) this._blitFBO(mod.displayTexture);
         // Blit to external second-screen window if open
-        if (mod.hasExtWindow && mod.hasExtWindow()) {
+        if (ext) {
           mod._blitToExtWindow(this.pipeline.glCanvas);
         }
         // Blit to recording canvas for single-monitor recording
-        if (mod._recordingCanvas && mod.isRecording && mod.isRecording()) {
+        if (rec) {
           mod._blitToRecordingCanvas(this.pipeline.glCanvas);
         }
       }
@@ -1683,50 +1825,26 @@ export class NodeGraphUI {
       p.text('Link', mod.x + MODULE_WIDTH / 2, linkBtnY + 10);
     }
 
-    // GRASS preview (clean video output, same size as Monitor preview)
-    if (mod.type === 'GRASS') {
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
-      const py = mod.y + HEADER_HEIGHT + portSection;
+    // GRASS and Conway preview (clean video output, same size as Monitor preview)
+    if (mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail') {
       p.fill(0);
       p.stroke(60);
       p.strokeWeight(1);
-      p.rect(mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
+      p.rect(preview.x, preview.y, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
       if (mod.outputFBO) {
         try {
-          this._drawFBO(mod.outputFBO, mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H);
-        } catch (e) { /* FBO may not be ready yet */ }
-      }
-    }
-
-    // Conway preview (same size as Monitor/GRASS preview)
-    if (mod.type === 'Conway' || mod.type === 'Yellowtail') {
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
-      const py = mod.y + HEADER_HEIGHT + portSection;
-      p.fill(0);
-      p.stroke(60);
-      p.strokeWeight(1);
-      p.rect(mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
-      if (mod.outputFBO) {
-        try {
-          this._drawFBO(mod.outputFBO, mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H);
+          this._drawPreview(mod, preview);
         } catch (e) { /* FBO may not be ready yet */ }
       }
     }
 
     // Module preview thumbnail (for non-Monitor, non-GRASS, non-Conway modules with FBO)
     if (mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway' && mod.type !== 'Yellowtail') {
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
-      const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
-      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 4;
-      const px = mod.x + (MODULE_WIDTH - PREVIEW_W) / 2;
       p.fill(0);
       p.noStroke();
-      p.rect(px, py, PREVIEW_W, PREVIEW_H, 2);
+      p.rect(preview.x, preview.y, PREVIEW_W, PREVIEW_H, 2);
       try {
-        this._drawFBO(mod.outputFBO, px, py, PREVIEW_W, PREVIEW_H);
+        this._drawPreview(mod, preview);
       } catch (e) {
         // FBO may not be ready yet
       }
