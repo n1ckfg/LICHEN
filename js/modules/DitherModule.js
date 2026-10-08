@@ -3,23 +3,25 @@ import { ditherFrag, ditherErrorInitFrag, ditherErrorDiffuseFrag } from '../shad
 import { registerModule } from '../moduleRegistry.js';
 
 export class DitherModule extends Module {
+  static uid = 'ac9e381e';
+
   constructor(glCanvas, id) {
     super('Dither', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '042f', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '1f3e', name: 'out', type: 'video' }];
     this.params = {
       mode: {
-        value: 0, min: 0, max: 2, step: 1, label: 'Mode', widget: 'dropdown',
+        id: 'd3cf', value: 0, min: 0, max: 2, step: 1, label: 'Mode', widget: 'dropdown',
         valueLabels: ['Bayer', 'Blue Noise', 'Error Diffusion'],
       },
       // Grey by default, so patches saved before RGB existed still dither in grey
       color: {
-        value: 0, min: 0, max: 1, step: 1, label: 'Color', widget: 'dropdown',
+        id: '1b8d', value: 0, min: 0, max: 1, step: 1, label: 'Color', widget: 'dropdown',
         valueLabels: ['Grey', 'RGB'],
       },
-      levels: { value: 2, min: 2, max: 16, step: 1, label: 'Levels' },
-      ditherStrength: { value: 1.0, min: 0, max: 2, step: 0.01, label: 'Strength' },
-      passes: { value: 4, min: 1, max: 8, step: 1, label: 'Passes' },
+      levels: { id: 'c1e3', value: 2, min: 2, max: 16, step: 1, label: 'Levels' },
+      ditherStrength: { id: 'e6b9', value: 1.0, min: 0, max: 2, step: 0.01, label: 'Strength' },
+      passes: { id: '6062', value: 4, min: 1, max: 8, step: 1, label: 'Passes' },
     };
 
     // Main shader for modes 0 and 1

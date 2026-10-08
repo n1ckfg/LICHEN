@@ -3,15 +3,17 @@ import { spatialSliceFrag } from '../shaders/spatial-slice.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class SpatialSliceModule extends Module {
+  static uid = '462eeaf8';
+
   constructor(glCanvas, id) {
     super('SpatialSlice', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: 'e244', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '624f', name: 'out', type: 'video' }];
     this.params = {
-      sliceWidth: { value: 20, min: 1, max: 100, step: 1, label: 'Slices' },
-      sliceSpeed: { value: 0.5, min: 0, max: 2, step: 0.01, label: 'Speed' },
-      offsetAmount: { value: 0.1, min: 0, max: 0.5, step: 0.01, label: 'Offset' },
-      chromatic: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Chroma' },
+      sliceWidth: { id: '1b48', value: 20, min: 1, max: 100, step: 1, label: 'Slices' },
+      sliceSpeed: { id: 'c2de', value: 0.5, min: 0, max: 2, step: 0.01, label: 'Speed' },
+      offsetAmount: { id: '7833', value: 0.1, min: 0, max: 0.5, step: 0.01, label: 'Offset' },
+      chromatic: { id: 'b2f8', value: 1.0, min: 0, max: 3, step: 0.01, label: 'Chroma' },
     };
     this.createShader(spatialSliceFrag);
     this.createOutputFBO();

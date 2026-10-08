@@ -33,20 +33,22 @@ let nextGeometryId = 0;
 //                  signal (worker.js)
 //   4. drawing:    the lines that come back are drawn on the next frame
 export class SlowscanJamModule extends Module {
+  static uid = '905c33f3';
+
   constructor(glCanvas, id) {
     super('SlowscanJam', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: 'ef73', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '844f', name: 'out', type: 'video' }];
     this.historicalInfo = "SlowscanJam";
     // The SlowscanJam app's controls, with its ranges and defaults
     this.params = {
-      lines: { value: 200, min: 50, max: 320, step: 10, label: 'Lines' },
-      fps: { value: 6, min: 1, max: 10, step: 0.5, label: 'FPS' },
-      lineWidth: { value: 5, min: 0.5, max: 5, step: 0.5, label: 'Line Width' },
-      brightness: { value: 1, min: 0.5, max: 2, step: 0.1, label: 'Brightness' },
-      saturation: { value: 1, min: 0.5, max: 2, step: 0.1, label: 'Saturation' },
+      lines: { id: 'cbd2', value: 200, min: 50, max: 320, step: 10, label: 'Lines' },
+      fps: { id: 'cc3f', value: 6, min: 1, max: 10, step: 0.5, label: 'FPS' },
+      lineWidth: { id: '1be5', value: 5, min: 0.5, max: 5, step: 0.5, label: 'Line Width' },
+      brightness: { id: '04c4', value: 1, min: 0.5, max: 2, step: 0.1, label: 'Brightness' },
+      saturation: { id: '8f57', value: 1, min: 0.5, max: 2, step: 0.1, label: 'Saturation' },
       blend: {
-        value: 0, min: 0, max: 1, step: 1, label: 'Blend',
+        id: '30f4', value: 0, min: 0, max: 1, step: 1, label: 'Blend',
         widget: 'dropdown', valueLabels: ['Normal', 'Additive'],
       },
       // None, so a patch saved before the effects plays as it did
@@ -54,7 +56,7 @@ export class SlowscanJamModule extends Module {
       // Protected keeps the sync pulses out of the effects; Raw runs the whole
       // signal through them, and the picture rolls and tears where they break it
       sync: {
-        value: PROTECTED, min: 0, max: 1, step: 1, label: 'Sync',
+        id: 'f682', value: PROTECTED, min: 0, max: 1, step: 1, label: 'Sync',
         widget: 'dropdown', valueLabels: ['Protected', 'Raw'],
       },
     };

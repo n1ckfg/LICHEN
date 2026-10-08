@@ -3,11 +3,13 @@ import { passthroughFrag } from '../shaders/passthrough.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class VideoPlayerModule extends Module {
+  static uid = '13e19572';
+
   constructor(glCanvas, id) {
     super('VideoPlayer', glCanvas, id);
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '45af', name: 'out', type: 'video' }];
     this.params = {
-      speed: { value: 1, min: 0.1, max: 4, step: 0.1, label: 'Speed' },
+      speed: { id: '2e8f', value: 1, min: 0.1, max: 4, step: 0.1, label: 'Speed' },
     };
     this.video = null;
     this.videoReady = false;

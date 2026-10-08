@@ -3,12 +3,14 @@ import { cyberlaceFrag } from '../shaders/cyberlace.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class CyberlaceModule extends Module {
+  static uid = '1bbc4da5';
+
   constructor(glCanvas, id) {
     super('Cyberlace', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '3acd', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '2677', name: 'out', type: 'video' }];
     this.params = {
-      levels: { value: 4, min: 2, max: 4, step: 1, label: 'Levels' },
+      levels: { id: '94bc', value: 4, min: 2, max: 4, step: 1, label: 'Levels' },
     };
     this.createShader(cyberlaceFrag);
     this.createOutputFBO();

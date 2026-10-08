@@ -3,13 +3,15 @@ import { hypercardFrag } from '../shaders/hypercard.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class HyperCardModule extends Module {
+  static uid = '4b4270bd';
+
   constructor(glCanvas, id) {
     super('HyperCard', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: 'a0ef', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '9f86', name: 'out', type: 'video' }];
     this.historicalInfo = "Hypercard";
     this.params = {
-      finalThreshold: { value: 0.4, min: 0, max: 1, step: 0.01, label: 'Thresh' },
+      finalThreshold: { id: '24af', value: 0.4, min: 0, max: 1, step: 0.01, label: 'Thresh' },
     };
     this.createShader(hypercardFrag);
     this.createOutputFBO();

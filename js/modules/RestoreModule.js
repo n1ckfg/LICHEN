@@ -25,26 +25,28 @@ function loadHook(glCanvas, name) {
 }
 
 export class RestoreModule extends Module {
+  static uid = 'c3d6e65b';
+
   constructor(glCanvas, id) {
     super('Restore', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '0581', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '6097', name: 'out', type: 'video' }];
     this.params = {
       model: {
-        value: 0, min: 0, max: MODELS.length - 1, step: 1, label: 'Model',
+        id: '2e2f', value: 0, min: 0, max: MODELS.length - 1, step: 1, label: 'Model',
         widget: 'dropdown', valueLabels: [...MODELS],
       },
       size: {
-        value: 1, min: 0, max: SIZES.length - 1, step: 1, label: 'Size',
+        id: '2441', value: 1, min: 0, max: SIZES.length - 1, step: 1, label: 'Size',
         widget: 'dropdown', valueLabels: [...SIZES],
       },
       clamp: {
-        value: 1, min: 0, max: 1, step: 1, label: 'Clamp',
+        id: 'bf80', value: 1, min: 0, max: 1, step: 1, label: 'Clamp',
         widget: 'dropdown', valueLabels: ['Off', 'On'],
       },
       // The networks add a small correction to the input; past 1 this scales it
       // up. Still saved as mix, so a patch from when it stopped at 1 loads as it was.
-      mix: { value: 2, min: 0, max: 4, step: 0.01, label: 'Amount' },
+      mix: { id: 'f938', value: 2, min: 0, max: 4, step: 0.01, label: 'Amount' },
     };
     this.createShader(restoreMixFrag);
     this.createOutputFBO();

@@ -7,9 +7,11 @@ function isChromium() {
 }
 
 export class MonitorModule extends Module {
+  static uid = 'b1f08cff';
+
   constructor(glCanvas, id) {
     super('Monitor', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
+    this.inputs = [{ id: '7ae7', name: 'in', type: 'video' }];
     this.displayTexture = null;
     this.isFullscreen = false;
     this._extWindow = null;
@@ -27,21 +29,21 @@ export class MonitorModule extends Module {
     // Recording params
     this.params = {
       width: {
-        value: 1440,
+        id: 'c3ae', value: 1440,
         min: 640,
         max: 3840,
         step: 160,
         label: 'Width'
       },
       height: {
-        value: 1080,
+        id: '7fda', value: 1080,
         min: 480,
         max: 2160,
         step: 120,
         label: 'Height'
       },
       bitrate: {
-        value: 20,
+        id: '4786', value: 20,
         min: 5,
         max: 80,
         step: 5,

@@ -152,15 +152,19 @@ export class ConnectionGraph {
     return false;
   }
 
+  // A patch refers to modules, params and ports by id, never by name or port
+  // number, so any of them can be renamed or reordered (see Patch IDs in
+  // ARCHITECTURE.md). type is only there to make the file readable.
   toJSON() {
     const nodes = [];
     for (const [id, mod] of this.nodes) {
       const params = {};
-      for (const [k, v] of Object.entries(mod.params)) {
-        params[k] = v.value;
+      for (const param of Object.values(mod.params)) {
+        params[param.id] = param.value;
       }
       const node = {
         id,
+        uid: mod.constructor.uid,
         type: mod.type,
         x: mod.x,
         y: mod.y,
@@ -170,10 +174,21 @@ export class ConnectionGraph {
       if (mod.seed) node.seed = mod.seed;
       nodes.push(node);
     }
+    const output = (c) => this.nodes.get(c.fromId).outputs[c.fromPort].id;
     return {
       nodes,
-      connections: this.connections.map(c => ({ ...c })),
-      controlConnections: this.controlConnections.map(c => ({ ...c })),
+      connections: this.connections.map(c => ({
+        fromId: c.fromId,
+        fromPort: output(c),
+        toId: c.toId,
+        toPort: this.nodes.get(c.toId).inputs[c.toPort].id
+      })),
+      controlConnections: this.controlConnections.map(c => ({
+        fromId: c.fromId,
+        fromPort: output(c),
+        toId: c.toId,
+        param: this.nodes.get(c.toId).params[c.paramName].id
+      })),
       nextId: this.nextId
     };
   }
@@ -185,7 +200,7 @@ export class ConnectionGraph {
     this.nextId = data.nextId || 0;
 
     for (const nodeData of data.nodes) {
-      const mod = createModuleFn(nodeData.type, nodeData.id);
+      const mod = createModuleFn(nodeData.uid, nodeData.id, nodeData.type);
       if (!mod) continue;
       mod.id = nodeData.id;
       mod.x = nodeData.x;
@@ -196,10 +211,11 @@ export class ConnectionGraph {
         // draw, so it goes back to its declared value and the patch looks as
         // it did.
         for (const [k, v] of Object.entries(mod.declared ?? {})) {
-          if (!(k in nodeData.params)) mod.setParam(k, v);
+          if (!(mod.params[k].id in nodeData.params)) mod.setParam(k, v);
         }
-        for (const [k, v] of Object.entries(nodeData.params)) {
-          mod.setParam(k, v);
+        // A value whose param has since been removed is skipped
+        for (const [k, param] of Object.entries(mod.params)) {
+          if (param.id in nodeData.params) mod.setParam(k, nodeData.params[param.id]);
         }
       }
       // The saved params replaced the ones the constructor seeded, so the
@@ -209,17 +225,32 @@ export class ConnectionGraph {
       this.nodes.set(nodeData.id, mod);
     }
 
+    // Cables are saved with port and param ids. One whose port or param has
+    // since been removed is dropped.
+    const portIndex = (ports, id) => {
+      const i = ports ? ports.findIndex(p => p.id === id) : -1;
+      return i < 0 ? null : i;
+    };
     for (const c of data.connections) {
-      if (this.nodes.has(c.fromId) && this.nodes.has(c.toId)) {
-        this.connections.push({ ...c });
+      const fromPort = portIndex(this.nodes.get(c.fromId)?.outputs, c.fromPort);
+      const toPort = portIndex(this.nodes.get(c.toId)?.inputs, c.toPort);
+      if (fromPort === null || toPort === null) {
+        console.warn('Dropped a cable whose port no longer exists:', c);
+        continue;
       }
+      this.connections.push({ fromId: c.fromId, fromPort, toId: c.toId, toPort });
     }
 
     if (data.controlConnections) {
       for (const c of data.controlConnections) {
-        if (this.nodes.has(c.fromId) && this.nodes.has(c.toId)) {
-          this.controlConnections.push({ ...c });
+        const fromPort = portIndex(this.nodes.get(c.fromId)?.outputs, c.fromPort);
+        const params = this.nodes.get(c.toId)?.params ?? {};
+        const paramName = Object.keys(params).find(k => params[k].id === c.param);
+        if (fromPort === null || !paramName) {
+          console.warn('Dropped a cable whose port or param no longer exists:', c);
+          continue;
         }
+        this.controlConnections.push({ fromId: c.fromId, fromPort, toId: c.toId, paramName });
       }
     }
 

@@ -71,18 +71,20 @@ function bakeLattice(apply, n = BAKE_SIZE) {
 }
 
 export class LUTModule extends Module {
+  static uid = 'ccf14f8f';
+
   constructor(glCanvas, id) {
     super('LUT', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: 'd19a', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '83ec', name: 'out', type: 'video' }];
     // Option 0 is the file loaded with the button, named after it once there
     // is one; the rest are the bundled presets.
     this.params = {
       preset: {
-        value: 0, min: 0, max: PRESETS.length, step: 1, label: 'LUT', widget: 'dropdown',
+        id: 'a5f8', value: 0, min: 0, max: PRESETS.length, step: 1, label: 'LUT', widget: 'dropdown',
         valueLabels: [NO_FILE_LABEL, ...PRESETS.map(p => p.label)],
       },
-      mix: { value: 1, min: 0, max: 1, step: 0.01, label: 'Mix' },
+      mix: { id: '50f2', value: 1, min: 0, max: 1, step: 0.01, label: 'Mix' },
     };
     this.lutImage = null;   // the active bake, as a texture
     this.lutReady = false;  // false passes the input through untouched

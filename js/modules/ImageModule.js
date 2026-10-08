@@ -3,12 +3,14 @@ import { passthroughFrag } from '../shaders/passthrough.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class ImageModule extends Module {
+  static uid = '90ab4d59';
+
   constructor(glCanvas, id) {
     super('Image', glCanvas, id);
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '6382', name: 'out', type: 'video' }];
     this.params = {
-      width:  { value: 0, min: 0, max: 7680, step: 1, label: 'Width' },
-      height: { value: 0, min: 0, max: 4320, step: 1, label: 'Height' },
+      width:  { id: '798b', value: 0, min: 0, max: 7680, step: 1, label: 'Width' },
+      height: { id: '310a', value: 0, min: 0, max: 4320, step: 1, label: 'Height' },
     };
     this.img = null;
     this.imgReady = false;

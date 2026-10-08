@@ -74,15 +74,16 @@ export class EffectMenu {
     this.none = this.options.indexOf(NONE);
   }
 
-  // The drop-down and the two knobs, as module params
+  // The drop-down and the two knobs, as module params. Their ids are the same
+  // in every module that spreads these in, so its own params must avoid them.
   params(option, fxA, fxB) {
     return {
       effect: {
-        value: option, min: 0, max: this.options.length - 1, step: 1, label: 'Effect',
+        id: '7c56', value: option, min: 0, max: this.options.length - 1, step: 1, label: 'Effect',
         widget: 'dropdown', valueLabels: this.options.map((o) => o.label),
       },
-      fxA: { value: fxA, min: 0, max: 1, step: 0.001, label: 'Effect A' },
-      fxB: { value: fxB, min: 0, max: 1, step: 0.001, label: 'Effect B' },
+      fxA: { id: '7df9', value: fxA, min: 0, max: 1, step: 0.001, label: 'Effect A' },
+      fxB: { id: '3c06', value: fxB, min: 0, max: 1, step: 0.001, label: 'Effect B' },
     };
   }
 

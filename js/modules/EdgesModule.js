@@ -3,16 +3,18 @@ import { edgesFrag } from '../shaders/edges.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class EdgesModule extends Module {
+  static uid = '68c08c2a';
+
   constructor(glCanvas, id) {
     super('Edges', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '9eb5', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '9241', name: 'out', type: 'video' }];
     this.params = {
       mode: {
-        value: 0, min: 0, max: 3, step: 1, label: 'Mode', widget: 'dropdown',
+        id: '8a1f', value: 0, min: 0, max: 3, step: 1, label: 'Mode', widget: 'dropdown',
         valueLabels: ['Refine Contour', 'Scharr', 'Quantum Walk', 'Grayscale (debug)'],
       },
-      threshold: { value: 0.5, min: 0, max: 1, step: 0.01, label: 'Threshold' },
+      threshold: { id: '2731', value: 0.5, min: 0, max: 1, step: 0.01, label: 'Threshold' },
     };
     this.createShader(edgesFrag);
     this.createOutputFBO();

@@ -3,14 +3,16 @@ import { pixelvisionFrag } from '../shaders/pixelvision.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class PixelVisionModule extends Module {
+  static uid = '5c7aa061';
+
   constructor(glCanvas, id) {
     super('PixelVision', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '0040', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '55c1', name: 'out', type: 'video' }];
     this.params = {
-      gamma: { value: 1.2, min: 0.5, max: 3, step: 0.01, label: 'Gamma' },
-      posterizeLevels: { value: 90, min: 2, max: 256, step: 1, label: 'Levels' },
-      texelSize: { value: 0.008, min: 0.001, max: 0.05, step: 0.001, label: 'Texel' },
+      gamma: { id: '0b91', value: 1.2, min: 0.5, max: 3, step: 0.01, label: 'Gamma' },
+      posterizeLevels: { id: 'd95c', value: 90, min: 2, max: 256, step: 1, label: 'Levels' },
+      texelSize: { id: 'efb6', value: 0.008, min: 0.001, max: 0.05, step: 0.001, label: 'Texel' },
     };
     this.createShader(pixelvisionFrag);
     this.createOutputFBO();

@@ -32,19 +32,21 @@ const fract = (x) => x - Math.floor(x);
 let nextGeometryId = 0;
 
 export class WhitneyModule extends Module {
+  static uid = '4bde3bfa';
+
   constructor(glCanvas, id) {
     super('Whitney', glCanvas, id);
     this.inputs = [];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '9670', name: 'out', type: 'video' }];
     this.historicalInfo = 'Whitney';
     this.params = {
       sketch: {
-        value: 0, min: 0, max: SKETCHES.length - 1, step: 1, label: 'Sketch', widget: 'dropdown',
+        id: '0320', value: 0, min: 0, max: SKETCHES.length - 1, step: 1, label: 'Sketch', widget: 'dropdown',
         valueLabels: SKETCHES.map(s => s.label),
       },
-      speed: { value: 1, min: -8, max: 8, step: 0.01, label: 'Speed' },
-      offset: { value: 0, min: 0, max: 1, step: 0.001, label: 'Offset' },
-      size: { value: 1, min: 0.25, max: 4, step: 0.01, label: 'Size' },
+      speed: { id: '5533', value: 1, min: -8, max: 8, step: 0.01, label: 'Speed' },
+      offset: { id: '38e5', value: 0, min: 0, max: 1, step: 0.001, label: 'Offset' },
+      size: { id: '1329', value: 1, min: 0.25, max: 4, step: 0.01, label: 'Size' },
     };
 
     this.dotShader = glCanvas.createShader(whitneyVert, whitneyFrag);

@@ -2,39 +2,43 @@
   "nodes": [
     {
       "id": 0,
+      "uid": "b1f08cff",
       "type": "Monitor",
       "x": 1034.5,
       "y": 579.75,
       "params": {
-        "bitrate": 20
+        "4786": 20
       }
     },
     {
       "id": 1,
+      "uid": "d5a84eef",
       "type": "TVLines",
       "x": 757.5495081504929,
       "y": 384.90258795174464,
       "params": {
-        "lineThickness": 1.2,
-        "lineDarkness": 0.013333333333333336,
-        "flicker": 0.01
+        "2cb2": 1.2,
+        "580a": 0.013333333333333336,
+        "89f0": 0.01
       }
     },
     {
       "id": 2,
+      "uid": "4b57bbb0",
       "type": "GridGuys",
       "x": 306.37898965625595,
       "y": 14.588706245305389,
       "params": {
-        "blend": 1,
-        "delay": 1,
-        "life": 40,
-        "respawn": 50,
-        "chaos": 0.03
+        "3947": 1,
+        "6789": 1,
+        "b05d": 40,
+        "0a47": 50,
+        "61ca": 0.03
       }
     },
     {
       "id": 3,
+      "uid": "605dcd4a",
       "type": "FilmGrain",
       "x": 534.923081698816,
       "y": 542.0175554397016,
@@ -42,119 +46,124 @@
     },
     {
       "id": 4,
+      "uid": "a75885fd",
       "type": "BufferSmear",
       "x": 549.5677776482331,
       "y": 33.013376114218715,
       "params": {
-        "smearAmount": 1,
-        "feedback": 0.96,
-        "zoomSpeed": 1
+        "4279": 1,
+        "9252": 1,
+        "5e1c": 0.96
       }
     },
     {
       "id": 7,
+      "uid": "cd55eb84",
       "type": "ColorEncoder",
       "x": 361.5933625141996,
       "y": 296.5097575924027,
       "params": {
-        "phaseR": 0,
-        "phaseG": 2.094,
-        "phaseB": 4.189,
-        "frequency": 1
+        "4704": 0,
+        "4ca6": 2.094,
+        "0132": 4.189,
+        "83af": 1
       }
     },
     {
       "id": 8,
+      "uid": "01d95e88",
       "type": "VHSC",
       "x": 952.3634250039479,
       "y": 353.0213005601139,
       "params": {
-        "gamma": 1.2,
-        "posterizeLevels": 90,
-        "texelSize": 0.008
+        "4b63": 1.2,
+        "bc86": 90,
+        "14c9": 0.008
       }
     },
     {
       "id": 9,
+      "uid": "4bc92c10",
       "type": "RuttEtra",
       "x": 784.7586793105232,
       "y": 20.76524258794973,
       "params": {
-        "scale": 1.208,
-        "scanStep": 3.62,
-        "lineThickness": 1.9366666666666668,
-        "opacity": 0.42666666666666664,
-        "depth": 80,
-        "rotationX": 0.3,
-        "rotationY": 0
+        "9dbc": 1.208,
+        "0515": 3.62,
+        "b956": 1.9366666666666668,
+        "48fe": 0.42666666666666664,
+        "74b6": 80,
+        "dab3": 0.3,
+        "aea2": 0
       }
     },
     {
       "id": 10,
+      "uid": "8cea39bc",
       "type": "AdderMultiplier",
       "x": 563.7136858476363,
       "y": 273.5883785274607,
       "params": {
-        "mode": 0,
-        "mixVal": 0.5,
-        "contrast": 0.86
+        "1288": 0,
+        "8436": 0.86,
+        "ac2e": 0.5
       }
     }
   ],
   "connections": [
     {
       "fromId": 3,
-      "fromPort": 0,
+      "fromPort": "7fa7",
       "toId": 1,
-      "toPort": 0
+      "toPort": "8f1f"
     },
     {
       "fromId": 1,
-      "fromPort": 0,
+      "fromPort": "9dcc",
       "toId": 8,
-      "toPort": 0
+      "toPort": "6da5"
     },
     {
       "fromId": 8,
-      "fromPort": 0,
+      "fromPort": "acd9",
       "toId": 0,
-      "toPort": 0
+      "toPort": "7ae7"
     },
     {
       "fromId": 4,
-      "fromPort": 0,
+      "fromPort": "3e6c",
       "toId": 9,
-      "toPort": 0
+      "toPort": "870d"
     },
     {
       "fromId": 4,
-      "fromPort": 0,
+      "fromPort": "3e6c",
       "toId": 10,
-      "toPort": 0
+      "toPort": "3a2a"
     },
     {
       "fromId": 9,
-      "fromPort": 0,
+      "fromPort": "0f5b",
       "toId": 10,
-      "toPort": 1
+      "toPort": "1565"
     },
     {
       "fromId": 10,
-      "fromPort": 0,
+      "fromPort": "6288",
       "toId": 7,
-      "toPort": 0
+      "toPort": "87a9"
     },
     {
       "fromId": 7,
-      "fromPort": 0,
+      "fromPort": "1bc2",
       "toId": 3,
-      "toPort": 0
+      "toPort": "c120"
     },
     {
       "fromId": 2,
-      "fromPort": 0,
+      "fromPort": "3616",
       "toId": 4,
-      "toPort": 0
+      "toPort": "477c"
     }
   ],
   "controlConnections": [],

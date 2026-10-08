@@ -9,28 +9,30 @@ const CHANNELS = ['Red', 'Green', 'Blue', 'Alpha', 'Luminance', 'Hue', 'Lightnes
 const EDGES = ['Clamp', 'Wrap', 'Mirror', 'Black'];
 
 export class DisplacerModule extends Module {
+  static uid = 'a291a656';
+
   constructor(glCanvas, id) {
     super('Displacer', glCanvas, id);
     this.inputs = [
-      { name: 'in', type: 'video' },
-      { name: 'map', type: 'video' },
+      { id: 'ab75', name: 'in', type: 'video' },
+      { id: '3e00', name: 'map', type: 'video' },
     ];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: 'c7b3', name: 'out', type: 'video' }];
     // Max displacements are in pixels of the logical frame, so +-640 and +-480
     // can push a pixel a whole frame width or height
     this.params = {
       xChannel: {
-        value: 0, min: 0, max: CHANNELS.length - 1, step: 1, label: 'X From',
+        id: 'd407', value: 0, min: 0, max: CHANNELS.length - 1, step: 1, label: 'X From',
         widget: 'dropdown', valueLabels: CHANNELS,
       },
-      xMax: { value: 20, min: -640, max: 640, step: 1, label: 'X Max' },
+      xMax: { id: '0705', value: 20, min: -640, max: 640, step: 1, label: 'X Max' },
       yChannel: {
-        value: 1, min: 0, max: CHANNELS.length - 1, step: 1, label: 'Y From',
+        id: '3f5c', value: 1, min: 0, max: CHANNELS.length - 1, step: 1, label: 'Y From',
         widget: 'dropdown', valueLabels: CHANNELS,
       },
-      yMax: { value: 20, min: -480, max: 480, step: 1, label: 'Y Max' },
+      yMax: { id: 'c16a', value: 20, min: -480, max: 480, step: 1, label: 'Y Max' },
       edges: {
-        value: 0, min: 0, max: EDGES.length - 1, step: 1, label: 'Edges',
+        id: '176c', value: 0, min: 0, max: EDGES.length - 1, step: 1, label: 'Edges',
         widget: 'dropdown', valueLabels: EDGES,
       },
     };

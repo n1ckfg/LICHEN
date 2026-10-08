@@ -3,14 +3,16 @@ import { brcosaFrag } from '../shaders/brcosa.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class BrcosaModule extends Module {
+  static uid = '45d56d73';
+
   constructor(glCanvas, id) {
     super('Brcosa', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: 'ae9e', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '4b92', name: 'out', type: 'video' }];
     this.params = {
-      brightness: { value: 0, min: -1, max: 1, step: 0.01, label: 'Bright' },
-      contrast: { value: 1, min: 0, max: 3, step: 0.01, label: 'Contrast' },
-      saturation: { value: 1, min: 0, max: 3, step: 0.01, label: 'Sat' },
+      brightness: { id: '7213', value: 0, min: -1, max: 1, step: 0.01, label: 'Bright' },
+      contrast: { id: '0924', value: 1, min: 0, max: 3, step: 0.01, label: 'Contrast' },
+      saturation: { id: '1459', value: 1, min: 0, max: 3, step: 0.01, label: 'Sat' },
     };
     this.createShader(brcosaFrag);
     this.createOutputFBO();

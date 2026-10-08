@@ -7,18 +7,20 @@ import { registerModule } from '../moduleRegistry.js';
 // VideoMixer's feeds both of its, so Channel then sets one picture's channel
 // gains. With two or three plugged in, an unplugged channel is black.
 export class ChannelModule extends Module {
+  static uid = '716017f8';
+
   constructor(glCanvas, id) {
     super('Channel', glCanvas, id);
     this.inputs = [
-      { name: 'r', type: 'video' },
-      { name: 'g', type: 'video' },
-      { name: 'b', type: 'video' },
+      { id: 'cd7f', name: 'r', type: 'video' },
+      { id: '3652', name: 'g', type: 'video' },
+      { id: '7c48', name: 'b', type: 'video' },
     ];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: 'e90e', name: 'out', type: 'video' }];
     this.params = {
-      gainR: { value: 1, min: 0, max: 3, step: 0.01, label: 'R Gain' },
-      gainG: { value: 1, min: 0, max: 3, step: 0.01, label: 'G Gain' },
-      gainB: { value: 1, min: 0, max: 3, step: 0.01, label: 'B Gain' },
+      gainR: { id: '1f27', value: 1, min: 0, max: 3, step: 0.01, label: 'R Gain' },
+      gainG: { id: '7fb8', value: 1, min: 0, max: 3, step: 0.01, label: 'G Gain' },
+      gainB: { id: 'cf3a', value: 1, min: 0, max: 3, step: 0.01, label: 'B Gain' },
     };
     this.createShader(channelFrag);
     this.createOutputFBO();

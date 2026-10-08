@@ -2,49 +2,54 @@
   "nodes": [
     {
       "id": 0,
+      "uid": "b1f08cff",
       "type": "Monitor",
       "x": 1463,
       "y": 389,
       "params": {
-        "bitrate": 20
+        "4786": 20
       }
     },
     {
       "id": 1,
+      "uid": "d19abc06",
       "type": "Delay",
       "x": 497.0251444716847,
       "y": 429.25059106079533,
       "params": {
-        "delaySpeed": 0.2,
-        "lumaThreshold": 0.5,
-        "alphaMax": 1,
-        "alphaMin": 0.1
+        "9201": 0.1,
+        "c7ae": 0.2,
+        "66de": 0.5,
+        "4d60": 1
       }
     },
     {
       "id": 2,
+      "uid": "a75885fd",
       "type": "BufferSmear",
       "x": 670.1802772304068,
       "y": 399.1626482930104,
       "params": {
-        "smearAmount": 1,
-        "feedback": 0.96,
-        "zoomSpeed": 1
+        "4279": 1,
+        "9252": 1,
+        "5e1c": 0.96
       }
     },
     {
       "id": 3,
+      "uid": "5c7aa061",
       "type": "PixelVision",
       "x": 835.2262730685679,
       "y": 109.14763488612039,
       "params": {
-        "gamma": 1.2,
-        "posterizeLevels": 106.93333333333334,
-        "texelSize": 0.008
+        "0b91": 1.2,
+        "d95c": 106.93333333333334,
+        "efb6": 0.008
       }
     },
     {
       "id": 4,
+      "uid": "21b607f9",
       "type": "Camera",
       "x": 468.13270165472,
       "y": 271.86828932301614,
@@ -52,43 +57,47 @@
     },
     {
       "id": 5,
+      "uid": "8c1222c1",
       "type": "FunctionGenerator",
       "x": 858.3205650426207,
       "y": 383.21500693699716,
       "params": {
-        "curve": 3.7666666666666666,
-        "gain": 1.4000000000000001
+        "1858": 1.4000000000000001,
+        "2d9d": 3.7666666666666666
       }
     },
     {
       "id": 6,
+      "uid": "7dae2c48",
       "type": "HSFlow",
       "x": 724.6380114391583,
       "y": 710.3888178224797,
       "params": {
-        "lambda": 0.01,
-        "flowScale": 1,
-        "offset": 1,
-        "distortAmt": 1,
-        "slide": 0.8,
-        "lumaThresh": 0.5,
-        "lumaTol": 0.2
+        "3090": 0.01,
+        "350b": 1,
+        "d65b": 1,
+        "fad8": 1,
+        "ede3": 0.8,
+        "3a35": 0.5,
+        "d1be": 0.2
       }
     },
     {
       "id": 7,
+      "uid": "cd55eb84",
       "type": "ColorEncoder",
       "x": 936.5752386728153,
       "y": 591.9114209228641,
       "params": {
-        "phaseR": 0,
-        "phaseG": 2.094,
-        "phaseB": 2.8486266666666666,
-        "frequency": 0.372242864824877
+        "4704": 0,
+        "4ca6": 2.094,
+        "0132": 2.8486266666666666,
+        "83af": 0.372242864824877
       }
     },
     {
       "id": 8,
+      "uid": "605dcd4a",
       "type": "FilmGrain",
       "x": 1154.5132402145473,
       "y": 738.0058531394538,
@@ -96,144 +105,149 @@
     },
     {
       "id": 9,
+      "uid": "14ff0d1e",
       "type": "Oscillator",
       "x": 417.1556747810937,
       "y": 644.703181117733,
       "params": {
-        "frequency": 0.1,
-        "waveform": 0,
-        "direction": 0
+        "0e2a": 0.1,
+        "be3f": 0,
+        "2c31": 0
       }
     },
     {
       "id": 10,
+      "uid": "6a1e3f93",
       "type": "ValueScrambler",
       "x": 1117.0896634311134,
       "y": 480.0711647528216,
       "params": {
-        "levels": 10.6,
-        "scramble": 0.47333333333333333
+        "d5bd": 10.6,
+        "ab64": 0.47333333333333333
       }
     },
     {
       "id": 11,
+      "uid": "8c1222c1",
       "type": "FunctionGenerator",
       "x": 1339.7165929884677,
       "y": 770.1286918537519,
       "params": {
-        "curve": 0.5333333333333333,
-        "gain": 1.56
+        "1858": 1.56,
+        "2d9d": 0.5333333333333333
       }
     },
     {
       "id": 12,
+      "uid": "8cea39bc",
       "type": "AdderMultiplier",
       "x": 1097.4584747906063,
       "y": 246.89807644128598,
       "params": {
-        "mode": 0.66,
-        "mixVal": 1,
-        "contrast": 0.98
+        "1288": 0.66,
+        "8436": 0.98,
+        "ac2e": 1
       }
     },
     {
       "id": 13,
+      "uid": "ed0095c2",
       "type": "UnrealBloom",
       "x": 1294.4799430862079,
       "y": 250.58299013907754,
       "params": {
-        "threshold": 0.5866666666666667,
-        "strength": 1.5,
-        "radius": 0.5
+        "9ad4": 0.5866666666666667,
+        "a808": 1.5,
+        "2b74": 0.5
       }
     }
   ],
   "connections": [
     {
       "fromId": 4,
-      "fromPort": 0,
+      "fromPort": "3261",
       "toId": 1,
-      "toPort": 0
+      "toPort": "e4eb"
     },
     {
       "fromId": 1,
-      "fromPort": 0,
+      "fromPort": "b8d7",
       "toId": 2,
-      "toPort": 0
+      "toPort": "477c"
     },
     {
       "fromId": 2,
-      "fromPort": 0,
+      "fromPort": "3e6c",
       "toId": 3,
-      "toPort": 0
+      "toPort": "0040"
     },
     {
       "fromId": 3,
-      "fromPort": 0,
+      "fromPort": "55c1",
       "toId": 5,
-      "toPort": 0
+      "toPort": "9540"
     },
     {
       "fromId": 5,
-      "fromPort": 0,
+      "fromPort": "b2f6",
       "toId": 7,
-      "toPort": 0
+      "toPort": "87a9"
     },
     {
       "fromId": 7,
-      "fromPort": 0,
+      "fromPort": "1bc2",
       "toId": 6,
-      "toPort": 0
+      "toPort": "306f"
     },
     {
       "fromId": 6,
-      "fromPort": 0,
+      "fromPort": "3bb1",
       "toId": 8,
-      "toPort": 0
+      "toPort": "c120"
     },
     {
       "fromId": 8,
-      "fromPort": 0,
+      "fromPort": "7fa7",
       "toId": 11,
-      "toPort": 0
+      "toPort": "9540"
     },
     {
       "fromId": 10,
-      "fromPort": 0,
+      "fromPort": "b2ad",
       "toId": 12,
-      "toPort": 1
+      "toPort": "1565"
     },
     {
       "fromId": 11,
-      "fromPort": 0,
+      "fromPort": "b2f6",
       "toId": 12,
-      "toPort": 0
+      "toPort": "3a2a"
     },
     {
       "fromId": 8,
-      "fromPort": 0,
+      "fromPort": "7fa7",
       "toId": 10,
-      "toPort": 0
+      "toPort": "4836"
     },
     {
       "fromId": 12,
-      "fromPort": 0,
+      "fromPort": "6288",
       "toId": 13,
-      "toPort": 0
+      "toPort": "5133"
     },
     {
       "fromId": 13,
-      "fromPort": 0,
+      "fromPort": "91b8",
       "toId": 0,
-      "toPort": 0
+      "toPort": "7ae7"
     }
   ],
   "controlConnections": [
     {
       "fromId": 9,
-      "fromPort": 1,
+      "fromPort": "5f92",
       "toId": 7,
-      "paramName": "frequency"
+      "param": "83af"
     }
   ],
   "nextId": 14

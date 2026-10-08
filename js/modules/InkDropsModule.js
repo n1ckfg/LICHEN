@@ -119,26 +119,28 @@ function harmonize(palette, o) {
 }
 
 export class InkDropsModule extends Module {
+  static uid = '9e7cb9ec';
+
   constructor(glCanvas, id) {
     super('InkDrops', glCanvas, id);
     this.inputs = [];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '935b', name: 'out', type: 'video' }];
     // `random` ranges keep a fresh seed away from the knobs' degenerate ends:
     // frozen at speed 0, a sheet that barely holds a stain at fade 5, and
     // hueVar up near 0.5, where the palette spreads round the whole wheel and
     // loses its family.
     this.params = {
-      speed: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.5, 1.75] },
-      rate: { value: 1.0, min: 0.1, max: 4, step: 0.05, label: 'Rate', random: [0.5, 2.5] },
-      size: { value: 1.0, min: 0.3, max: 2.5, step: 0.05, label: 'Size', random: [0.6, 1.6] },
-      stains: { value: 3, min: 0, max: 6, step: 1, label: 'Stains', random: [1, 5] },
-      wipes: { value: 1.0, min: 0, max: 3, step: 0.05, label: 'Wipes', random: [0.3, 2] },
-      fade: { value: 40, min: 5, max: 120, step: 1, label: 'Fade', random: [15, 90] },
-      hue: { value: 0.58, min: 0, max: 1, step: 0.01, label: 'Hue', random: true },
-      hueVar: { value: 0.085, min: 0, max: 0.5, step: 0.005, label: 'Hue Var', random: [0.02, 0.2] },
-      sat: { value: 0.80, min: 0, max: 1, step: 0.01, label: 'Sat', random: [0.3, 1] },
-      grain: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Grain', random: [0.3, 2] },
-      reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
+      speed: { id: '1566', value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.5, 1.75] },
+      rate: { id: 'b4c9', value: 1.0, min: 0.1, max: 4, step: 0.05, label: 'Rate', random: [0.5, 2.5] },
+      size: { id: '81bd', value: 1.0, min: 0.3, max: 2.5, step: 0.05, label: 'Size', random: [0.6, 1.6] },
+      stains: { id: '0307', value: 3, min: 0, max: 6, step: 1, label: 'Stains', random: [1, 5] },
+      wipes: { id: '379d', value: 1.0, min: 0, max: 3, step: 0.05, label: 'Wipes', random: [0.3, 2] },
+      fade: { id: '9276', value: 40, min: 5, max: 120, step: 1, label: 'Fade', random: [15, 90] },
+      hue: { id: '3243', value: 0.58, min: 0, max: 1, step: 0.01, label: 'Hue', random: true },
+      hueVar: { id: 'f479', value: 0.085, min: 0, max: 0.5, step: 0.005, label: 'Hue Var', random: [0.02, 0.2] },
+      sat: { id: 'a73e', value: 0.80, min: 0, max: 1, step: 0.01, label: 'Sat', random: [0.3, 1] },
+      grain: { id: '92fc', value: 1.0, min: 0, max: 3, step: 0.01, label: 'Grain', random: [0.3, 2] },
+      reseed: { id: '2dfd', value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
 
     this.bakeShader = glCanvas.createShader(vertSrc, inkDropsBakeFrag);

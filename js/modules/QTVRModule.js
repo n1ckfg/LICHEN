@@ -35,19 +35,21 @@ const SKYBOX_UVS = [[0, 0], [1, 0], [1, 1], [0, 1]];
 // p5.js viewer: the image is mapped inside a sphere (equirectangular), a cube
 // (a horizontal strip of six faces) or an open cylinder, and viewed from its center.
 export class QTVRModule extends Module {
+  static uid = '80590c5e';
+
   constructor(glCanvas, id) {
     super('QTVR', glCanvas, id);
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '4029', name: 'out', type: 'video' }];
     this.historicalInfo = 'QTVR';
     this.params = {
       projection: {
-        value: CYLINDRICAL, min: 0, max: PROJECTIONS.length - 1, step: 1, label: 'Projection', widget: 'dropdown',
+        id: '4353', value: CYLINDRICAL, min: 0, max: PROJECTIONS.length - 1, step: 1, label: 'Projection', widget: 'dropdown',
         valueLabels: PROJECTIONS,
       },
-      yaw:   { value: 0, min: -180, max: 180, step: 1, label: 'Yaw' },
-      pitch: { value: 0, min: -90, max: 90, step: 1, label: 'Pitch' },
-      fov:   { value: 75, min: 20, max: 120, step: 1, label: 'FOV' },
-      spin:  { value: 0, min: -90, max: 90, step: 1, label: 'Spin' },
+      yaw:   { id: 'a3c9', value: 0, min: -180, max: 180, step: 1, label: 'Yaw' },
+      pitch: { id: 'db4a', value: 0, min: -90, max: 90, step: 1, label: 'Pitch' },
+      fov:   { id: 'fc65', value: 75, min: 20, max: 120, step: 1, label: 'FOV' },
+      spin:  { id: 'cb5b', value: 0, min: -90, max: 90, step: 1, label: 'Spin' },
     };
     this.img = null;
     this.faces = null;      // the cube faces cut from the atlas, made on first use

@@ -15,6 +15,9 @@ export class Module {
     this.id = id;
     this.x = 200;
     this.y = 200;
+    // Each port and param declares an id of 4 hex digits, unique within the
+    // module, and each subclass a static uid of 8: patches save these in place
+    // of names and port numbers (see Patch IDs in ARCHITECTURE.md)
     this.inputs = [];
     this.outputs = [];
     this.params = {};

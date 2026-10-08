@@ -22,15 +22,17 @@ const ZOOM_PER_WHEEL = 1.001;   // distance factor per unit of wheel delta
 // project's p5.js viewer. The loader bakes the scene into a few vertex-colored
 // p5.Geometry objects, drawn here from an orbiting camera.
 export class VRMLModule extends Module {
+  static uid = '25f86a93';
+
   constructor(glCanvas, id) {
     super('VRML', glCanvas, id);
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: 'ff78', name: 'out', type: 'video' }];
     this.historicalInfo = 'VRML';
     this.params = {
-      yaw:      { value: 0, min: -180, max: 180, step: 1, label: 'Yaw' },
-      pitch:    { value: 0, min: -89, max: 89, step: 1, label: 'Pitch' },
-      distance: { value: 80, min: 1, max: 200, step: 1, label: 'Distance' },
-      spin:     { value: 0, min: -90, max: 90, step: 1, label: 'Spin' },
+      yaw:      { id: '4235', value: 0, min: -180, max: 180, step: 1, label: 'Yaw' },
+      pitch:    { id: '8cbf', value: 0, min: -89, max: 89, step: 1, label: 'Pitch' },
+      distance: { id: '08f9', value: 80, min: 1, max: 200, step: 1, label: 'Distance' },
+      spin:     { id: 'ea9a', value: 0, min: -90, max: 90, step: 1, label: 'Spin' },
     };
     this.scene = null;      // { geometries, boundingBox, background } from VRMLLoader
     this.fileName = '';     // shown on the load button

@@ -24,22 +24,24 @@ const PREVIEW_WIDTH = 2;       // and 2 px wide
 // newest waits for the worker, and any older is dropped, so each trace is of
 // the freshest mask. X and Y carry the latest trace every frame.
 export class SkeletonModule extends Module {
+  static uid = 'e87de5ff';
+
   constructor(glCanvas, id) {
     super('Skeleton', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'x', type: 'control' }, { name: 'y', type: 'control' }];
+    this.inputs = [{ id: 'da2e', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '6141', name: 'x', type: 'control' }, { id: 'd12b', name: 'y', type: 'control' }];
     this.params = {
-      threshold: { value: 0.5, min: 0, max: 1, step: 0.01, label: 'Threshold' },
+      threshold: { id: '44e8', value: 0.5, min: 0, max: 1, step: 0.01, label: 'Threshold' },
       // Which shapes are traced: light on dark, or dark on light
       trace: {
-        value: 0, min: 0, max: 1, step: 1, label: 'Trace',
+        id: '8da7', value: 0, min: 0, max: 1, step: 1, label: 'Trace',
         widget: 'dropdown', valueLabels: ['White', 'Black'],
       },
       // Cells across the tracer's grid. camera_trace used 256 x 256; here the
       // grid keeps the frame's shape, so 256 is 256 x 192
-      resolution: { value: 256, min: 64, max: 1024, step: 32, label: 'Resolution' },
+      resolution: { id: '95f2', value: 256, min: 64, max: 1024, step: 32, label: 'Resolution' },
       // Loops a second on X and Y. A lower rate gives the lines more samples
-      loopHz: { value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
+      loopHz: { id: 'eded', value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
     };
 
     this.maskShader = glCanvas.createShader(vertSrc, skeletonMaskFrag);

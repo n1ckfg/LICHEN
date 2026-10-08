@@ -3,13 +3,15 @@ import { differentiatorFrag } from '../shaders/differentiator.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class DifferentiatorModule extends Module {
+  static uid = 'ad9f6859';
+
   constructor(glCanvas, id) {
     super('Differentiator', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: 'a770', name: 'in', type: 'video' }];
+    this.outputs = [{ id: 'a7d4', name: 'out', type: 'video' }];
     this.historicalInfo="Sandin"
     this.params = {
-      strength: { value: 1, min: 0, max: 5, step: 0.01, label: 'Strength' },
+      strength: { id: 'aed7', value: 1, min: 0, max: 5, step: 0.01, label: 'Strength' },
     };
     this.createShader(differentiatorFrag);
     this.createOutputFBO();

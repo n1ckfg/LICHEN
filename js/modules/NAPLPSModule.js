@@ -12,18 +12,20 @@ const ARC_SEGMENTS = 72;     // a circle's sides on X and Y
 // X and Y outputs carry what is drawn as one loop of XY audio, as Latk's do,
 // to drive Twoscilloscope.
 export class NAPLPSModule extends Module {
+  static uid = '3fd67525';
+
   constructor(glCanvas, id) {
     super('NAPLPS', glCanvas, id);
     this.outputs = [
-      { name: 'out', type: 'video' },
-      { name: 'x', type: 'control' },
-      { name: 'y', type: 'control' },
+      { id: '5a97', name: 'out', type: 'video' },
+      { id: 'c7e5', name: 'x', type: 'control' },
+      { id: '4e53', name: 'y', type: 'control' },
     ];
     this.historicalInfo = "NAPLPS";
     this.params = {
-      speed: { value: 1, min: 0.1, max: 10, step: 0.1, label: 'Speed' },
+      speed: { id: '9a2d', value: 1, min: 0.1, max: 10, step: 0.1, label: 'Speed' },
       // Loops a second on X and Y. A lower rate gives the drawing more samples
-      loopHz: { value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
+      loopHz: { id: '48f2', value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
     };
     this.decoder = null;
     this.drawCmds = [];

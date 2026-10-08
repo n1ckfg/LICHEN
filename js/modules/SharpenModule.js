@@ -3,17 +3,19 @@ import { sharpenFrag } from '../shaders/sharpen.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class SharpenModule extends Module {
+  static uid = '3b37efdd';
+
   constructor(glCanvas, id) {
     super('Sharpen', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '5c5a', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '8bdd', name: 'out', type: 'video' }];
     this.params = {
-      sharpenAmount: { value: 5, min: 1, max: 10, step: 0.1, label: 'Sharpen' },
+      sharpenAmount: { id: 'b6d6', value: 5, min: 1, max: 10, step: 0.1, label: 'Sharpen' },
       posterize: {
-        value: 0, min: 0, max: 1, step: 1, label: 'Posterize',
+        id: '843d', value: 0, min: 0, max: 1, step: 1, label: 'Posterize',
         widget: 'dropdown', valueLabels: ['Off', 'On'],
       },
-      posterizeLevels: { value: 8, min: 2, max: 32, step: 1, label: 'Levels' },
+      posterizeLevels: { id: '1390', value: 8, min: 2, max: 32, step: 1, label: 'Levels' },
     };
     this.createShader(sharpenFrag);
     this.createOutputFBO();

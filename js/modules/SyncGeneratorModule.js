@@ -3,15 +3,17 @@ import { syncGeneratorFrag } from '../shaders/sync-generator.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class SyncGeneratorModule extends Module {
+  static uid = '6c5dcbe9';
+
   constructor(glCanvas, id) {
     super('SyncGenerator', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '6d7f', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '5ee8', name: 'out', type: 'video' }];
     this.historicalInfo="Sandin"
     this.params = {
-      steps: { value: 4, min: 2, max: 32, step: 1, label: 'Steps' },
+      steps: { id: '042d', value: 4, min: 2, max: 32, step: 1, label: 'Steps' },
       mode: {
-        value: 0, min: 0, max: 2, step: 1, label: 'Mode', widget: 'dropdown',
+        id: '1238', value: 0, min: 0, max: 2, step: 1, label: 'Mode', widget: 'dropdown',
         valueLabels: ['Floor', 'Round', 'Gamma'],
       },
     };

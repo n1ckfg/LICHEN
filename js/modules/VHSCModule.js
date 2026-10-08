@@ -3,14 +3,16 @@ import { vhscFrag } from '../shaders/vhsc.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class VHSCModule extends Module {
+  static uid = '01d95e88';
+
   constructor(glCanvas, id) {
     super('VHSC', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '6da5', name: 'in', type: 'video' }];
+    this.outputs = [{ id: 'acd9', name: 'out', type: 'video' }];
     this.params = {
-      gamma: { value: 1.2, min: 0.5, max: 3, step: 0.01, label: 'Gamma' },
-      posterizeLevels: { value: 90, min: 2, max: 256, step: 1, label: 'Levels' },
-      texelSize: { value: 0.008, min: 0.001, max: 0.05, step: 0.001, label: 'Texel' },
+      gamma: { id: '4b63', value: 1.2, min: 0.5, max: 3, step: 0.01, label: 'Gamma' },
+      posterizeLevels: { id: 'bc86', value: 90, min: 2, max: 256, step: 1, label: 'Levels' },
+      texelSize: { id: '14c9', value: 0.008, min: 0.001, max: 0.05, step: 0.001, label: 'Texel' },
     };
     this.createShader(vhscFrag);
     this.createOutputFBO();

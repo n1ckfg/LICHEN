@@ -5,17 +5,19 @@ import { vertSrc } from '../shaders/vert.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class DeeSeventySixModule extends Module {
+  static uid = 'e246e553';
+
   constructor(glCanvas, id) {
     super('DeeSeventySix', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: 'd98e', name: 'in', type: 'video' }];
+    this.outputs = [{ id: 'd878', name: 'out', type: 'video' }];
     this.historicalInfo = "DeeSeventySix";
     this.params = {
-      grainScale: { value: 100, min: 10, max: 500, step: 1, label: 'Grain' },
-      solarizeLimit: { value: 90, min: 1, max: 200, step: 1, label: 'Solarize' },
-      fadeAmount: { value: 0.02, min: 0, max: 0.1, step: 0.001, label: 'Fade' },
-      progressSpeed: { value: 0.005, min: 0, max: 0.05, step: 0.001, label: 'Speed' },
-      isColor: { value: 1, min: 0, max: 1, step: 1, label: 'Color' },
+      grainScale: { id: 'a293', value: 100, min: 10, max: 500, step: 1, label: 'Grain' },
+      solarizeLimit: { id: '186c', value: 90, min: 1, max: 200, step: 1, label: 'Solarize' },
+      fadeAmount: { id: '4dd3', value: 0.02, min: 0, max: 0.1, step: 0.001, label: 'Fade' },
+      progressSpeed: { id: 'e0ac', value: 0.005, min: 0, max: 0.05, step: 0.001, label: 'Speed' },
+      isColor: { id: '2549', value: 1, min: 0, max: 1, step: 1, label: 'Color' },
     };
     this.createShader(deeSeventySixFrag);
     this.createOutputFBO();

@@ -294,13 +294,15 @@ class Gesture {
 
 
 export class YellowtailModule extends Module {
+  static uid = 'd21aaf56';
+
   constructor(glCanvas, id) {
     super('Yellowtail', glCanvas, id);
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '684e', name: 'out', type: 'video' }];
     this.historicalInfo = "Yellowtail";
 
     this.params = {
-      thickness: { value: 14, min: 2, max: 96, step: 1, label: 'Thickness' }
+      thickness: { id: '4d82', value: 14, min: 2, max: 96, step: 1, label: 'Thickness' }
     };
 
     this.createShader(passthroughFrag);

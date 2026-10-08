@@ -52,18 +52,20 @@ const KAWASE_SIGMA = [0, 1.683, 3.765, 7.721, 15.534, 31.102, 62.222, 122.112];
 const KAWASE_LEVELS = KAWASE_SIGMA.length - 1;
 
 export class BlurModule extends Module {
+  static uid = '070ea419';
+
   constructor(glCanvas, id) {
     super('Blur', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '7c08', name: 'in', type: 'video' }];
+    this.outputs = [{ id: 'c6ae', name: 'out', type: 'video' }];
     this.params = {
       mode: {
-        value: 0, min: 0, max: 2, step: 1, label: 'Mode', widget: 'dropdown',
+        id: '32e0', value: 0, min: 0, max: 2, step: 1, label: 'Mode', widget: 'dropdown',
         valueLabels: ['Gaussian', 'Kawase', 'Bokeh'],
       },
-      radius: { value: 8, min: 0, max: 100, step: 0.5, label: 'Radius' },
-      highlights: { value: 0.25, min: 0, max: 1, step: 0.01, label: 'Highlights' },
-      mix: { value: 1, min: 0, max: 1, step: 0.01, label: 'Mix' },
+      radius: { id: '1d47', value: 8, min: 0, max: 100, step: 0.5, label: 'Radius' },
+      highlights: { id: '248a', value: 0.25, min: 0, max: 1, step: 0.01, label: 'Highlights' },
+      mix: { id: '0ec0', value: 1, min: 0, max: 1, step: 0.01, label: 'Mix' },
     };
 
     this.prepShader = glCanvas.createShader(vertSrc, blurPrepFrag);

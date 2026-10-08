@@ -16,20 +16,22 @@ const MAX_DT = 0.1;   // clamp long stalls so a tab switch doesn't jump the phas
 const TAU = Math.PI * 2;
 
 export class SpiralGalaxyModule extends Module {
+  static uid = '6d6d8184';
+
   constructor(glCanvas, id) {
     super('SpiralGalaxy', glCanvas, id);
     this.inputs = [];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: 'b611', name: 'out', type: 'video' }];
     // `random` ranges keep a fresh seed away from the knobs' degenerate ends:
     // frozen at speed 0, no arms at swirl 0, a dark tunnel at ripple 0, and the
     // top of trail, where the white core swells over more of the frame.
     this.params = {
-      loop: { value: 60, min: 5, max: 180, step: 1, label: 'Loop', random: [20, 120] },
-      speed: { value: 0.5, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.15, 1.5] },
-      trail: { value: 0.92, min: 0.7, max: 0.99, step: 0.005, label: 'Trail', random: [0.8, 0.95] },
-      swirl: { value: 0.012, min: 0, max: 0.06, step: 0.001, label: 'Swirl', random: [0.004, 0.04] },
-      ripple: { value: 0.4, min: 0, max: 1.5, step: 0.01, label: 'Ripple', random: [0.15, 1.2] },
-      reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
+      loop: { id: '0786', value: 60, min: 5, max: 180, step: 1, label: 'Loop', random: [20, 120] },
+      speed: { id: '7c61', value: 0.5, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.15, 1.5] },
+      trail: { id: 'f8fe', value: 0.92, min: 0.7, max: 0.99, step: 0.005, label: 'Trail', random: [0.8, 0.95] },
+      swirl: { id: 'c8e6', value: 0.012, min: 0, max: 0.06, step: 0.001, label: 'Swirl', random: [0.004, 0.04] },
+      ripple: { id: '91ac', value: 0.4, min: 0, max: 1.5, step: 0.01, label: 'Ripple', random: [0.15, 1.2] },
+      reseed: { id: '66bd', value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
 
     this.createShader(spiralgalaxyFrag);

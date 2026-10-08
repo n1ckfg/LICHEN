@@ -15,17 +15,19 @@ const PATTERNS = [
 ];
 
 export class GridGuysModule extends Module {
+  static uid = '4b57bbb0';
+
   constructor(glCanvas, id) {
     super('GridGuys', glCanvas, id);
     this.inputs = [];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '3616', name: 'out', type: 'video' }];
     this.historicalInfo = "GridGuys";
     this.params = {
-      blend: { value: 1.0, min: 0, max: 1, step: 0.01 },
-      delay: { value: 1, min: 0, max: 60, step: 1 },
-      life: { value: 40, min: 1, max: 120, step: 1 },
-      respawn: { value: 50, min: 1, max: 120, step: 1 },
-      chaos: { value: 0.03, min: 0, max: 1, step: 0.01 }
+      blend: { id: '3947', value: 1.0, min: 0, max: 1, step: 0.01 },
+      delay: { id: '6789', value: 1, min: 0, max: 60, step: 1 },
+      life: { id: 'b05d', value: 40, min: 1, max: 120, step: 1 },
+      respawn: { id: '0a47', value: 50, min: 1, max: 120, step: 1 },
+      chaos: { id: '61ca', value: 0.03, min: 0, max: 1, step: 0.01 }
     };
 
     // Create both shaders

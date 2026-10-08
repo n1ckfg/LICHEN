@@ -17,27 +17,29 @@ const DEFAULT_FILE = new URL('../../files/latk/jellyfish.latk', import.meta.url)
 // outputs carry each frame as one loop of XY audio, as the example encoded it,
 // to drive Twoscilloscope.
 export class LatkModule extends Module {
+  static uid = '32a408d8';
+
   constructor(glCanvas, id) {
     super('Latk', glCanvas, id);
     this.outputs = [
-      { name: 'out', type: 'video' },
-      { name: 'x', type: 'control' },
-      { name: 'y', type: 'control' },
+      { id: '3fd9', name: 'out', type: 'video' },
+      { id: '4c65', name: 'x', type: 'control' },
+      { id: 'd1e6', name: 'y', type: 'control' },
     ];
     this.historicalInfo = 'Latk';
     this.params = {
-      fps: { value: 12, min: 0, max: 60, step: 1, label: 'FPS' },   // ofxLatk's 12 frames a second
-      yaw: { value: 0, min: -180, max: 180, step: 1, label: 'Yaw' },
-      pitch: { value: OrbitCamera.HOME_PITCH * 180 / Math.PI, min: -89, max: 89, step: 1, label: 'Pitch' },
+      fps: { id: '9083', value: 12, min: 0, max: 60, step: 1, label: 'FPS' },   // ofxLatk's 12 frames a second
+      yaw: { id: '180c', value: 0, min: -180, max: 180, step: 1, label: 'Yaw' },
+      pitch: { id: '9432', value: OrbitCamera.HOME_PITCH * 180 / Math.PI, min: -89, max: 89, step: 1, label: 'Pitch' },
       // In radii of the drawing, so it fits whatever its size
       distance: {
-        value: OrbitCamera.HOME_DISTANCE, min: OrbitCamera.MIN_DISTANCE, max: OrbitCamera.MAX_DISTANCE, step: 0.01,
+        id: 'cd55', value: OrbitCamera.HOME_DISTANCE, min: OrbitCamera.MIN_DISTANCE, max: OrbitCamera.MAX_DISTANCE, step: 0.01,
         label: 'Distance',
       },
-      spin: { value: 0, min: -90, max: 90, step: 1, label: 'Spin' },
-      width: { value: 2, min: 0.5, max: 10, step: 0.1, label: 'Width' },   // example-latk's strokeWeight
+      spin: { id: '3b03', value: 0, min: -90, max: 90, step: 1, label: 'Spin' },
+      width: { id: '5ee2', value: 2, min: 0.5, max: 10, step: 0.1, label: 'Width' },   // example-latk's strokeWeight
       // Loops a second on X and Y. A lower rate gives the drawing more samples
-      loopHz: { value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
+      loopHz: { id: '2b16', value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
     };
 
     this.segments = new SegmentRenderer(glCanvas, 'Latk');

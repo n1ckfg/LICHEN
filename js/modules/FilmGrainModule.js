@@ -3,10 +3,12 @@ import { filmFrag } from '../shaders/film.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class FilmGrainModule extends Module {
+  static uid = '605dcd4a';
+
   constructor(glCanvas, id) {
     super('FilmGrain', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: 'c120', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '7fa7', name: 'out', type: 'video' }];
     this.params = {};
     this.createShader(filmFrag);
     this.createOutputFBO();

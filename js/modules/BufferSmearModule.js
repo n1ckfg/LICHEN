@@ -5,14 +5,16 @@ import { vertSrc } from '../shaders/vert.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class BufferSmearModule extends Module {
+  static uid = 'a75885fd';
+
   constructor(glCanvas, id) {
     super('BufferSmear', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '477c', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '3e6c', name: 'out', type: 'video' }];
     this.params = {
-      smearAmount: { value: 0.2, min: 0, max: 5, step: 0.01, label: 'Smear' },
-      feedback: { value: 0.96, min: 0, max: 1, step: 0.01, label: 'Feedback' },
-      zoomSpeed: { value: 1.0, min: 0, max: 5, step: 0.01, label: 'Zoom' },
+      smearAmount: { id: '9252', value: 0.2, min: 0, max: 5, step: 0.01, label: 'Smear' },
+      feedback: { id: '5e1c', value: 0.96, min: 0, max: 1, step: 0.01, label: 'Feedback' },
+      zoomSpeed: { id: '4279', value: 1.0, min: 0, max: 5, step: 0.01, label: 'Zoom' },
     };
     this.createShader(bufferSmearFrag);
     this.createOutputFBO();

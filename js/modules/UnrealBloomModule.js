@@ -8,15 +8,17 @@ import { vertSrc } from '../shaders/vert.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class UnrealBloomModule extends Module {
+  static uid = 'ed0095c2';
+
   constructor(glCanvas, id) {
     super('UnrealBloom', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '5133', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '91b8', name: 'out', type: 'video' }];
     this.historicalInfo = "UnrealBloom";
     this.params = {
-      threshold: { value: 0.8, min: 0.0, max: 1.0, step: 0.01, label: 'Threshold' },
-      strength: { value: 1.5, min: 0.0, max: 5.0, step: 0.01, label: 'Strength' },
-      radius: { value: 0.5, min: 0.0, max: 1.0, step: 0.01, label: 'Radius' },
+      threshold: { id: '9ad4', value: 0.8, min: 0.0, max: 1.0, step: 0.01, label: 'Threshold' },
+      strength: { id: 'a808', value: 1.5, min: 0.0, max: 5.0, step: 0.01, label: 'Strength' },
+      radius: { id: '2b74', value: 0.5, min: 0.0, max: 1.0, step: 0.01, label: 'Radius' },
     };
 
     this.createOutputFBO();

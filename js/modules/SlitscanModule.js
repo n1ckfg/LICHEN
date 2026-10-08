@@ -9,15 +9,17 @@ const COLS = 8;
 const ROWS = 8;
 
 export class SlitscanModule extends Module {
+  static uid = 'a1091c0c';
+
   constructor(glCanvas, id) {
     super('Slitscan', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '5188', name: 'in', type: 'video' }];
+    this.outputs = [{ id: 'b658', name: 'out', type: 'video' }];
     this.params = {
-      strips: { value: 1.0, min: 0, max: 1, step: 0.001, label: 'Strips' },
-      delay: { value: 0.0, min: 0, max: 1, step: 0.001, label: 'Delay' },
-      axis: { value: 0, min: 0, max: 1, step: 1, label: 'Axis', widget: 'dropdown', valueLabels: ['Y', 'X'] },
-      mirror: { value: 1, min: 0, max: 1, step: 1, label: 'Mirror' },
+      strips: { id: 'c76f', value: 1.0, min: 0, max: 1, step: 0.001, label: 'Strips' },
+      delay: { id: '04c3', value: 0.0, min: 0, max: 1, step: 0.001, label: 'Delay' },
+      axis: { id: 'b3ed', value: 0, min: 0, max: 1, step: 1, label: 'Axis', widget: 'dropdown', valueLabels: ['Y', 'X'] },
+      mirror: { id: '44fd', value: 1, min: 0, max: 1, step: 1, label: 'Mirror' },
     };
 
     this.createShader(slitscanFrag);

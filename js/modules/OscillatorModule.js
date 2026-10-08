@@ -3,18 +3,20 @@ import { oscillatorFrag } from '../shaders/oscillator.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class OscillatorModule extends Module {
+  static uid = '14ff0d1e';
+
   constructor(glCanvas, id) {
     super('Oscillator', glCanvas, id);
-    this.outputs = [{ name: 'out', type: 'video' }, { name: 'out2', type: 'control' }];
+    this.outputs = [{ id: '8d0e', name: 'out', type: 'video' }, { id: '5f92', name: 'out2', type: 'control' }];
     this.historicalInfo="Sandin"
     this.params = {
-      frequency: { value: 4, min: 0.0001, max: 50, step: 0.1, label: 'Freq' },
+      frequency: { id: '0e2a', value: 4, min: 0.0001, max: 50, step: 0.1, label: 'Freq' },
       waveform: {
-        value: 0, min: 0, max: 3, step: 1, label: 'Wave', widget: 'dropdown',
+        id: 'be3f', value: 0, min: 0, max: 3, step: 1, label: 'Wave', widget: 'dropdown',
         valueLabels: ['Sine', 'Square', 'Triangle', 'Sawtooth'],
       },
       direction: {
-        value: 0, min: 0, max: 2, step: 1, label: 'Dir', widget: 'dropdown',
+        id: '2c31', value: 0, min: 0, max: 2, step: 1, label: 'Dir', widget: 'dropdown',
         valueLabels: ['Horizontal', 'Vertical', 'Radial'],
       },
     };

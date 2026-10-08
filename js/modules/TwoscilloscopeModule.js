@@ -29,10 +29,12 @@ const MENU = new EffectMenu([OPENING, NONE]);
 // too: one that brings only a 0..1 value each frame is drawn as a trail of
 // its last Trail seconds.
 export class TwoscilloscopeModule extends Module {
+  static uid = 'e44d2f20';
+
   constructor(glCanvas, id) {
     super('Twoscilloscope', glCanvas, id);
-    this.inputs = [{ name: 'x', type: 'control' }, { name: 'y', type: 'control' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '2dee', name: 'x', type: 'control' }, { id: '8a2f', name: 'y', type: 'control' }];
+    this.outputs = [{ id: '68cc', name: 'out', type: 'video' }];
     this.historicalInfo = 'Twoscilloscope';
 
     this.scope = new ScopeRenderer();
@@ -40,19 +42,19 @@ export class TwoscilloscopeModule extends Module {
 
     this.params = {
       view: {
-        value: BEAMS, min: 0, max: 2, step: 1, label: 'View',
+        id: '24ce', value: BEAMS, min: 0, max: 2, step: 1, label: 'View',
         widget: 'dropdown', valueLabels: ['Beams', 'Decoded Strokes', 'Original Lines'],
       },
-      beamSize: { value: 1.5, min: 0.5, max: 12, step: 0.1, label: 'Beam Size' },
-      intensity: { value: 1.5, min: 0, max: 4, step: 0.01, label: 'Intensity' },
+      beamSize: { id: 'ec5b', value: 1.5, min: 0.5, max: 12, step: 0.1, label: 'Beam Size' },
+      intensity: { id: 'dc9e', value: 1.5, min: 0, max: 4, step: 0.01, label: 'Intensity' },
       // The opening chain: Low Pass at 1500 Hz, Channel Delay with Y 0.6 ms late
       ...MENU.params(0, knobFor(0, 'a', 1500), knobFor(1, 'b', 0.6)),
       sound: {
-        value: 0, min: 0, max: 1, step: 1, label: 'Sound',
+        id: '9956', value: 0, min: 0, max: 1, step: 1, label: 'Sound',
         widget: 'dropdown', valueLabels: ['Off', 'On'],
       },
       // Seconds of a frame-rate control input drawn at once
-      trail: { value: 1, min: 0.1, max: 10, step: 0.1, label: 'Trail' },
+      trail: { id: '3037', value: 1, min: 0.1, max: 10, step: 0.1, label: 'Trail' },
     };
     this._applyEffects();
 

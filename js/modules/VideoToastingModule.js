@@ -9,19 +9,21 @@ const MAX_DT = 0.1;   // clamp long stalls so a tab switch doesn't jump the effe
 // effect loops a wipe between A (the Toaster's outgoing Main bus) and B (the
 // incoming Preview bus), and is its own shader in js/shaders/videotoasting/.
 export class VideoToastingModule extends Module {
+  static uid = '8bf4012e';
+
   constructor(glCanvas, id) {
     super('VideoToasting', glCanvas, id);
     this.inputs = [
-      { name: 'A', type: 'video' },
-      { name: 'B', type: 'video' },
+      { id: '5249', name: 'A', type: 'video' },
+      { id: 'e8f4', name: 'B', type: 'video' },
     ];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '52d7', name: 'out', type: 'video' }];
     this.params = {
       effect: {
-        value: 0, min: 0, max: videoToastingEffects.length - 1, step: 1, label: 'Effect', widget: 'dropdown',
+        id: '3f8f', value: 0, min: 0, max: videoToastingEffects.length - 1, step: 1, label: 'Effect', widget: 'dropdown',
         valueLabels: videoToastingEffects.map(e => e.label),
       },
-      speed: { value: 1.0, min: 0, max: 4, step: 0.01, label: 'Speed' },
+      speed: { id: '899a', value: 1.0, min: 0, max: 4, step: 0.01, label: 'Speed' },
     };
     // p5 compiles a shader the first time it is bound, so unchosen effects cost nothing
     this.effectShaders = videoToastingEffects.map(e => glCanvas.createShader(vertSrc, e.frag));

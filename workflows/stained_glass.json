@@ -2,151 +2,163 @@
   "nodes": [
     {
       "id": 0,
+      "uid": "b1f08cff",
       "type": "Monitor",
       "x": 1111.6453772622435,
       "y": 518.3247755500354,
       "params": {
-        "width": 1440,
-        "height": 1080,
-        "bitrate": 20
+        "4786": 20,
+        "c3ae": 1440,
+        "7fda": 1080
       },
       "collapsed": false
     },
     {
       "id": 8,
+      "uid": "01d95e88",
       "type": "VHSC",
       "x": 644.9216789485345,
       "y": 437.48040909824465,
       "params": {
-        "gamma": 2.25,
-        "posterizeLevels": 156.04000000000002,
-        "texelSize": 0.008
+        "4b63": 2.25,
+        "bc86": 156.04000000000002,
+        "14c9": 0.008
       },
       "collapsed": false
     },
     {
       "id": 10,
+      "uid": "4bc92c10",
       "type": "RuttEtra",
       "x": 206.17848055291904,
       "y": 160.93391024280635,
       "params": {
-        "scale": 1.078,
-        "scanStep": 4.42,
-        "lineThickness": 2,
-        "opacity": 1,
-        "depth": 80,
-        "rotationX": -0.020000000000000056,
-        "rotationY": 0.020000000000000018
+        "9dbc": 1.078,
+        "0515": 4.42,
+        "b956": 2,
+        "48fe": 1,
+        "74b6": 80,
+        "dab3": -0.020000000000000056,
+        "aea2": 0.020000000000000018
       },
       "collapsed": false
     },
     {
       "id": 11,
+      "uid": "4b57bbb0",
       "type": "GridGuys",
       "x": 309.2371385676885,
       "y": -82.83454145228268,
       "params": {
-        "blend": 1,
-        "delay": 0.19999999999999996,
-        "life": 40,
-        "respawn": 111.08666666666667,
-        "chaos": 0.03
+        "3947": 1,
+        "6789": 0.19999999999999996,
+        "b05d": 40,
+        "0a47": 111.08666666666667,
+        "61ca": 0.03
       },
       "collapsed": false
     },
     {
       "id": 12,
+      "uid": "8cea39bc",
       "type": "AdderMultiplier",
       "x": 432.279751584148,
       "y": 489.53987000306483,
       "params": {
-        "mode": 0.62,
-        "mixVal": 0.6599999999999999,
-        "contrast": 1.3399999999999999
+        "1288": 0.62,
+        "8436": 1.3399999999999999,
+        "ac2e": 0.6599999999999999
       },
       "collapsed": false
     },
     {
       "id": 14,
+      "uid": "cd55eb84",
       "type": "ColorEncoder",
       "x": 1078.3034152077794,
       "y": 38.022570666611216,
       "params": {
-        "phaseR": 6.283,
-        "phaseG": 5.026066666666667,
-        "phaseB": 4.189,
-        "frequency": 1
+        "4704": 6.283,
+        "4ca6": 5.026066666666667,
+        "0132": 4.189,
+        "83af": 1
       },
       "collapsed": false
     },
     {
       "id": 15,
+      "uid": "a75885fd",
       "type": "BufferSmear",
       "x": 452.4389143126605,
       "y": 166.09423034903585,
       "params": {
-        "smearAmount": 1,
-        "feedback": 0.05607624451066834,
-        "zoomSpeed": 1
+        "4279": 1,
+        "9252": 1,
+        "5e1c": 0.05607624451066834
       },
       "collapsed": false
     },
     {
       "id": 16,
+      "uid": "a75885fd",
       "type": "BufferSmear",
       "x": 198.43891431266047,
       "y": 472.09423034903585,
       "params": {
-        "smearAmount": 0.2803812225533417,
-        "feedback": 0.8466666666666667,
-        "zoomSpeed": 1.6666666666666665
+        "4279": 1.6666666666666665,
+        "9252": 0.2803812225533417,
+        "5e1c": 0.8466666666666667
       },
       "collapsed": false
     },
     {
       "id": 20,
+      "uid": "3b37efdd",
       "type": "Sharpen",
       "x": 660.484459540557,
       "y": 741.8502913191967,
       "params": {
-        "sharpenAmount": 5,
-        "posterize": 1,
-        "posterizeLevels": 16
+        "1390": 16,
+        "b6d6": 5,
+        "843d": 1
       },
       "collapsed": false
     },
     {
       "id": 21,
+      "uid": "68c08c2a",
       "type": "Edges",
       "x": 722.1640154090815,
       "y": 128.6829418026891,
       "params": {
-        "mode": 0,
-        "threshold": 0.15999999999999992
+        "2731": 0.15999999999999992,
+        "8a1f": 0
       },
       "collapsed": false
     },
     {
       "id": 22,
+      "uid": "45d56d73",
       "type": "Brcosa",
       "x": 855.1983515960949,
       "y": 412.5678844703644,
       "params": {
-        "brightness": 0,
-        "contrast": 1,
-        "saturation": 1.7800000000000002
+        "1459": 1.7800000000000002,
+        "7213": 0,
+        "0924": 1
       },
       "collapsed": false
     },
     {
       "id": 23,
+      "uid": "ed0095c2",
       "type": "UnrealBloom",
       "x": 878.1770096647609,
       "y": 648.4014804382518,
       "params": {
-        "threshold": 0.5266666666666666,
-        "strength": 1.5,
-        "radius": 0.5
+        "9ad4": 0.5266666666666666,
+        "a808": 1.5,
+        "2b74": 0.5
       },
       "collapsed": false
     }
@@ -154,75 +166,75 @@
   "connections": [
     {
       "fromId": 11,
-      "fromPort": 0,
+      "fromPort": "3616",
       "toId": 10,
-      "toPort": 0
+      "toPort": "870d"
     },
     {
       "fromId": 11,
-      "fromPort": 0,
+      "fromPort": "3616",
       "toId": 15,
-      "toPort": 0
+      "toPort": "477c"
     },
     {
       "fromId": 10,
-      "fromPort": 0,
+      "fromPort": "0f5b",
       "toId": 16,
-      "toPort": 0
+      "toPort": "477c"
     },
     {
       "fromId": 16,
-      "fromPort": 0,
+      "fromPort": "3e6c",
       "toId": 12,
-      "toPort": 0
+      "toPort": "3a2a"
     },
     {
       "fromId": 12,
-      "fromPort": 0,
+      "fromPort": "6288",
       "toId": 8,
-      "toPort": 0
+      "toPort": "6da5"
     },
     {
       "fromId": 14,
-      "fromPort": 0,
+      "fromPort": "1bc2",
       "toId": 12,
-      "toPort": 1
+      "toPort": "1565"
     },
     {
       "fromId": 15,
-      "fromPort": 0,
+      "fromPort": "3e6c",
       "toId": 21,
-      "toPort": 0
+      "toPort": "9eb5"
     },
     {
       "fromId": 21,
-      "fromPort": 0,
+      "fromPort": "9241",
       "toId": 14,
-      "toPort": 0
+      "toPort": "87a9"
     },
     {
       "fromId": 8,
-      "fromPort": 0,
+      "fromPort": "acd9",
       "toId": 20,
-      "toPort": 0
+      "toPort": "5c5a"
     },
     {
       "fromId": 23,
-      "fromPort": 0,
+      "fromPort": "91b8",
       "toId": 0,
-      "toPort": 0
+      "toPort": "7ae7"
     },
     {
       "fromId": 20,
-      "fromPort": 0,
+      "fromPort": "8bdd",
       "toId": 22,
-      "toPort": 0
+      "toPort": "ae9e"
     },
     {
       "fromId": 22,
-      "fromPort": 0,
+      "fromPort": "4b92",
       "toId": 23,
-      "toPort": 0
+      "toPort": "5133"
     }
   ],
   "controlConnections": [],

@@ -3,23 +3,25 @@ import { cloudyFrag } from '../shaders/cloudy.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class CloudyModule extends Module {
+  static uid = '47bd99ea';
+
   constructor(glCanvas, id) {
     super('Cloudy', glCanvas, id);
     this.inputs = [];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '93e3', name: 'out', type: 'video' }];
     // `random` ranges keep a fresh seed away from the knobs' degenerate ends:
     // frozen at speed 0, and either end of depth, where the cloud flattens into
     // a white haze (-2) or sinks into the dark background (2).
     this.params = {
-      speed: { value: 0.4, min: 0, max: 2, step: 0.01, label: 'Speed', random: [0.1, 1.2] },
-      depth: { value: -0.31, min: -2, max: 2, step: 0.01, label: 'Depth', random: [-1, 1.25] },
-      wander: { value: 0.08, min: 0, max: 1, step: 0.01, label: 'Wander', random: [0, 0.5] },
-      noiseScale: { value: 2.5, min: 0.1, max: 8, step: 0.1, label: 'Noise', random: [1, 5] },
-      displace: { value: 0.12, min: 0, max: 0.5, step: 0.01, label: 'Displace', random: [0.03, 0.35] },
-      colorShift: { value: 3.0, min: 0, max: 6.28, step: 0.01, label: 'Color', random: true },
-      glow: { value: 0.4, min: 0, max: 2, step: 0.01, label: 'Glow', random: [0.1, 1.2] },
-      zoom: { value: 1.0, min: 0.2, max: 4, step: 0.05, label: 'Zoom', random: [0.5, 2] },
-      reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
+      speed: { id: '92da', value: 0.4, min: 0, max: 2, step: 0.01, label: 'Speed', random: [0.1, 1.2] },
+      depth: { id: '10cf', value: -0.31, min: -2, max: 2, step: 0.01, label: 'Depth', random: [-1, 1.25] },
+      wander: { id: '6360', value: 0.08, min: 0, max: 1, step: 0.01, label: 'Wander', random: [0, 0.5] },
+      noiseScale: { id: 'ebe2', value: 2.5, min: 0.1, max: 8, step: 0.1, label: 'Noise', random: [1, 5] },
+      displace: { id: '5369', value: 0.12, min: 0, max: 0.5, step: 0.01, label: 'Displace', random: [0.03, 0.35] },
+      colorShift: { id: 'ba6e', value: 3.0, min: 0, max: 6.28, step: 0.01, label: 'Color', random: true },
+      glow: { id: 'b791', value: 0.4, min: 0, max: 2, step: 0.01, label: 'Glow', random: [0.1, 1.2] },
+      zoom: { id: '58e3', value: 1.0, min: 0.2, max: 4, step: 0.05, label: 'Zoom', random: [0.5, 2] },
+      reseed: { id: 'b32b', value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
 
     this.createShader(cloudyFrag);

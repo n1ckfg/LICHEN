@@ -19,27 +19,29 @@ function smoothstep01(x) {
 }
 
 export class CrystallineModule extends Module {
+  static uid = 'd9943709';
+
   constructor(glCanvas, id) {
     super('Crystalline', glCanvas, id);
     this.inputs = [];
     this.outputs = [
-      { name: 'out', type: 'video' },
-      { name: 'burst', type: 'control' },
+      { id: '3f57', name: 'out', type: 'video' },
+      { id: '173d', name: 'burst', type: 'control' },
     ];
     // `random` ranges keep a fresh seed away from the knobs' degenerate ends
     // (frozen at speed 0, frantic at cycle 5). Steps is a render budget, not a
     // look, so the seed leaves it alone.
     this.params = {
-      speed: { value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.25, 2] },
-      cycle: { value: 60, min: 5, max: 180, step: 1, label: 'Cycle', random: [20, 120] },
-      scale: { value: 2.0, min: 0.5, max: 6, step: 0.05, label: 'Scale', random: [1, 4] },
-      burst: { value: 1.0, min: 0, max: 2, step: 0.01, label: 'Burst', random: [0.4, 1.6] },
-      dist: { value: 3.0, min: 1.5, max: 8, step: 0.05, label: 'Dist', random: [2, 5] },
-      orbit: { value: 1.0, min: 0, max: 4, step: 0.01, label: 'Orbit', random: [0.25, 2.5] },
-      hue: { value: 0.55, min: 0, max: 1, step: 0.01, label: 'Hue', random: true },
-      glow: { value: 2.0, min: 0, max: 5, step: 0.05, label: 'Glow', random: [0.5, 3.5] },
-      steps: { value: 64, min: 16, max: 80, step: 1, label: 'Steps' },
-      reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
+      speed: { id: '74dd', value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.25, 2] },
+      cycle: { id: 'bb33', value: 60, min: 5, max: 180, step: 1, label: 'Cycle', random: [20, 120] },
+      scale: { id: 'ac66', value: 2.0, min: 0.5, max: 6, step: 0.05, label: 'Scale', random: [1, 4] },
+      burst: { id: '0078', value: 1.0, min: 0, max: 2, step: 0.01, label: 'Burst', random: [0.4, 1.6] },
+      dist: { id: '9691', value: 3.0, min: 1.5, max: 8, step: 0.05, label: 'Dist', random: [2, 5] },
+      orbit: { id: '5c34', value: 1.0, min: 0, max: 4, step: 0.01, label: 'Orbit', random: [0.25, 2.5] },
+      hue: { id: '6cfd', value: 0.55, min: 0, max: 1, step: 0.01, label: 'Hue', random: true },
+      glow: { id: 'f847', value: 2.0, min: 0, max: 5, step: 0.05, label: 'Glow', random: [0.5, 3.5] },
+      steps: { id: 'd2ea', value: 64, min: 16, max: 80, step: 1, label: 'Steps' },
+      reseed: { id: 'cb2f', value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
 
     this.createShader(crystallineFrag);

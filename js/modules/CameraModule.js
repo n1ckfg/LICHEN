@@ -3,9 +3,11 @@ import { passthroughFrag } from '../shaders/passthrough.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class CameraModule extends Module {
+  static uid = '21b607f9';
+
   constructor(glCanvas, id) {
     super('Camera', glCanvas, id);
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '3261', name: 'out', type: 'video' }];
     this.capture = null;
     this.captureReady = false;
     this.createShader(passthroughFrag);

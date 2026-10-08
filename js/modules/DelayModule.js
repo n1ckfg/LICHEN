@@ -5,15 +5,17 @@ import { vertSrc } from '../shaders/vert.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class DelayModule extends Module {
+  static uid = 'd19abc06';
+
   constructor(glCanvas, id) {
     super('Delay', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: 'e4eb', name: 'in', type: 'video' }];
+    this.outputs = [{ id: 'b8d7', name: 'out', type: 'video' }];
     this.params = {
-      delaySpeed: { value: 0.2, min: 0, max: 1, step: 0.01, label: 'Speed' },
-      lumaThreshold: { value: 0.5, min: 0, max: 1, step: 0.01, label: 'Luma' },
-      alphaMax: { value: 1, min: 0, max: 1, step: 0.01, label: 'A Max' },
-      alphaMin: { value: 0.1, min: 0, max: 1, step: 0.01, label: 'A Min' },
+      delaySpeed: { id: 'c7ae', value: 0.2, min: 0, max: 1, step: 0.01, label: 'Speed' },
+      lumaThreshold: { id: '66de', value: 0.5, min: 0, max: 1, step: 0.01, label: 'Luma' },
+      alphaMax: { id: '4d60', value: 1, min: 0, max: 1, step: 0.01, label: 'A Max' },
+      alphaMin: { id: '9201', value: 0.1, min: 0, max: 1, step: 0.01, label: 'A Min' },
     };
     this.createShader(delayFrag);
     this.createOutputFBO();

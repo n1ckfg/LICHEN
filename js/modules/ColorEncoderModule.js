@@ -3,16 +3,18 @@ import { colorEncoderFrag } from '../shaders/color-encoder.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class ColorEncoderModule extends Module {
+  static uid = 'cd55eb84';
+
   constructor(glCanvas, id) {
     super('ColorEncoder', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '87a9', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '1bc2', name: 'out', type: 'video' }];
     this.historicalInfo="Sandin"
     this.params = {
-      phaseR: { value: 0, min: 0, max: 6.283, step: 0.01, label: 'Phase R' },
-      phaseG: { value: 2.094, min: 0, max: 6.283, step: 0.01, label: 'Phase G' },
-      phaseB: { value: 4.189, min: 0, max: 6.283, step: 0.01, label: 'Phase B' },
-      frequency: { value: 1, min: 0.1, max: 10, step: 0.01, label: 'Freq' },
+      phaseR: { id: '4704', value: 0, min: 0, max: 6.283, step: 0.01, label: 'Phase R' },
+      phaseG: { id: '4ca6', value: 2.094, min: 0, max: 6.283, step: 0.01, label: 'Phase G' },
+      phaseB: { id: '0132', value: 4.189, min: 0, max: 6.283, step: 0.01, label: 'Phase B' },
+      frequency: { id: '83af', value: 1, min: 0.1, max: 10, step: 0.01, label: 'Freq' },
     };
     this.createShader(colorEncoderFrag);
     this.createOutputFBO();

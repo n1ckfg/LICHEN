@@ -3,13 +3,15 @@ import { timetunnelFrag } from '../shaders/timetunnel.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class TimeTunnelModule extends Module {
+  static uid = '56551ba1';
+
   constructor(glCanvas, id) {
     super('TimeTunnel', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: 'df5e', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '4dca', name: 'out', type: 'video' }];
     this.params = {
-      zoom: { value: 3.0, min: 0.5, max: 10, step: 0.1, label: 'Zoom' },
-      speed: { value: 1.0, min: 0.0, max: 5, step: 0.01, label: 'Speed' },
+      zoom: { id: '6a68', value: 3.0, min: 0.5, max: 10, step: 0.1, label: 'Zoom' },
+      speed: { id: '054a', value: 1.0, min: 0.0, max: 5, step: 0.01, label: 'Speed' },
     };
     this.createShader(timetunnelFrag);
     this.createOutputFBO();

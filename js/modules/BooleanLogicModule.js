@@ -7,22 +7,24 @@ import { registerModule } from '../moduleRegistry.js';
 const OPS = ['XOR', 'XNOR', 'AND', 'NAND', 'OR', 'NOR'];
 
 export class BooleanLogicModule extends Module {
+  static uid = '791a82b0';
+
   constructor(glCanvas, id) {
     super('BooleanLogic', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: 'b7e0', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '67ec', name: 'out', type: 'video' }];
     // The defaults are the constants the shader had before they were knobs.
     // The seed picks the pattern; Speed and Intensity are master controls, so
     // it leaves them alone.
     this.params = {
-      speed: { value: 1.0, min: 0, max: 5, step: 0.01, label: 'Speed' },
-      intensity: { value: 1.0, min: 0, max: 1, step: 0.01, label: 'Intensity' },
-      op: { value: 0, min: 0, max: OPS.length - 1, step: 1, label: 'Op', widget: 'dropdown', valueLabels: OPS, random: true },
-      scale: { value: 1, min: 0, max: 8, step: 0.05, label: 'Scale', random: [0.5, 4] },
-      driftX: { value: 50, min: -200, max: 200, step: 1, label: 'Drift X', random: [-100, 100] },
-      driftY: { value: -30, min: -200, max: 200, step: 1, label: 'Drift Y', random: [-100, 100] },
-      driftXY: { value: 0, min: -200, max: 200, step: 1, label: 'Drift XY', random: [-100, 100] },
-      reseed: { value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
+      speed: { id: '462b', value: 1.0, min: 0, max: 5, step: 0.01, label: 'Speed' },
+      intensity: { id: 'd3d3', value: 1.0, min: 0, max: 1, step: 0.01, label: 'Intensity' },
+      op: { id: 'a8fa', value: 0, min: 0, max: OPS.length - 1, step: 1, label: 'Op', widget: 'dropdown', valueLabels: OPS, random: true },
+      scale: { id: 'fe64', value: 1, min: 0, max: 8, step: 0.05, label: 'Scale', random: [0.5, 4] },
+      driftX: { id: 'e41c', value: 50, min: -200, max: 200, step: 1, label: 'Drift X', random: [-100, 100] },
+      driftY: { id: 'c1fc', value: -30, min: -200, max: 200, step: 1, label: 'Drift Y', random: [-100, 100] },
+      driftXY: { id: '5541', value: 0, min: -200, max: 200, step: 1, label: 'Drift XY', random: [-100, 100] },
+      reseed: { id: '0057', value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
     this.createShader(booleanLogicFrag);
     this.createOutputFBO();

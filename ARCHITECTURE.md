@@ -14,12 +14,13 @@ js/main.js (p5.js loop)
 - `js/main.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+A select all, Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen); also parses and loads shareable patch data from the URL hash.
 - `js/pipeline.js` — `ProcessingPipeline`: holds the `ConnectionGraph`, drives per-frame processing
 - `js/graph.js` — `ConnectionGraph`: DAG of modules; tracks video `connections` and parameter `controlConnections`; re-runs topological sort on every structural change; serializes/deserializes the full patch as JSON. This is the source of truth for patch state.
-- `js/moduleRegistry.js` — global module registry; `registerModule(typeName, class)` / `createModule(typeName, glCanvas, id)`. Its `RENAMED` table maps old type names to current ones, so patches saved before a rename still load (see Renaming a Module)
+- `js/moduleRegistry.js` — global module registry; `registerModule(typeName, class)` / `createModule(typeName, glCanvas, id)` for the UI, and `createModuleByUid(uid, glCanvas, id, savedType)` for loading patches. It checks every module's ids (see Patch IDs)
 - `js/ui.js` — `NodeGraphUI`: full node graph editor drawn on the p5.js P2D canvas, with a DOM sidebar palette and right-click search popup; handles pan/zoom, node drag, cable wiring, parameter knobs, and monitor preview rendering
 - `js/modules/Module.js` — base class for all modules; defines common behavior for shaders, FBOs, and parameters, plus seeded randomization and trigger params
 - `js/stringseed.js` — `StringSeed`, the SSoT seed-to-choice mapping behind `Module.randomize()` (ported from the StringSeedGenerator project)
 - `js/shaders/vert.js` — the shared vertex shader used by all modules for screen-quad rendering
 - `workflows/` — contains JSON patches (connection graph state, module types, and parameter values) that can be loaded via Ctrl+O
+- `tools/convert-workflows.mjs` — converts patches saved before ids to the id format, using the frozen table in `tools/legacy-ids.json` (see Patch IDs)
 
 ### Module System (`js/modules/`)
 
@@ -38,7 +39,7 @@ A control value is one number a frame, and a parameter cable applies it after ev
 
 Latk's, NAPLPS's and Skeleton's X and Y outputs and Twoscilloscope's X and Y pins are the only ones so far (see Latk Module, NAPLPS Module and Skeleton Module).
 
-The UI renders each param in the `params` object: `{ paramName: { value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
+The UI renders each param in the `params` object: `{ paramName: { id, value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
 A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Restore `model`, `size` and `clamp`, Sharpen `posterize`, Skeleton `trace`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
 
@@ -80,19 +81,34 @@ Fragment shaders are stored as JS template literal exports (e.g., `export const 
 
 1. Create `js/shaders/mymodule.js` exporting the fragment shader source
 2. Create `js/modules/MyModule.js` extending `Module`, defining `inputs`, `outputs`, `params`, and `process()`; call `registerModule('MyModule', MyModuleClass)` at the end
-3. Import `'./modules/MyModule.js'` in `js/main.js`
-4. Add the type name to the appropriate category in `MODULE_CATEGORIES` in `js/ui.js`
+3. Give the class a fresh `static uid` (`openssl rand -hex 4`), and each param and port a fresh `id` (`openssl rand -hex 2`). Never copy them from another module, even when starting from its file (see Patch IDs)
+4. Import `'./modules/MyModule.js'` in `js/main.js`
+5. Add the type name to the appropriate category in `MODULE_CATEGORIES` in `js/ui.js`
+
+## Patch IDs
+
+A patch saves modules, params and ports by id, never by name or port number, so any of them can be renamed or reordered without breaking saved patches:
+- **Modules.** Each module class declares `static uid = '<8 hex digits>'`. A saved node has `uid`, which `createModuleByUid()` builds it from, and `type`, which is only there to make the file readable. Loading never reads `type`.
+- **Params and ports.** Each param and port declares `id: '<4 hex digits>'` next to its name. These only need to be unique within their module, since a node's uid already says which module they belong to. Params, inputs and outputs share that one namespace. A saved node's `params` are keyed by param id. A video cable's `fromPort` and `toPort` are port ids, and a knob cable has `fromPort`, a port id, and `param`, a param id.
+
+Only `ConnectionGraph.toJSON()` and `fromJSON()` see ids. At runtime everything still uses names and port numbers (`this.params.radius`, `getInput(graph, 0)`, `paramName` on a knob cable). `fromJSON()` maps the ids back using the declarations of the module it just built, so a renamed param, a renamed port, or a port moved to a new position all load with their saved values and cables. A saved value for a param that has since been removed is skipped, and a cable to a removed param or port is dropped with a console warning. A uid the registry doesn't know aborts the load.
+
+`registerModule()` throws at startup on a class without its own uid, or with one another class already has. `createModule()` checks a type's param and port ids the first time it builds one, since they are declared in the constructor, and throws on one that is missing, malformed or already used in the module. `EffectMenu.params()` (see Audio Effects) declares its three params with fixed ids, so a module that spreads them in has to avoid those three for its own params and ports.
+
+The rules:
+1. Never edit an id once it is committed, and never reuse one, even one whose param or module was deleted.
+2. An id names what a saved value means, not just where it goes. When a param's value changes meaning (a new range or unit, drop-down options reordered or removed), or a port changes between video and control, give it a new id. Old patches then load the declared value instead of a number that now means something else. Appending a drop-down option keeps the meaning, which is why the modules below append new options instead of inserting them.
+
+Patches saved before ids, which name modules by type, params by name and ports by number, are converted with `node tools/convert-workflows.mjs <patch.json> ...`. It converts each file in place and leaves alone any file that already has ids. Loading one unconverted fails with a message pointing at the tool. The tool reads `tools/legacy-ids.json`, every module's type name, param names and port order as they were when ids were added. Never regenerate it from later code: an old patch uses the old names.
 
 ## Renaming a Module
 
-Patches, including share-link hashes, save each node's type name, and `createModule()` throws on a name it doesn't know, which aborts the whole patch load. A rename therefore always adds the old name to the `RENAMED` table in `js/moduleRegistry.js`:
+Patches don't save names (see Patch IDs), so a rename never breaks one:
 
-1. Rename the type everywhere it appears: `super(...)` and `registerModule(...)` in the module, its entries in `MODULE_CATEGORIES` and `MODULE_COLORS` in `js/ui.js`, the import in `js/main.js`, any patches in `workflows/`, and this file. Rename the module and shader files to match with `git mv`, so history follows them.
-2. Add `OldName: 'NewName'` to `RENAMED`. `createModule()` looks a name up there before the registry, so an old patch builds the renamed module with its saved params and cables, and saves back under the new name.
-3. If the module was renamed before, point its earlier entries at the new name too. The lookup is a single step, so after renaming A to B and then B to C, an entry left as `A: 'B'` would stop loading.
-4. Never remove an entry, and never give a new module a name already in the table: the table is checked first, so that module could not be created.
+1. Rename the type everywhere it appears: `super(...)` and `registerModule(...)` in the module, its entries in `MODULE_CATEGORIES` and `MODULE_COLORS` in `js/ui.js`, the `mod.type` checks in `js/ui.js` and `js/main.js`, the import in `js/main.js`, the `type` field of any patches in `workflows/`, and this file. Rename the module and shader files to match with `git mv`, so history follows them.
+2. Leave its `static uid` alone, and the ids of its params and ports.
 
-The table is currently empty.
+Renaming a param or a port works the same way: change its name and every use of it, and keep its `id`.
 
 ## GRASS Module
 

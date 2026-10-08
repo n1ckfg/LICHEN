@@ -3,18 +3,20 @@ import { maelstromFrag } from '../shaders/maelstrom.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class MaelstromModule extends Module {
+  static uid = '793dbeef';
+
   constructor(glCanvas, id) {
     super('Maelstrom', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '71bd', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '1ec4', name: 'out', type: 'video' }];
     this.params = {
-      waveFreq: { value: 20.0, min: 1, max: 100, step: 0.5, label: 'Wave Freq' },
-      waveSpeed: { value: 2.0, min: 0, max: 10, step: 0.1, label: 'Wave Speed' },
-      waveAmount: { value: 0.08, min: 0, max: 0.5, step: 0.01, label: 'Wave Amt' },
-      radialStrength: { value: 0.15, min: 0, max: 1, step: 0.01, label: 'Radial Str' },
-      radialFreq: { value: 10.0, min: 1, max: 50, step: 0.5, label: 'Radial Freq' },
-      radialSpeed: { value: 3.0, min: 0, max: 10, step: 0.1, label: 'Radial Spd' },
-      chromaAmount: { value: 0.01, min: 0, max: 0.1, step: 0.001, label: 'Chroma' },
+      waveFreq: { id: '452b', value: 20.0, min: 1, max: 100, step: 0.5, label: 'Wave Freq' },
+      waveSpeed: { id: '09f0', value: 2.0, min: 0, max: 10, step: 0.1, label: 'Wave Speed' },
+      waveAmount: { id: '0400', value: 0.08, min: 0, max: 0.5, step: 0.01, label: 'Wave Amt' },
+      radialStrength: { id: 'ca80', value: 0.15, min: 0, max: 1, step: 0.01, label: 'Radial Str' },
+      radialFreq: { id: '7c8c', value: 10.0, min: 1, max: 50, step: 0.5, label: 'Radial Freq' },
+      radialSpeed: { id: '39c2', value: 3.0, min: 0, max: 10, step: 0.1, label: 'Radial Spd' },
+      chromaAmount: { id: '296d', value: 0.01, min: 0, max: 0.1, step: 0.001, label: 'Chroma' },
     };
 
     this.createShader(maelstromFrag);

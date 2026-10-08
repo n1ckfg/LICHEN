@@ -10,19 +10,21 @@ import { vertSrc } from '../shaders/vert.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class HSFlowModule extends Module {
+  static uid = '7dae2c48';
+
   constructor(glCanvas, id) {
     super('HSFlow', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '306f', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '3bb1', name: 'out', type: 'video' }];
     this.historicalInfo = "HSFlow";
     this.params = {
-      lambda: { value: 0.01, min: 0.001, max: 0.5, step: 0.001, label: 'Lambda' },
-      flowScale: { value: 1.0, min: 0.1, max: 5.0, step: 0.01, label: 'Flow' },
-      offset: { value: 1.0, min: 0.5, max: 5.0, step: 0.1, label: 'Offset' },
-      distortAmt: { value: 1.0, min: 0.0, max: 10.0, step: 0.1, label: 'Distort' },
-      slide: { value: 0.8, min: 0.0, max: 0.99, step: 0.01, label: 'Slide' },
-      lumaThresh: { value: 0.5, min: 0.0, max: 1.0, step: 0.01, label: 'Luma Thr' },
-      lumaTol: { value: 0.2, min: 0.0, max: 1.0, step: 0.01, label: 'Luma Tol' }
+      lambda: { id: '3090', value: 0.01, min: 0.001, max: 0.5, step: 0.001, label: 'Lambda' },
+      flowScale: { id: '350b', value: 1.0, min: 0.1, max: 5.0, step: 0.01, label: 'Flow' },
+      offset: { id: 'd65b', value: 1.0, min: 0.5, max: 5.0, step: 0.1, label: 'Offset' },
+      distortAmt: { id: 'fad8', value: 1.0, min: 0.0, max: 10.0, step: 0.1, label: 'Distort' },
+      slide: { id: 'ede3', value: 0.8, min: 0.0, max: 0.99, step: 0.01, label: 'Slide' },
+      lumaThresh: { id: '3a35', value: 0.5, min: 0.0, max: 1.0, step: 0.01, label: 'Luma Thr' },
+      lumaTol: { id: 'd1be', value: 0.2, min: 0.0, max: 1.0, step: 0.01, label: 'Luma Tol' }
     };
     
     this.createOutputFBO();

@@ -1,4 +1,4 @@
-import { createModule, getRegistry } from './moduleRegistry.js';
+import { createModule, createModuleByUid, getRegistry } from './moduleRegistry.js';
 import { vertSrc } from './shaders/vert.js';
 const blitFrag = `
 precision highp float;
@@ -2604,8 +2604,8 @@ export class NodeGraphUI {
 
   fromJSON(data) {
     const glCanvas = this.pipeline.glCanvas;
-    this.pipeline.graph.fromJSON(data, (type, id) => {
-      return createModule(type, glCanvas, id);
+    this.pipeline.graph.fromJSON(data, (uid, id, savedType) => {
+      return createModuleByUid(uid, glCanvas, id, savedType);
     });
   }
 }

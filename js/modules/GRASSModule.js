@@ -13,10 +13,12 @@ import { Interpreter } from './grass/interpreter.js';
 import { Scheduler } from './grass/scheduler.js';
 
 export class GRASSModule extends Module {
+  static uid = 'ca2234bc';
+
   constructor(glCanvas, id) {
     super('GRASS', glCanvas, id);
     this.inputs = [];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '0a9c', name: 'out', type: 'video' }];
     this.historicalInfo = 'GRASS';
 
     // FakeGRASS subsystem

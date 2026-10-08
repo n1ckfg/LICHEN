@@ -48,19 +48,21 @@ void main() {
 `;
 
 export class RuttEtraModule extends Module {
+  static uid = '4bc92c10';
+
   constructor(glCanvas, id) {
     super('RuttEtra', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '870d', name: 'in', type: 'video' }];
+    this.outputs = [{ id: '0f5b', name: 'out', type: 'video' }];
     this.historicalInfo = "Rutt-Etra";
     this.params = {
-      scale: { value: 1.0, min: 0.1, max: 4, step: 0.1, label: 'Scale' },
-      scanStep: { value: 4, min: 1, max: 20, step: 1, label: 'Line Separation' },
-      lineThickness: { value: 2.0, min: 0.5, max: 10, step: 0.5, label: 'Line Thickness' },
-      opacity: { value: 1.0, min: 0, max: 1, step: 0.05, label: 'Brightness' },
-      depth: { value: 80, min: 0, max: 300, step: 1, label: 'Max Line Depth' },
-      rotationX: { value: 0.3, min: -1.5, max: 1.5, step: 0.05, label: 'Rotation X' },
-      rotationY: { value: 0, min: -1.5, max: 1.5, step: 0.05, label: 'Rotation Y' },
+      scale: { id: '9dbc', value: 1.0, min: 0.1, max: 4, step: 0.1, label: 'Scale' },
+      scanStep: { id: '0515', value: 4, min: 1, max: 20, step: 1, label: 'Line Separation' },
+      lineThickness: { id: 'b956', value: 2.0, min: 0.5, max: 10, step: 0.5, label: 'Line Thickness' },
+      opacity: { id: '48fe', value: 1.0, min: 0, max: 1, step: 0.05, label: 'Brightness' },
+      depth: { id: '74b6', value: 80, min: 0, max: 300, step: 1, label: 'Max Line Depth' },
+      rotationX: { id: 'dab3', value: 0.3, min: -1.5, max: 1.5, step: 0.05, label: 'Rotation X' },
+      rotationY: { id: 'aea2', value: 0, min: -1.5, max: 1.5, step: 0.05, label: 'Rotation Y' },
     };
 
     this.width = glCanvas.width;

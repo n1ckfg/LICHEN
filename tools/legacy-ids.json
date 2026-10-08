@@ -1,0 +1,918 @@
+{
+  "AdderMultiplier": {
+    "uid": "8cea39bc",
+    "params": {
+      "mode": "1288",
+      "mixVal": "ac2e",
+      "contrast": "8436"
+    },
+    "inputs": [
+      "3a2a",
+      "1565"
+    ],
+    "outputs": [
+      "6288"
+    ]
+  },
+  "Blur": {
+    "uid": "070ea419",
+    "params": {
+      "mode": "32e0",
+      "radius": "1d47",
+      "highlights": "248a",
+      "mix": "0ec0"
+    },
+    "inputs": [
+      "7c08"
+    ],
+    "outputs": [
+      "c6ae"
+    ]
+  },
+  "BooleanLogic": {
+    "uid": "791a82b0",
+    "params": {
+      "speed": "462b",
+      "intensity": "d3d3",
+      "op": "a8fa",
+      "scale": "fe64",
+      "driftX": "e41c",
+      "driftY": "c1fc",
+      "driftXY": "5541",
+      "reseed": "0057"
+    },
+    "inputs": [
+      "b7e0"
+    ],
+    "outputs": [
+      "67ec"
+    ]
+  },
+  "Brcosa": {
+    "uid": "45d56d73",
+    "params": {
+      "brightness": "7213",
+      "contrast": "0924",
+      "saturation": "1459"
+    },
+    "inputs": [
+      "ae9e"
+    ],
+    "outputs": [
+      "4b92"
+    ]
+  },
+  "BufferSmear": {
+    "uid": "a75885fd",
+    "params": {
+      "smearAmount": "9252",
+      "feedback": "5e1c",
+      "zoomSpeed": "4279"
+    },
+    "inputs": [
+      "477c"
+    ],
+    "outputs": [
+      "3e6c"
+    ]
+  },
+  "Camera": {
+    "uid": "21b607f9",
+    "params": {},
+    "inputs": [],
+    "outputs": [
+      "3261"
+    ]
+  },
+  "Channel": {
+    "uid": "716017f8",
+    "params": {
+      "gainR": "1f27",
+      "gainG": "7fb8",
+      "gainB": "cf3a"
+    },
+    "inputs": [
+      "cd7f",
+      "3652",
+      "7c48"
+    ],
+    "outputs": [
+      "e90e"
+    ]
+  },
+  "Cloudy": {
+    "uid": "47bd99ea",
+    "params": {
+      "speed": "92da",
+      "depth": "10cf",
+      "wander": "6360",
+      "noiseScale": "ebe2",
+      "displace": "5369",
+      "colorShift": "ba6e",
+      "glow": "b791",
+      "zoom": "58e3",
+      "reseed": "b32b"
+    },
+    "inputs": [],
+    "outputs": [
+      "93e3"
+    ]
+  },
+  "Coils": {
+    "uid": "db648f5a",
+    "params": {
+      "speed": "1307",
+      "turns": "3841",
+      "radius": "ee29",
+      "thick": "0b60",
+      "lobes": "cff8",
+      "bulge": "7c3a",
+      "wriggle": "a3ef",
+      "bend": "08ee",
+      "melt": "c422",
+      "dist": "07e0",
+      "orbit": "97e8",
+      "hue": "7ea0",
+      "stepScale": "1562",
+      "steps": "9719",
+      "reseed": "b1c1"
+    },
+    "inputs": [],
+    "outputs": [
+      "e78c"
+    ]
+  },
+  "ColorEncoder": {
+    "uid": "cd55eb84",
+    "params": {
+      "phaseR": "4704",
+      "phaseG": "4ca6",
+      "phaseB": "0132",
+      "frequency": "83af"
+    },
+    "inputs": [
+      "87a9"
+    ],
+    "outputs": [
+      "1bc2"
+    ]
+  },
+  "Comparator": {
+    "uid": "ae58281c",
+    "params": {
+      "threshold": "280d"
+    },
+    "inputs": [
+      "b337"
+    ],
+    "outputs": [
+      "23b8"
+    ]
+  },
+  "Conway": {
+    "uid": "03e58180",
+    "params": {
+      "cellSize": "7dcc",
+      "speed": "dda8",
+      "running": "9846"
+    },
+    "inputs": [],
+    "outputs": [
+      "8702"
+    ]
+  },
+  "Crystalline": {
+    "uid": "d9943709",
+    "params": {
+      "speed": "74dd",
+      "cycle": "bb33",
+      "scale": "ac66",
+      "burst": "0078",
+      "dist": "9691",
+      "orbit": "5c34",
+      "hue": "6cfd",
+      "glow": "f847",
+      "steps": "d2ea",
+      "reseed": "cb2f"
+    },
+    "inputs": [],
+    "outputs": [
+      "3f57",
+      "173d"
+    ]
+  },
+  "Cyberlace": {
+    "uid": "1bbc4da5",
+    "params": {
+      "levels": "94bc"
+    },
+    "inputs": [
+      "3acd"
+    ],
+    "outputs": [
+      "2677"
+    ]
+  },
+  "DeeSeventySix": {
+    "uid": "e246e553",
+    "params": {
+      "grainScale": "a293",
+      "solarizeLimit": "186c",
+      "fadeAmount": "4dd3",
+      "progressSpeed": "e0ac",
+      "isColor": "2549"
+    },
+    "inputs": [
+      "d98e"
+    ],
+    "outputs": [
+      "d878"
+    ]
+  },
+  "Delay": {
+    "uid": "d19abc06",
+    "params": {
+      "delaySpeed": "c7ae",
+      "lumaThreshold": "66de",
+      "alphaMax": "4d60",
+      "alphaMin": "9201"
+    },
+    "inputs": [
+      "e4eb"
+    ],
+    "outputs": [
+      "b8d7"
+    ]
+  },
+  "Differentiator": {
+    "uid": "ad9f6859",
+    "params": {
+      "strength": "aed7"
+    },
+    "inputs": [
+      "a770"
+    ],
+    "outputs": [
+      "a7d4"
+    ]
+  },
+  "Displacer": {
+    "uid": "a291a656",
+    "params": {
+      "xChannel": "d407",
+      "xMax": "0705",
+      "yChannel": "3f5c",
+      "yMax": "c16a",
+      "edges": "176c"
+    },
+    "inputs": [
+      "ab75",
+      "3e00"
+    ],
+    "outputs": [
+      "c7b3"
+    ]
+  },
+  "Dither": {
+    "uid": "ac9e381e",
+    "params": {
+      "mode": "d3cf",
+      "color": "1b8d",
+      "levels": "c1e3",
+      "ditherStrength": "e6b9",
+      "passes": "6062"
+    },
+    "inputs": [
+      "042f"
+    ],
+    "outputs": [
+      "1f3e"
+    ]
+  },
+  "Edges": {
+    "uid": "68c08c2a",
+    "params": {
+      "mode": "8a1f",
+      "threshold": "2731"
+    },
+    "inputs": [
+      "9eb5"
+    ],
+    "outputs": [
+      "9241"
+    ]
+  },
+  "FilmGrain": {
+    "uid": "605dcd4a",
+    "params": {},
+    "inputs": [
+      "c120"
+    ],
+    "outputs": [
+      "7fa7"
+    ]
+  },
+  "FunctionGenerator": {
+    "uid": "8c1222c1",
+    "params": {
+      "curve": "2d9d",
+      "gain": "1858"
+    },
+    "inputs": [
+      "9540"
+    ],
+    "outputs": [
+      "b2f6"
+    ]
+  },
+  "GRASS": {
+    "uid": "ca2234bc",
+    "params": {},
+    "inputs": [],
+    "outputs": [
+      "0a9c"
+    ]
+  },
+  "GameBoy": {
+    "uid": "1373de62",
+    "params": {},
+    "inputs": [
+      "628c"
+    ],
+    "outputs": [
+      "b6a9"
+    ]
+  },
+  "Glitch": {
+    "uid": "fd69c128",
+    "params": {
+      "barsamount": "37ef",
+      "distortion": "900b",
+      "vsync": "1cc3",
+      "hsync": "3bf8"
+    },
+    "inputs": [
+      "296d",
+      "7420"
+    ],
+    "outputs": [
+      "eb16"
+    ]
+  },
+  "GridGuys": {
+    "uid": "4b57bbb0",
+    "params": {
+      "blend": "3947",
+      "delay": "6789",
+      "life": "b05d",
+      "respawn": "0a47",
+      "chaos": "61ca"
+    },
+    "inputs": [],
+    "outputs": [
+      "3616"
+    ]
+  },
+  "HSFlow": {
+    "uid": "7dae2c48",
+    "params": {
+      "lambda": "3090",
+      "flowScale": "350b",
+      "offset": "d65b",
+      "distortAmt": "fad8",
+      "slide": "ede3",
+      "lumaThresh": "3a35",
+      "lumaTol": "d1be"
+    },
+    "inputs": [
+      "306f"
+    ],
+    "outputs": [
+      "3bb1"
+    ]
+  },
+  "HyperCard": {
+    "uid": "4b4270bd",
+    "params": {
+      "finalThreshold": "24af"
+    },
+    "inputs": [
+      "a0ef"
+    ],
+    "outputs": [
+      "9f86"
+    ]
+  },
+  "Image": {
+    "uid": "90ab4d59",
+    "params": {
+      "width": "798b",
+      "height": "310a"
+    },
+    "inputs": [],
+    "outputs": [
+      "6382"
+    ]
+  },
+  "InkDrops": {
+    "uid": "9e7cb9ec",
+    "params": {
+      "speed": "1566",
+      "rate": "b4c9",
+      "size": "81bd",
+      "stains": "0307",
+      "wipes": "379d",
+      "fade": "9276",
+      "hue": "3243",
+      "hueVar": "f479",
+      "sat": "a73e",
+      "grain": "92fc",
+      "reseed": "2dfd"
+    },
+    "inputs": [],
+    "outputs": [
+      "935b"
+    ]
+  },
+  "LUT": {
+    "uid": "ccf14f8f",
+    "params": {
+      "preset": "a5f8",
+      "mix": "50f2"
+    },
+    "inputs": [
+      "d19a"
+    ],
+    "outputs": [
+      "83ec"
+    ]
+  },
+  "Latk": {
+    "uid": "32a408d8",
+    "params": {
+      "fps": "9083",
+      "yaw": "180c",
+      "pitch": "9432",
+      "distance": "cd55",
+      "spin": "3b03",
+      "width": "5ee2",
+      "loopHz": "2b16"
+    },
+    "inputs": [],
+    "outputs": [
+      "3fd9",
+      "4c65",
+      "d1e6"
+    ]
+  },
+  "Levels": {
+    "uid": "1889203c",
+    "params": {
+      "blackLevel": "7427",
+      "gamma": "caad",
+      "whiteLevel": "c3b8"
+    },
+    "inputs": [
+      "22ce"
+    ],
+    "outputs": [
+      "e6d3"
+    ]
+  },
+  "LuminanceDelay": {
+    "uid": "823fb8e7",
+    "params": {
+      "divisions": "729b",
+      "framesPerDivision": "317d",
+      "mirror": "6494"
+    },
+    "inputs": [
+      "0ad1"
+    ],
+    "outputs": [
+      "c580"
+    ]
+  },
+  "Maelstrom": {
+    "uid": "793dbeef",
+    "params": {
+      "waveFreq": "452b",
+      "waveSpeed": "09f0",
+      "waveAmount": "0400",
+      "radialStrength": "ca80",
+      "radialFreq": "7c8c",
+      "radialSpeed": "39c2",
+      "chromaAmount": "296d"
+    },
+    "inputs": [
+      "71bd"
+    ],
+    "outputs": [
+      "1ec4"
+    ]
+  },
+  "Monitor": {
+    "uid": "b1f08cff",
+    "params": {
+      "width": "c3ae",
+      "height": "7fda",
+      "bitrate": "4786"
+    },
+    "inputs": [
+      "7ae7"
+    ],
+    "outputs": []
+  },
+  "Mosaic": {
+    "uid": "efc612b3",
+    "params": {
+      "pixelsW": "9c49",
+      "pixelsH": "322b"
+    },
+    "inputs": [
+      "f455"
+    ],
+    "outputs": [
+      "7480"
+    ]
+  },
+  "NAPLPS": {
+    "uid": "3fd67525",
+    "params": {
+      "speed": "9a2d",
+      "loopHz": "48f2"
+    },
+    "inputs": [],
+    "outputs": [
+      "5a97",
+      "c7e5",
+      "4e53"
+    ]
+  },
+  "Oscillator": {
+    "uid": "14ff0d1e",
+    "params": {
+      "frequency": "0e2a",
+      "waveform": "be3f",
+      "direction": "2c31"
+    },
+    "inputs": [],
+    "outputs": [
+      "8d0e",
+      "5f92"
+    ]
+  },
+  "PixelVision": {
+    "uid": "5c7aa061",
+    "params": {
+      "gamma": "0b91",
+      "posterizeLevels": "d95c",
+      "texelSize": "efb6"
+    },
+    "inputs": [
+      "0040"
+    ],
+    "outputs": [
+      "55c1"
+    ]
+  },
+  "Protozoa": {
+    "uid": "2c5a2e33",
+    "params": {
+      "speed": "e951",
+      "motion": "7455",
+      "flow": "2c94",
+      "deposit": "801d",
+      "diffusion": "0176",
+      "bleed": "7267",
+      "feedback": "3110",
+      "banding": "4a7e",
+      "dry": "9b23",
+      "gain": "b53f",
+      "hue": "ca5c",
+      "reseed": "9213"
+    },
+    "inputs": [],
+    "outputs": [
+      "e34a"
+    ]
+  },
+  "QTVR": {
+    "uid": "80590c5e",
+    "params": {
+      "projection": "4353",
+      "yaw": "a3c9",
+      "pitch": "db4a",
+      "fov": "fc65",
+      "spin": "cb5b"
+    },
+    "inputs": [],
+    "outputs": [
+      "4029"
+    ]
+  },
+  "Restore": {
+    "uid": "c3d6e65b",
+    "params": {
+      "model": "2e2f",
+      "size": "2441",
+      "clamp": "bf80",
+      "mix": "f938"
+    },
+    "inputs": [
+      "0581"
+    ],
+    "outputs": [
+      "6097"
+    ]
+  },
+  "RuttEtra": {
+    "uid": "4bc92c10",
+    "params": {
+      "scale": "9dbc",
+      "scanStep": "0515",
+      "lineThickness": "b956",
+      "opacity": "48fe",
+      "depth": "74b6",
+      "rotationX": "dab3",
+      "rotationY": "aea2"
+    },
+    "inputs": [
+      "870d"
+    ],
+    "outputs": [
+      "0f5b"
+    ]
+  },
+  "Sharpen": {
+    "uid": "3b37efdd",
+    "params": {
+      "sharpenAmount": "b6d6",
+      "posterize": "843d",
+      "posterizeLevels": "1390"
+    },
+    "inputs": [
+      "5c5a"
+    ],
+    "outputs": [
+      "8bdd"
+    ]
+  },
+  "Skeleton": {
+    "uid": "e87de5ff",
+    "params": {
+      "threshold": "44e8",
+      "trace": "8da7",
+      "resolution": "95f2",
+      "loopHz": "eded"
+    },
+    "inputs": [
+      "da2e"
+    ],
+    "outputs": [
+      "6141",
+      "d12b"
+    ]
+  },
+  "Slitscan": {
+    "uid": "a1091c0c",
+    "params": {
+      "strips": "c76f",
+      "delay": "04c3",
+      "axis": "b3ed",
+      "mirror": "44fd"
+    },
+    "inputs": [
+      "5188"
+    ],
+    "outputs": [
+      "b658"
+    ]
+  },
+  "SlowscanJam": {
+    "uid": "905c33f3",
+    "params": {
+      "lines": "cbd2",
+      "fps": "cc3f",
+      "lineWidth": "1be5",
+      "brightness": "04c4",
+      "saturation": "8f57",
+      "blend": "30f4",
+      "effect": "7c56",
+      "fxA": "7df9",
+      "fxB": "3c06",
+      "sync": "f682"
+    },
+    "inputs": [
+      "ef73"
+    ],
+    "outputs": [
+      "844f"
+    ]
+  },
+  "SpatialSlice": {
+    "uid": "462eeaf8",
+    "params": {
+      "sliceWidth": "1b48",
+      "sliceSpeed": "c2de",
+      "offsetAmount": "7833",
+      "chromatic": "b2f8"
+    },
+    "inputs": [
+      "e244"
+    ],
+    "outputs": [
+      "624f"
+    ]
+  },
+  "SpiralGalaxy": {
+    "uid": "6d6d8184",
+    "params": {
+      "loop": "0786",
+      "speed": "7c61",
+      "trail": "f8fe",
+      "swirl": "c8e6",
+      "ripple": "91ac",
+      "reseed": "66bd"
+    },
+    "inputs": [],
+    "outputs": [
+      "b611"
+    ]
+  },
+  "SyncGenerator": {
+    "uid": "6c5dcbe9",
+    "params": {
+      "steps": "042d",
+      "mode": "1238"
+    },
+    "inputs": [
+      "6d7f"
+    ],
+    "outputs": [
+      "5ee8"
+    ]
+  },
+  "TVLines": {
+    "uid": "d5a84eef",
+    "params": {
+      "lineThickness": "2cb2",
+      "lineDarkness": "580a",
+      "flicker": "89f0"
+    },
+    "inputs": [
+      "8f1f"
+    ],
+    "outputs": [
+      "9dcc"
+    ]
+  },
+  "TimeTunnel": {
+    "uid": "56551ba1",
+    "params": {
+      "zoom": "6a68",
+      "speed": "054a"
+    },
+    "inputs": [
+      "df5e"
+    ],
+    "outputs": [
+      "4dca"
+    ]
+  },
+  "Twoscilloscope": {
+    "uid": "e44d2f20",
+    "params": {
+      "view": "24ce",
+      "beamSize": "ec5b",
+      "intensity": "dc9e",
+      "effect": "7c56",
+      "fxA": "7df9",
+      "fxB": "3c06",
+      "sound": "9956",
+      "trail": "3037"
+    },
+    "inputs": [
+      "2dee",
+      "8a2f"
+    ],
+    "outputs": [
+      "68cc"
+    ]
+  },
+  "UnrealBloom": {
+    "uid": "ed0095c2",
+    "params": {
+      "threshold": "9ad4",
+      "strength": "a808",
+      "radius": "2b74"
+    },
+    "inputs": [
+      "5133"
+    ],
+    "outputs": [
+      "91b8"
+    ]
+  },
+  "VHSC": {
+    "uid": "01d95e88",
+    "params": {
+      "gamma": "4b63",
+      "posterizeLevels": "bc86",
+      "texelSize": "14c9"
+    },
+    "inputs": [
+      "6da5"
+    ],
+    "outputs": [
+      "acd9"
+    ]
+  },
+  "VRML": {
+    "uid": "25f86a93",
+    "params": {
+      "yaw": "4235",
+      "pitch": "8cbf",
+      "distance": "08f9",
+      "spin": "ea9a"
+    },
+    "inputs": [],
+    "outputs": [
+      "ff78"
+    ]
+  },
+  "ValueScrambler": {
+    "uid": "6a1e3f93",
+    "params": {
+      "levels": "d5bd",
+      "scramble": "ab64"
+    },
+    "inputs": [
+      "4836"
+    ],
+    "outputs": [
+      "b2ad"
+    ]
+  },
+  "VideoMixer": {
+    "uid": "7272a9aa",
+    "params": {
+      "mode": "e155",
+      "mix": "d885"
+    },
+    "inputs": [
+      "7fb8",
+      "91ef"
+    ],
+    "outputs": [
+      "32ec"
+    ]
+  },
+  "VideoPlayer": {
+    "uid": "13e19572",
+    "params": {
+      "speed": "2e8f"
+    },
+    "inputs": [],
+    "outputs": [
+      "45af"
+    ]
+  },
+  "VideoToasting": {
+    "uid": "8bf4012e",
+    "params": {
+      "effect": "3f8f",
+      "speed": "899a"
+    },
+    "inputs": [
+      "5249",
+      "e8f4"
+    ],
+    "outputs": [
+      "52d7"
+    ]
+  },
+  "Whitney": {
+    "uid": "4bde3bfa",
+    "params": {
+      "sketch": "0320",
+      "speed": "5533",
+      "offset": "38e5",
+      "size": "1329"
+    },
+    "inputs": [],
+    "outputs": [
+      "9670"
+    ]
+  },
+  "Yellowtail": {
+    "uid": "d21aaf56",
+    "params": {
+      "thickness": "4d82"
+    },
+    "inputs": [],
+    "outputs": [
+      "684e"
+    ]
+  }
+}

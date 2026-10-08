@@ -3,17 +3,19 @@ import { functionGeneratorFrag } from '../shaders/function-generator.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class FunctionGeneratorModule extends Module {
+  static uid = '8c1222c1';
+
   constructor(glCanvas, id) {
     super('FunctionGenerator', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '9540', name: 'in', type: 'video' }];
+    this.outputs = [{ id: 'b2f6', name: 'out', type: 'video' }];
     this.historicalInfo="Sandin"
     this.params = {
       curve: {
-        value: 0, min: 0, max: 5, step: 1, label: 'Curve', widget: 'dropdown',
+        id: '2d9d', value: 0, min: 0, max: 5, step: 1, label: 'Curve', widget: 'dropdown',
         valueLabels: ['Linear', 'Square', 'Square Root', 'Sine', 'Fold', 'Stairs'],
       },
-      gain: { value: 1, min: 0, max: 3, step: 0.01, label: 'Gain' },
+      gain: { id: '1858', value: 1, min: 0, max: 3, step: 0.01, label: 'Gain' },
     };
     this.createShader(functionGeneratorFrag);
     this.createOutputFBO();

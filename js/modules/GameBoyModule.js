@@ -3,10 +3,12 @@ import { gameboyFrag } from '../shaders/gameboy.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class GameBoyModule extends Module {
+  static uid = '1373de62';
+
   constructor(glCanvas, id) {
     super('GameBoy', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '628c', name: 'in', type: 'video' }];
+    this.outputs = [{ id: 'b6a9', name: 'out', type: 'video' }];
     this.historicalInfo = "Gameboy";
     this.params = {};
     this.createShader(gameboyFrag);

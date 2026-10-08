@@ -9,14 +9,16 @@ const COLS = 8;
 const ROWS = 8;
 
 export class LuminanceDelayModule extends Module {
+  static uid = '823fb8e7';
+
   constructor(glCanvas, id) {
     super('LuminanceDelay', glCanvas, id);
-    this.inputs = [{ name: 'in', type: 'video' }];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.inputs = [{ id: '0ad1', name: 'in', type: 'video' }];
+    this.outputs = [{ id: 'c580', name: 'out', type: 'video' }];
     this.params = {
-      divisions: { value: 8, min: -12, max: 12, step: 1, label: 'Segments' },
-      framesPerDivision: { value: 4, min: 1, max: 10, step: 1, label: 'Delay' },
-      mirror: { value: 0, min: 0, max: 1, step: 1, label: 'Mirror' },
+      divisions: { id: '729b', value: 8, min: -12, max: 12, step: 1, label: 'Segments' },
+      framesPerDivision: { id: '317d', value: 4, min: 1, max: 10, step: 1, label: 'Delay' },
+      mirror: { id: '6494', value: 0, min: 0, max: 1, step: 1, label: 'Mirror' },
     };
 
     this.createShader(luminanceDelayFrag);

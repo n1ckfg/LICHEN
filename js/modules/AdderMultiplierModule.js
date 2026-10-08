@@ -3,21 +3,23 @@ import { adderMultiplierFrag } from '../shaders/adder-multiplier.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class AdderMultiplierModule extends Module {
+  static uid = '8cea39bc';
+
   constructor(glCanvas, id) {
     super('AdderMultiplier', glCanvas, id);
     this.inputs = [
-      { name: 'in1', type: 'video' },
-      { name: 'in2', type: 'video' },
+      { id: '3a2a', name: 'in1', type: 'video' },
+      { id: '1565', name: 'in2', type: 'video' },
     ];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '6288', name: 'out', type: 'video' }];
     this.historicalInfo="Sandin"
     this.params = {
       mode: {
-        value: 0, min: 0, max: 3, step: 1, label: 'Mode', widget: 'dropdown',
+        id: '1288', value: 0, min: 0, max: 3, step: 1, label: 'Mode', widget: 'dropdown',
         valueLabels: ['Add', 'Multiply', 'Difference', 'Screen'],
       },
-      mixVal: { value: 0.5, min: 0, max: 1, step: 0.01, label: 'Mix' },
-      contrast: { value: 1, min: 0, max: 3, step: 0.01, label: 'Contrast' },
+      mixVal: { id: 'ac2e', value: 0.5, min: 0, max: 1, step: 0.01, label: 'Mix' },
+      contrast: { id: '8436', value: 1, min: 0, max: 3, step: 0.01, label: 'Contrast' },
     };
     this.createShader(adderMultiplierFrag);
     this.createOutputFBO();

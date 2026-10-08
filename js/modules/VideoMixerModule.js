@@ -3,21 +3,23 @@ import { videoMixerFrag } from '../shaders/video-mixer.js';
 import { registerModule } from '../moduleRegistry.js';
 
 export class VideoMixerModule extends Module {
+  static uid = '7272a9aa';
+
   constructor(glCanvas, id) {
     super('VideoMixer', glCanvas, id);
     this.inputs = [
-      { name: 'A', type: 'video' },
-      { name: 'B', type: 'video' },
+      { id: '7fb8', name: 'A', type: 'video' },
+      { id: '91ef', name: 'B', type: 'video' },
     ];
-    this.outputs = [{ name: 'out', type: 'video' }];
+    this.outputs = [{ id: '32ec', name: 'out', type: 'video' }];
     this.params = {
       mode: {
         // Patches save the index, so new modes go on the end
-        value: 0, min: 0, max: 11, step: 1, label: 'Mode', widget: 'dropdown',
+        id: 'e155', value: 0, min: 0, max: 11, step: 1, label: 'Mode', widget: 'dropdown',
         valueLabels: ['Blend', 'Add', 'Subtract', 'Multiply', 'Divide', 'Lighten', 'Darken', 'Difference',
           'Color', 'Overlay', 'Saturation', 'Luminance'],
       },
-      mix: { value: 1.0, min: 0, max: 1, step: 0.01, label: 'Mix' },
+      mix: { id: 'd885', value: 1.0, min: 0, max: 1, step: 0.01, label: 'Mix' },
     };
     this.createShader(videoMixerFrag);
     this.createOutputFBO();

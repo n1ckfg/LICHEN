@@ -2,102 +2,112 @@
   "nodes": [
     {
       "id": 0,
+      "uid": "b1f08cff",
       "type": "Monitor",
       "x": 1118.5,
       "y": 598.75,
       "params": {
-        "bitrate": 20
+        "4786": 20
       }
     },
     {
       "id": 2,
+      "uid": "cd55eb84",
       "type": "ColorEncoder",
       "x": 477.36247919765844,
       "y": 314.9429484786124,
       "params": {
-        "phaseR": 0,
-        "phaseG": 0.7034118995384195,
-        "phaseB": 4.189,
-        "frequency": 3.706
+        "4704": 0,
+        "4ca6": 0.7034118995384195,
+        "0132": 4.189,
+        "83af": 3.706
       }
     },
     {
       "id": 3,
+      "uid": "14ff0d1e",
       "type": "Oscillator",
       "x": 269.2861118278363,
       "y": 313.0142774452584,
       "params": {
-        "frequency": 0.1,
-        "waveform": 0,
-        "direction": 0
+        "0e2a": 0.1,
+        "be3f": 0,
+        "2c31": 0
       }
     },
     {
       "id": 4,
+      "uid": "ad9f6859",
       "type": "Differentiator",
       "x": 521.0834460023339,
       "y": 146.6031548546839,
       "params": {
-        "strength": 0.5597739133681517
+        "aed7": 0.5597739133681517
       }
     },
     {
       "id": 9,
+      "uid": "6a1e3f93",
       "type": "ValueScrambler",
       "x": 471.40434884728757,
       "y": 537.7530464014994,
       "params": {
-        "levels": 22.800000000000004,
-        "scramble": 0.11195478267363035
+        "d5bd": 22.800000000000004,
+        "ab64": 0.11195478267363035
       }
     },
     {
       "id": 10,
+      "uid": "8cea39bc",
       "type": "AdderMultiplier",
       "x": 1085.4373685595224,
       "y": 287.8695726159612,
       "params": {
-        "mode": 1.3,
-        "mixVal": 0.11195478267363035,
-        "contrast": 2.7199999999999998
+        "1288": 1.3,
+        "8436": 2.7199999999999998,
+        "ac2e": 0.11195478267363035
       }
     },
     {
       "id": 12,
+      "uid": "5c7aa061",
       "type": "PixelVision",
       "x": 687.9702022498673,
       "y": 533.6215327454564,
       "params": {
-        "gamma": 0.5166666666666666,
-        "posterizeLevels": 30.43651479910211,
-        "texelSize": 0.005386666666666666
+        "0b91": 0.5166666666666666,
+        "d95c": 30.43651479910211,
+        "efb6": 0.005386666666666666
       }
     },
     {
       "id": 13,
+      "uid": "01d95e88",
       "type": "VHSC",
       "x": 932.0629132182257,
       "y": 587.1874082307959,
       "params": {
-        "gamma": 3,
-        "posterizeLevels": 256,
-        "texelSize": 0.013226666666666668
+        "4b63": 3,
+        "bc86": 256,
+        "14c9": 0.013226666666666668
       }
     },
     {
       "id": 14,
+      "uid": "d19abc06",
       "type": "Delay",
       "x": 758.6658821173462,
       "y": 251.45552407648074,
       "params": {
-        "delaySpeed": 0.16,
-        "lumaThreshold": 0,
-        "alphaMax": 0.94,
-        "alphaMin": 0.3733333333333333
+        "9201": 0.3733333333333333,
+        "c7ae": 0.16,
+        "66de": 0,
+        "4d60": 0.94
       }
     },
     {
       "id": 15,
+      "uid": "21b607f9",
       "type": "Camera",
       "x": 206.16232527726788,
       "y": 71.2189945514773,
@@ -107,89 +117,89 @@
   "connections": [
     {
       "fromId": 4,
-      "fromPort": 0,
+      "fromPort": "a7d4",
       "toId": 2,
-      "toPort": 0
+      "toPort": "87a9"
     },
     {
       "fromId": 2,
-      "fromPort": 0,
+      "fromPort": "1bc2",
       "toId": 9,
-      "toPort": 0
+      "toPort": "4836"
     },
     {
       "fromId": 12,
-      "fromPort": 0,
+      "fromPort": "55c1",
       "toId": 10,
-      "toPort": 1
+      "toPort": "1565"
     },
     {
       "fromId": 9,
-      "fromPort": 0,
+      "fromPort": "b2ad",
       "toId": 12,
-      "toPort": 0
+      "toPort": "0040"
     },
     {
       "fromId": 10,
-      "fromPort": 0,
+      "fromPort": "6288",
       "toId": 13,
-      "toPort": 0
+      "toPort": "6da5"
     },
     {
       "fromId": 13,
-      "fromPort": 0,
+      "fromPort": "acd9",
       "toId": 0,
-      "toPort": 0
+      "toPort": "7ae7"
     },
     {
       "fromId": 2,
-      "fromPort": 0,
+      "fromPort": "1bc2",
       "toId": 14,
-      "toPort": 0
+      "toPort": "e4eb"
     },
     {
       "fromId": 14,
-      "fromPort": 0,
+      "fromPort": "b8d7",
       "toId": 10,
-      "toPort": 0
+      "toPort": "3a2a"
     },
     {
       "fromId": 15,
-      "fromPort": 0,
+      "fromPort": "3261",
       "toId": 4,
-      "toPort": 0
+      "toPort": "a770"
     }
   ],
   "controlConnections": [
     {
       "fromId": 3,
-      "fromPort": 1,
+      "fromPort": "5f92",
       "toId": 4,
-      "paramName": "strength"
+      "param": "aed7"
     },
     {
       "fromId": 3,
-      "fromPort": 1,
+      "fromPort": "5f92",
       "toId": 2,
-      "paramName": "phaseG"
+      "param": "4ca6"
     },
     {
       "fromId": 3,
-      "fromPort": 1,
+      "fromPort": "5f92",
       "toId": 9,
-      "paramName": "scramble"
+      "param": "ab64"
     },
     {
       "fromId": 3,
-      "fromPort": 1,
+      "fromPort": "5f92",
       "toId": 12,
-      "paramName": "posterizeLevels"
+      "param": "d95c"
     },
     {
       "fromId": 3,
-      "fromPort": 1,
+      "fromPort": "5f92",
       "toId": 10,
-      "paramName": "mixVal"
+      "param": "ac2e"
     }
   ],
   "nextId": 16
