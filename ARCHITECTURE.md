@@ -409,9 +409,9 @@ The Blur module (`js/modules/BlurModule.js`, `js/shaders/blur.js`) blurs its inp
 
 The Channel module (`js/modules/ChannelModule.js`, `js/shaders/channel.js`) builds a picture from the channels of up to three inputs: red from `r`, green from `g` and blue from `b`, each times its gain (R Gain, G Gain and B Gain, 0–3, default 1), clamped to 0–1. A grey source gives its brightness to the channel it is cabled to. The output is opaque.
 
-**Inputs.** A lone input, on any pin, feeds all three channels, as VideoMixer's feeds both of its. Channel then sets that picture's channel gains, and with all three at 1 it passes the picture through unchanged. With two or three cabled in, an unplugged channel is black. With none, the output keeps its last frame, as VideoMixer's does.
+**Inputs.** Each pin feeds only its own channel, and an unplugged channel is black. A lone input on `r` shows only its red channel, two inputs show two channels, and the same picture cabled to all three pins passes through unchanged at gains of 1. With none, the output keeps its last frame, as VideoMixer's does.
 
-**Checked.** In headless Chrome, a lone input on any pin with gains of 1 comes out the same on every pixel. With gains of 0.5, 1.7 and 0, every pixel is within one level of `round(input × gain)`, clamped. The three-input and two-input cases take each channel from its input exactly, with the unplugged channel at 0.
+**Checked.** In headless Chrome, on random-noise inputs, a lone input on each pin comes out as that one channel exactly, with the other two at 0, and two inputs give their two channels with the third at 0. Three different inputs, and the same input on all three pins, take each channel from its pin exactly. With gains of 0.5, 1.7 and 0, every pixel is `round(input × gain)`, clamped. The two- and three-input cases are unchanged from when a lone input fed all three channels.
 
 ## Restore Module
 
