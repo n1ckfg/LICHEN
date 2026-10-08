@@ -13,9 +13,10 @@ const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
   'Utility': ['Blur', 'Brcosa', 'Channel', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'Skeleton', 'VideoMixer'],
   'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
-  'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Latk', 'Twoscilloscope', 'Yellowtail'],
+  'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Latk', 'Yellowtail'],
+  'Analog': ['SlowscanJam', 'Twoscilloscope'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'DeeSeventySix', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'RuttEtra', 'Slitscan', 'SlowscanJam', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'DeeSeventySix', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
   'Archival': ['NAPLPS', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
 };
@@ -30,6 +31,7 @@ const color_effect_op = [108, 102, 186];
 const color_utility = [85, 120, 100];
 const color_output = [170, 85, 34];
 const color_interactive = [160, 120, 40];
+const color_analog = [30, 125, 135];
 
 const MODULE_COLORS = {
   // - - - SOURCES - - -
@@ -62,8 +64,10 @@ const MODULE_COLORS = {
   InkDrops: color_interactive,
   GRASS: color_grass,
   Latk: color_interactive,
-  Twoscilloscope: color_interactive,
   Yellowtail: color_interactive,
+  // - - - ANALOG - - -
+  SlowscanJam: color_analog,
+  Twoscilloscope: color_analog,
   // - - - SANDIN - - -
   AdderMultiplier: color_sandin,
   ColorEncoder: color_sandin,
@@ -91,7 +95,6 @@ const MODULE_COLORS = {
   LuminanceDelay: color_effect_op,
   SpatialSlice: color_effect,
   Slitscan: color_effect_op,
-  SlowscanJam: color_effect_op,
   TimeTunnel: color_effect,
   TVLines: color_effect_op,
   UnrealBloom: color_effect_op,
@@ -183,10 +186,10 @@ export class NodeGraphUI {
     this._loadHistoricalInfo();
   }
 
-  // Load docs/historical-info.json (name -> entry) for the info button popups
+  // Load js/historical-info.json (name -> entry) for the info button popups
   async _loadHistoricalInfo() {
     try {
-      const url = new URL('../docs/historical-info.json', import.meta.url);
+      const url = new URL('historical-info.json', import.meta.url);
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const entries = await res.json();
@@ -196,6 +199,13 @@ export class NodeGraphUI {
     } catch (e) {
       console.warn('Could not load historical-info.json:', e);
     }
+  }
+
+  // A module's entry name in js/historical-info.json: its historicalInfo, else
+  // its type when an entry has that name. Null hides the info button.
+  _infoName(mod) {
+    if (mod.historicalInfo) return mod.historicalInfo;
+    return this._historicalInfo.has(mod.type) ? mod.type : null;
   }
 
   // Render a Framebuffer onto the P2D main canvas by blitting through glCanvas
@@ -219,6 +229,7 @@ export class NodeGraphUI {
       'Utility': true,
       'Generative': true,
       'Interactive': true,
+      'Analog': true,
       'Sandin': true,
       'Effects': true,
       'Archival': true,
@@ -1250,7 +1261,8 @@ export class NodeGraphUI {
     // Refill only when the popup opens on a different node
     if (this._infoElNode !== this._infoPopup) {
       this._infoElNode = this._infoPopup;
-      const entry = this._historicalInfo.get(mod.historicalInfo);
+      const name = this._infoName(mod);
+      const entry = this._historicalInfo.get(name);
       const title = el.querySelector('.info-popup-title');
       const body = el.querySelector('.info-popup-body');
       // The JSON title is HTML too (it usually links out), so render it as markup
@@ -1258,12 +1270,12 @@ export class NodeGraphUI {
         title.innerHTML = entry.title;
         this._openLinksInNewTab(title);
       } else {
-        title.textContent = mod.historicalInfo;
+        title.textContent = name;
       }
       // Year follows the title as plain text, outside any link: "Telidon (1978)"
       if (entry?.year != null) title.append(` (${entry.year})`);
       if (entry == null) {
-        body.textContent = `No entry for "${mod.historicalInfo}".`;
+        body.textContent = `No entry for "${name}".`;
       } else {
         body.innerHTML = entry.body ?? '';
         this._openLinksInNewTab(body);
@@ -1424,8 +1436,8 @@ export class NodeGraphUI {
     }
     p.noStroke();
 
-    // Historical-info toggle (only when the module declares a historicalInfo name)
-    if (mod.historicalInfo) {
+    // Historical-info toggle (only when the module has an entry, see _infoName)
+    if (this._infoName(mod)) {
       const infoX = mod.x + MODULE_WIDTH - 28;
       p.fill(180);
       p.noStroke();
@@ -2528,7 +2540,7 @@ export class NodeGraphUI {
   _hitTestInfoBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (!mod.historicalInfo) continue;
+      if (!this._infoName(mod)) continue;
       // Circle just left of the collapse toggle
       const cx = mod.x + MODULE_WIDTH - 28;
       const cy = mod.y + HEADER_HEIGHT / 2;

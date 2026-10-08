@@ -24,19 +24,19 @@
 		"body": "TK"
 	},
 	{
-		"name": "Hypercard",
+		"name": "HyperCard",
 		"year": 1987,
-		"title": "<a href='https://en.wikipedia.org/wiki/HyperCard'>Hypercard</a>",
+		"title": "<a href='https://en.wikipedia.org/wiki/HyperCard'>HyperCard</a>",
 		"body": "TK"
 	},
 	{
-		"name": "Rutt-Etra",
+		"name": "RuttEtra",
 		"year": 1972,
 		"title": "<a href='https://en.wikipedia.org/wiki/Rutt/Etra_Video_Synthesizer'>Rutt-Etra Video Synthesizer</a>",
 		"body": "Based on the <a href='https://www.airtightinteractive.com/2011/06/rutt-etra-izer/'>Rutt-Etra-Izer</a> implementation by <a href='https://airtight.cc'>Felix Turner</a>"
 	},
 	{
-		"name": "Gameboy",
+		"name": "GameBoy",
 		"year": 1998,
 		"title": "<a href='https://en.wikipedia.org/wiki/Game_Boy_Camera'>Game Boy Camera</a>",
 		"body": "TK"
@@ -105,5 +105,14 @@
 		"year": 2026,
 		"title": "<a href='https://github.com/n1ckfg/Twoscilloscope'>Twoscilloscope</a>",
 		"body": "Vector drawings to oscilloscope audio and back again, by <a href='https://fox-gieg.com'>Nick Fox-Gieg</a>. It joins <a href='https://teddavis.org/xyscope'>XYscope</a> by Ted Davis and <a href='https://github.com/kritzikratzi/Oscilloscope'>Oscilloscope</a> by Hansi Raber at the audio. The drawing is made with the <a href='https://github.com/n1ckfg/latk.js'>Lightning Artist Toolkit</a>."
+	},
+	{
+		"name": "Skeleton",
+		"year": 2020,
+		"title": "<a href='https://rosettacode.org/wiki/Zhang-Suen_thinning_algorithm'>Zhang-Suen Thinning</a>",
+		"body": "Based on the <a href='https://github.com/LingDong-/skeleton-tracing'>skeleton-tracing</a> implementation by <a href='https://github.com/LingDong-'>Lingdong Huang</a>."
+	},
+	{
+		"name": "Restore"
 	}
 ]

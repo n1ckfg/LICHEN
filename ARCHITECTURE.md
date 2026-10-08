@@ -58,7 +58,7 @@ The seed is kept on `mod.seed`. A node whose `mod.seed` is set saves it as `seed
 
 A module adopts this by adding `random` to its params. It may call `this.randomize()` at the end of its constructor, and may add a trigger param with `onTrigger()` calling `this.randomize()` and `triggerText()` returning `this.seed`. Cloudy, Coils, Crystalline, InkDrops, Protozoa and SpiralGalaxy all do all three, each with the trigger named `reseed` and labelled Seed, last in its params. The seed sets params only. Anything a module draws from `Math.random` stays unseeded.
 
-Each node header has a collapse toggle in the upper right ("−" when expanded, "+" when collapsed). A module may also set `this.historicalInfo = 'Name'` in its constructor; this adds a "?" button to the left of the collapse toggle that opens an info popup (2× the node's size, centered on the node, dismissed by any click outside it). The popup content comes from the entry with a matching `name` in `docs/historical-info.json`: the popup's heading is that entry's `title` followed by its `year` in parentheses (the title falls back to the `historicalInfo` name when the entry or its title is missing; the year is omitted when absent), and its text is the entry's `body`. Modules leaving `historicalInfo` at its default `null` show no button.
+Each node header has a collapse toggle in the upper right ("−" when expanded, "+" when collapsed). A module whose type name matches an entry's `name` in `js/historical-info.json` also gets a "?" button to the left of the collapse toggle, so adding an entry named after a module is enough to give it one. A module can point at an entry with another name by setting `this.historicalInfo = 'Name'` in its constructor, as the Sandin modules share `Sandin`; that name then shows the button even with no entry. `NodeGraphUI._infoName(mod)` resolves the name: `historicalInfo` when set, else the type when an entry has it, else `null` for no button. The button opens an info popup (2× the node's size, centered on the node, dismissed by any click outside it). The popup's heading is the entry's `title` followed by its `year` in parentheses (the title falls back to the resolved name when the entry or its title is missing; the year is omitted when absent), and its text is the entry's `body`.
 
 The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not canvas text, so an entry's `title` and `body` are both rendered as HTML markup — links, emphasis, lists, images. `NodeGraphUI._updateInfoPopup()` runs each frame from `draw()`: it repositions and `scale()`s the element to track the node's pan/zoom, clamps it to the viewport, and hides it while a module is fullscreened. Mouse and wheel events inside the popup are stopped from reaching p5's window-level handlers so links stay clickable and long entries scroll instead of zooming the graph; anchors get `target="_blank"` so following one doesn't tear down the patch.
 
@@ -67,9 +67,10 @@ The popup is a **DOM overlay** (`.info-popup`, styled in `css/style.css`), not c
 - **Sources**: Camera, Image, VideoPlayer
 - **Utility**: Blur, Brcosa, Channel, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, Skeleton, VideoMixer
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
-- **Interactive**: Conway, GRASS, InkDrops, Latk, Twoscilloscope, Yellowtail
+- **Interactive**: Conway, GRASS, InkDrops, Latk, Yellowtail
+- **Analog**: SlowscanJam, Twoscilloscope
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
-- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, RuttEtra, Slitscan, SlowscanJam, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
+- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
 - **Archival**: NAPLPS, QTVR, VRML
 - **Output**: Monitor
 

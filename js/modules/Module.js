@@ -29,7 +29,8 @@ export class Module {
     this.outputFBO = null;
     this.glCanvas = glCanvas;
     this.collapsed = false;
-    // Name key into docs/historical-info.json; null hides the info button
+    // Name key into js/historical-info.json; null uses the type, and the info
+    // button shows only when an entry has that name
     this.historicalInfo = null;
     // Hex seed the random params were last drawn from; null until randomize()
     this.seed = null;
