@@ -11,6 +11,8 @@ const MAX_DT = 0.1;          // clamp long stalls so a tab switch doesn't jump t
 // vertices than this, and every few are used: the loop's samples are far sparser
 const XY_MAX_COLS = 160;
 
+let nextGeometryId = 0;
+
 // Vertex shader that samples input texture for displacement
 const ruttEtraVert = `
 precision highp float;
@@ -23,6 +25,7 @@ uniform mat4 uProjectionMatrix;
 
 uniform sampler2D uInputTex;
 uniform float uDepth;
+uniform float uHalfWidth;    // half of Line Thickness, in px
 
 varying vec3 vColor;
 
@@ -36,8 +39,9 @@ void main() {
   // Z displacement
   float z = -brightness * uDepth + uDepth * 0.5;
 
-  vec3 pos = aPosition;
-  pos.z = z;
+  // A vertex sits on its line's centre, and its z says which edge of the
+  // ribbon it belongs to: -1 the top, 1 the bottom
+  vec3 pos = vec3(aPosition.x, aPosition.y + aPosition.z * uHalfWidth, z);
 
   vColor = texColor.rgb;
 
@@ -88,7 +92,8 @@ function mat4Mult(a, b) {
 
 // Rutt-Etra scan lines: each row of the input is a line, pushed back by its
 // brightness and seen in 3D. Its X and Y outputs carry the lines as one loop of
-// XY audio, as Latk's do, to drive Twoscilloscope.
+// XY audio, as Latk's do, to drive Twoscilloscope. That takes most of its time
+// on the CPU, so it is done only while X or Y is cabled to something.
 export class RuttEtraModule extends Module {
   static uid = '4bc92c10';
 
@@ -149,13 +154,19 @@ export class RuttEtraModule extends Module {
     const h = this.height;
     const halfW = w / 2;
     const halfH = h / 2;
-    const thickness = this.getParam('lineThickness') * 0.5;
 
     const cols = Math.floor(w / scanStep);
     const rows = Math.floor(h / scanStep);
 
+    // model() caches GPU buffers under a geometry's gid (see Development
+    // Conventions), so the geometry this replaces is freed
+    if (this.geometry) this.glCanvas.freeGeometry(this.geometry);
+
     // Build as a p5.Geometry with triangle strips for each row
-    // Each row is a ribbon: top and bottom vertices alternating
+    // Each row is a ribbon: top and bottom vertices alternating. Both sit on
+    // the line's centre, and ruttEtraVert moves them apart by Line Thickness,
+    // so turning it needs no rebuild. Their z, which the shader replaces with
+    // the brightness displacement, says which edge each is
     this.geometry = new p5.Geometry(1, 1, function() {
       for (let row = 0; row < rows; row++) {
         const y = row * scanStep - halfH;
@@ -166,11 +177,11 @@ export class RuttEtraModule extends Module {
           const v = (row * scanStep) / h;
 
           // Top vertex of ribbon
-          this.vertices.push(new p5.Vector(x, y - thickness, 0));
+          this.vertices.push(new p5.Vector(x, y, -1));
           this.uvs.push([u, v]);
 
           // Bottom vertex of ribbon
-          this.vertices.push(new p5.Vector(x, y + thickness, 0));
+          this.vertices.push(new p5.Vector(x, y, 1));
           this.uvs.push([u, v]);
         }
       }
@@ -188,6 +199,11 @@ export class RuttEtraModule extends Module {
 
       this.computeNormals();
     });
+    this.geometry.gid = `RuttEtra|${nextGeometryId++}`;
+    // On a geometry's first draw, model() finds every edge and turns them all
+    // into stroke geometry, though the lines are drawn with noStroke(). Given
+    // one edge of its own, it doesn't look for the rest
+    this.geometry.edges = [[0, 1]];
 
     this.cols = cols;
     this.rows = rows;
@@ -202,11 +218,21 @@ export class RuttEtraModule extends Module {
     if (this.reading) this._pollReadback();
     const inputFBO = this.getInput(graph, 0);
     const mvp = this._draw(inputFBO, glCanvas);
-    if (!mvp) this.grid = null;
+    const xy = this._xyCabled(graph);
+    // Uncabled, nothing is read back, and the grid goes, so cabling X or Y
+    // again starts from a blank loop rather than an old picture
+    if (!mvp || !xy) this.grid = null;
     else if (!this.reading) this._startGrid(inputFBO, glCanvas);
+    if (!xy) return;
     // With no lines, the loop is all blank, so the beam rests unlit in the middle
     const pieces = mvp ? this._linePieces(mvp) : [];
     this.xy.publish(this, pieces, this.width, this.height, dt, this.params.loopHz.value);
+  }
+
+  // X or Y cabled to a pin or a knob
+  _xyCabled(graph) {
+    const fromXY = (c) => c.fromId === this.id && this.outputs[c.fromPort]?.type === 'control';
+    return graph.connections.some(fromXY) || graph.controlConnections.some(fromXY);
   }
 
   // Draws the scan lines into the output, and returns the matrix they were
@@ -257,6 +283,7 @@ export class RuttEtraModule extends Module {
     glCanvas.shader(this.ruttShader);
     this.ruttShader.setUniform('uInputTex', inputFBO);
     this.ruttShader.setUniform('uDepth', depth);
+    this.ruttShader.setUniform('uHalfWidth', this.getParam('lineThickness') * 0.5);
     this.ruttShader.setUniform('uOpacity', opacity);
 
     // Enable additive blending
@@ -351,6 +378,7 @@ export class RuttEtraModule extends Module {
   }
 
   dispose() {
+    if (this.geometry) this.glCanvas.freeGeometry(this.geometry);
     this.geometry = null;
     this.readback.dispose();
     if (this.gridFBO) this.gridFBO.remove();
