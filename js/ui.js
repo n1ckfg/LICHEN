@@ -32,11 +32,11 @@ void main() {
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
   'Utility': ['Blur', 'Brcosa', 'Channel', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'Skeleton', 'VideoMixer'],
-  'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
-  'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Latk', 'Yellowtail'],
-  'Analog': ['SlowscanJam', 'Twoscilloscope'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'DeeSeventySix', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'DeeSeventySix', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
+  'Interactive': ['Conway', 'GRASS', 'InkDrops', 'Latk', 'Yellowtail'],
+  'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
+  'Analog': ['RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
   'GAN': ['InfrDrawings'],
   'Archival': ['NAPLPS', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
@@ -47,8 +47,8 @@ const color_grass = [34, 120, 68];
 const color_generative = [170, 85, 136];
 const color_sandin = [102, 102, 68];
 const color_archival = [68, 102, 136];
-const color_effect = [125, 85, 129];
-const color_effect_op = [108, 102, 186];
+const color_effect = [108, 102, 186];
+const color_effect2 = [125, 85, 129];
 const color_utility = [85, 120, 100];
 const color_output = [170, 85, 34];
 const color_interactive = [160, 120, 40];
@@ -88,6 +88,7 @@ const MODULE_COLORS = {
   Latk: color_interactive,
   Yellowtail: color_interactive,
   // - - - ANALOG - - -
+  RuttEtra: color_analog,
   SlowscanJam: color_analog,
   Twoscilloscope: color_analog,
   // - - - SANDIN - - -
@@ -100,28 +101,27 @@ const MODULE_COLORS = {
   SyncGenerator: color_sandin,
   ValueScrambler: color_sandin,
   // - - - EFFECTS - - -
-  BooleanLogic: color_effect_op,
-  BufferSmear: color_effect_op,
-  Cyberlace: color_effect,
-  DeeSeventySix: color_effect,
-  Delay: color_effect_op,
+  BooleanLogic: color_effect,
+  BufferSmear: color_effect,
+  Cyberlace: color_effect2,
+  DeeSeventySix: color_effect2,
+  Delay: color_effect,
   Displacer: color_effect,
-  FilmGrain: color_effect_op,
-  GameBoy: color_effect_op,
-  Glitch: color_effect,
+  FilmGrain: color_effect2,
+  GameBoy: color_effect2,
+  Glitch: color_effect2,
   HSFlow: color_effect,
-  HyperCard: color_effect_op,
-  Maelstrom: color_effect,
-  PixelVision: color_effect_op,
-  RuttEtra: color_effect,
-  LuminanceDelay: color_effect_op,
+  HyperCard: color_effect2,
+  Maelstrom: color_effect2,
+  PixelVision: color_effect2,
+  LuminanceDelay: color_effect,
   SpatialSlice: color_effect,
-  Slitscan: color_effect_op,
+  Slitscan: color_effect,
   TimeTunnel: color_effect,
-  TVLines: color_effect_op,
-  UnrealBloom: color_effect_op,
-  VHSC: color_effect_op,
-  VideoToasting: color_effect,
+  TVLines: color_effect2,
+  UnrealBloom: color_effect,
+  VHSC: color_effect2,
+  VideoToasting: color_effect2,
   // - - - GAN - - -
   InfrDrawings: color_gan,
   // - - - ARCHIVAL - - -

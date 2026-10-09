@@ -37,7 +37,7 @@ A control value is one number a frame, and a parameter cable applies it after ev
 - **Control signals:** a control output can also publish a loop in `this.controlSignals['portName']`, as `{ samples, sampleRate, z, color }`. `samples` is a `Float32Array` in −1..1. `z` (blanking, XYscope's −1 off and 1 on) and `color` (0xRRGGBB a sample) are optional lanes the same length, or `null`. It should still set a numeric `controlValues` entry for the same port, because a knob cable sees only that.
 - **Control input pins:** an input declared `{ name, type: 'control' }` is drawn green, as is a cable into it, and takes a control output's cable. The cable is stored in `connections`, like a video cable, so the topological sort runs the source first, in the same frame. `this.getControlInput(graph, portIndex)` returns `{ value, signal }`: the source's control value and its control signal, or `null` for the signal if it has none. It returns `null` when nothing is cabled to the pin, or when a video output is.
 
-Latk's, NAPLPS's and Skeleton's X and Y outputs and Twoscilloscope's X and Y pins are the only ones so far (see Latk Module, NAPLPS Module and Skeleton Module).
+Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs and Twoscilloscope's X and Y pins are the only ones so far (see Latk Module, NAPLPS Module, RuttEtra Module, Skeleton Module and Yellowtail Module).
 
 The UI renders each param in the `params` object: `{ paramName: { id, value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
@@ -82,9 +82,9 @@ A node shows its output (a Monitor its input) in a preview on the 2D canvas. The
 - **Utility**: Blur, Brcosa, Channel, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, Skeleton, VideoMixer
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
 - **Interactive**: Conway, GRASS, InkDrops, Latk, Yellowtail
-- **Analog**: SlowscanJam, Twoscilloscope
+- **Analog**: RuttEtra, SlowscanJam, Twoscilloscope
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
-- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, RuttEtra, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
+- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
 - **Archival**: NAPLPS, QTVR, VRML
 - **Output**: Monitor
 
@@ -665,7 +665,7 @@ The Latk module (`js/modules/LatkModule.js`, `js/modules/latk/`, `js/shaders/lat
 - `latk/strokes.js` holds the example's drawing half:
   - `projectFrame()` is the example's `project()`. It puts the current frame of each layer through the camera, breaks a stroke where it goes behind the camera, and cuts it where it leaves the canvas.
   - `encodeLoop()` is the first half of the example's `encode()`, which turns those pieces into one loop of XY audio (see X and Y).
-  - `XYOutputs` publishes that loop on a module's X and Y outputs each frame, and keeps the beam's place in it for knob cables. NAPLPS and Skeleton use it too, with `polylinePieces()`, which cuts a polyline at the canvas edge into pieces as `projectFrame()` cuts strokes. A polyline given no colour gets none on X and Y, so Twoscilloscope draws it in its default white.
+  - `XYOutputs` publishes that loop on a module's X and Y outputs each frame, and keeps the beam's place in it for knob cables. NAPLPS, RuttEtra, Skeleton and Yellowtail use it too, with `polylinePieces()`, which cuts a polyline at the canvas edge into pieces as `projectFrame()` cuts strokes. A polyline given no colour gets none on X and Y, so Twoscilloscope draws it in its default white.
   - `PointStream` packs lines for the segment shader (see Rendering).
 - `latk/SegmentRenderer.js` draws a point stream. Twoscilloscope draws with it too.
 
@@ -819,11 +819,32 @@ Fill, Min Length and Hold were checked the same way:
 - **Tracing:** in the worker, a trace takes 3–4 ms at 128 cells. At 256 cells it takes 3.4 ms for Latk's lines and 6–7 ms for the test mask's thick strokes. At 512 cells it takes about 9 ms for Latk's lines and 36 ms for the thick strokes, since thinning peels a shape one cell at a time from each side. At 1024 cells, a picture of thick shapes (a 20 px ring, a 30 px bar and a 100 px disc) took about 370 ms, against 50 ms at 512 and 7 ms at 256.
 - **Rate:** there is a new trace every frame wherever one takes under a frame, 27 a second for thick strokes at 512 cells, and under 3 a second for thick shapes at 1024. The main thread never waits for one.
 
+## RuttEtra Module
+
+The RuttEtra module (`js/modules/RuttEtraModule.js`) draws its input as Rutt-Etra scan lines, after Felix Turner's Rutt-Etra-Izer. Every Line Separation pixels down the frame, a row of the input becomes a line of vertices, each pushed back by its brightness (`0.34 r + 0.5 g + 0.16 b`) times Max Line Depth, and the lines are drawn in 3D through p5's camera.
+
+**X and Y.** Like Latk, RuttEtra has X and Y control outputs, which carry its lines each frame as one loop of XY audio to drive Twoscilloscope (see Latk Module). Loop Hz (1–100, default 5) is the loops a second, as Latk's. The lines carry no colour, so Twoscilloscope draws them in its default white.
+- **Brightness:** the vertex shader reads each vertex's brightness on the GPU, so it is read back for X and Y. `ruttEtraGridFrag` writes it one texel a vertex, sampling the input where the vertex does, into a buffer read back behind a fence, as Skeleton's mask is (`PixelReadback`). The lines on X and Y are therefore a frame or two behind the video's.
+- **Projection:** each frame, every line's vertices, at the centre of its ribbon, are pushed back by the latest grid and the current Max Line Depth. They go through the matrices `model()` draws them with, read from p5's renderer, so Scale, Rotation X and Rotation Y are never behind. p5's framebuffer camera flips y, so clip space y = −1 is the top of the output.
+- **Cut:** a line breaks where it goes behind the camera or past its depth range, and is cut at the canvas edge (`polylinePieces()`).
+- **Thinned:** a line keeps at most 160 points (`XY_MAX_COLS`, every point at the default Line Separation of 4), its ends included. At Line Separation 1 a line has 640 vertices, and even at Loop Hz 1 the loop has about one sample for every 7 px of line.
+- **Empty:** with no input, the loop is all blank, so the beam rests unlit in the middle.
+
+**Checked** in Node, with p5 1.9.4's framebuffer camera rebuilt from its own formulas. With Max Line Depth 0 and no rotation, every vertex lands on its own pixel, to within 1e-13 px, with the first line at the top. At Scale 4, Rotation X 1.5 and Max Line Depth 300, lines break where they swing behind the camera, and every point stays on the canvas.
+
 ## Yellowtail Module
 
 The Yellowtail module (`js/modules/YellowtailModule.js`) implements Golan Levin's interactive kinetic gesture system, ported from a p5.js version.
 
 **Rendering path:** The module internally creates an off-screen `p5.Graphics` context (`this.pg`) in 2D mode. Gestures are simulated and compiled into polygon meshes which are drawn to this 2D buffer every frame using standard p5 shape functions. The resulting 2D canvas texture is then piped into the module's WebGL `outputFBO` via the passthrough shader.
+
+**X and Y.** Like Latk, Yellowtail has X and Y control outputs, which carry its gestures each frame as one loop of XY audio to drive Twoscilloscope (see Latk Module). Loop Hz (1–100, default 5) is the loops a second, as Latk's. Each gesture goes into the loop as its centre line, in the gestures' colour (255, 255, 245):
+- **Centre line:** each quad's line runs from the middle of its first edge to the middle of its last, and joins the next quad's, so a gesture is one line until it wraps.
+- **Wrapping:** where a quad wraps to the other side of the canvas, the line breaks there. A quad near an edge is also drawn a canvas across, and its line is too, so the part of a gesture that wraps onto the canvas comes through.
+- **Cut:** lines are cut at the canvas edge, as Latk's strokes are (`polylinePieces()`).
+- **Empty:** with no gestures, the loop is all blank, so the beam rests unlit in the middle.
+
+Thickness changes only the video. Checked in Node with the browser stubbed: six seeded gestures crawled for 400 frames, wrapping round the edges throughout. Every lit sample, 176,053 of them over 20 of those frames, lies inside or within 0.75 px of a quad as `process()` draws it, copies included.
 
 **Fullscreen interaction:**
 - Double-click the node preview to enter fullscreen.
@@ -836,7 +857,7 @@ The Yellowtail module (`js/modules/YellowtailModule.js`) implements Golan Levin'
 - **Rendering**: Modules should always render to their `outputFBO` during `process()`. The `Monitor` and `GRASS` modules provide previews by blitting their FBOs to the main P2D canvas in `js/ui.js`.
 - **Parameters**: Module parameters are normalized or use specific ranges defined in the `params` object. The UI handles scaling these values for display.
 - **Coordinate System**: p5.js uses a 2D coordinate system for the UI (top-left 0,0), while the WebGL `glCanvas` uses standard GL coordinates (centered 0,0 or screen-space depending on usage).
-- **Pixel Density**: framebuffers are allocated at the graphics' pixel density, so on a retina display `gl_FragCoord` runs over twice as many pixels as `glCanvas.width` / `glCanvas.height` report. A shader that works in `gl_FragCoord` space — or that derives a texel step from a resolution — must be given `Module.fragResolution()` rather than the logical size, and any pixel-valued uniform the shader compares against `gl_FragCoord` must be scaled by `Module.pixelDensity` (Conway's spawn position, radius and cell size; GridGuys' target). Getting this wrong confines the output to one quadrant, and in a feedback shader it also reads off the clamped edge. Shaders that address themselves through `vTexCoord` are unaffected, which is most of them — only `conway`, `dither`, `gridguys-simulation`, `inkdrops` and `spiralgalaxy` read `gl_FragCoord` (`cyberlace` uses it for a `mod(…, 2.0)` dither that is deliberately one physical pixel wide).
+- **Pixel Density**: framebuffers are allocated at the graphics' pixel density, so on a retina display `gl_FragCoord` runs over twice as many pixels as `glCanvas.width` / `glCanvas.height` report. A shader that works in `gl_FragCoord` space — or that derives a texel step from a resolution — must be given `Module.fragResolution()` rather than the logical size, and any pixel-valued uniform the shader compares against `gl_FragCoord` must be scaled by `Module.pixelDensity` (Conway's spawn position, radius and cell size; GridGuys' target). Getting this wrong confines the output to one quadrant, and in a feedback shader it also reads off the clamped edge. Shaders that address themselves through `vTexCoord` are unaffected, which is most of them — only `conway`, `dither`, `gridguys-simulation`, `inkdrops` and `spiralgalaxy` read `gl_FragCoord` (`cyberlace` uses it for a `mod(…, 2.0)` dither that is deliberately one physical pixel wide, and RuttEtra's grid pass to count the texels of a buffer of density 1).
 - **Framebuffer Orientation**: `NodeGraphUI` blits an FBO to the P2D canvas through a shader that flips `v`, so within a framebuffer `gl_FragCoord.y = 0` is the *top* of the displayed image. A pass that reads a buffer it also writes (feedback, ping-pong) must address it with the unflipped `gl_FragCoord.xy / resolution`: `v = y / H` is by definition the row being written, and reading through a flipped uv mirrors the buffer on every iteration. `InkDrops` and `SpiralGalaxy` both carry notes on this.
 - **No `glCanvas.image()` in `process()`**: p5 draws `image()` through the bound shader whenever that shader has a sampler, not through its own texture shader. Between frames the bound shader is one of `NodeGraphUI`'s preview shaders, because `framebuffer.end()` pops each module's own `shader()` call back off. An `image()` copy therefore draws whatever the UI blitted last, instead of the image. This is what turned Dither's error diffusion solid black. To read an upstream frame, bind it as a sampler uniform. To copy one, draw it through a shader you bind yourself.
 - **Give a hand-built `p5.Geometry` its own `gid`**: `model()` caches a geometry's GPU buffers under `geometry.gid`, and `new p5.Geometry()` leaves it undefined. Two such geometries then share the cache key `undefined`, and the second draws the first's buffers. Whitney sets `geometry.gid = 'Whitney|<n>'` and frees it with `freeGeometry()` in `dispose()`. `SegmentRenderer` does the same, named for the module it draws for (`'Latk|<n>'`, `'Twoscilloscope|<n>'`).

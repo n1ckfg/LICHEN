@@ -1,6 +1,11 @@
 import { Module } from './Module.js';
 import { passthroughFrag } from '../shaders/passthrough.js';
 import { registerModule } from '../moduleRegistry.js';
+import { polylinePieces, XYOutputs } from './latk/strokes.js';
+
+const SAMPLE_RATE = 44100;   // of the X and Y outputs, as Latk's
+const MAX_DT = 0.1;          // clamp long stalls so a tab switch doesn't jump the beam
+const INK = [255, 255, 245]; // the gestures' colour, in the video and on X and Y
 
 class Vec3f {
 
@@ -293,17 +298,27 @@ class Gesture {
 
 
 
+// Golan Levin's Yellowtail. Its X and Y outputs carry each gesture's centre
+// line as one loop of XY audio, as Latk's do, to drive Twoscilloscope.
 export class YellowtailModule extends Module {
   static uid = 'd21aaf56';
 
   constructor(glCanvas, id) {
     super('Yellowtail', glCanvas, id);
-    this.outputs = [{ id: '684e', name: 'out', type: 'video' }];
+    this.outputs = [
+      { id: '684e', name: 'out', type: 'video' },
+      { id: 'dd2b', name: 'x', type: 'control' },
+      { id: '3049', name: 'y', type: 'control' },
+    ];
     this.historicalInfo = "Yellowtail";
 
     this.params = {
-      thickness: { id: '4d82', value: 14, min: 2, max: 96, step: 1, label: 'Thickness' }
+      thickness: { id: '4d82', value: 14, min: 2, max: 96, step: 1, label: 'Thickness' },
+      // Loops a second on X and Y. A lower rate gives the gestures more samples
+      loopHz: { id: '3005', value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
     };
+    this.xy = new XYOutputs(SAMPLE_RATE);
+    this.lastTime = performance.now() / 1000;
 
     this.createShader(passthroughFrag);
     this.createOutputFBO();
@@ -481,15 +496,59 @@ export class YellowtailModule extends Module {
     }
   }
 
+  // Each gesture's centre line, where its quads are drawn, as pieces for the
+  // X and Y outputs (see latk/strokes.js). A quad's line runs from the middle
+  // of its first edge (a b) to the middle of its last (c d), and joins the next
+  // quad's where that one starts, which it does unless the next quad wrapped
+  // to the other side of the canvas. A quad near an edge is also drawn a canvas
+  // across, as in process(), and so is its line, so the part of it that lands
+  // on the canvas comes through.
+  _gesturePieces() {
+    const w = this.w, h = this.h;
+    const shifts = [[0, 0], [w, 0], [-w, 0], [0, h], [0, -h]];
+    const pieces = [];
+    const flush = (line) => {
+      if (line.length > 1) for (const piece of polylinePieces(line, INK, w, h)) pieces.push(piece);
+    };
+
+    for (const gesture of this.gestureArray) {
+      if (!gesture.exists || gesture.nPolys === 0) continue;
+      const lines = shifts.map(() => []);   // the line running on in each shift
+      for (let j = 0; j < gesture.nPolys; j++) {
+        const xpts = gesture.polygons[j].xpoints;
+        const ypts = gesture.polygons[j].ypoints;
+        const x0 = (xpts[0] + xpts[1]) / 2, y0 = (ypts[0] + ypts[1]) / 2;
+        const x1 = (xpts[2] + xpts[3]) / 2, y1 = (ypts[2] + ypts[3]) / 2;
+        const cr = gesture.crosses[j];
+        for (let k = 0; k < shifts.length; k++) {
+          const [sx, sy] = shifts[k];
+          const drawn = k === 0 || (k < 3 ? (cr & 3) > 0 : (cr & 12) > 0);
+          let line = lines[k];
+          const last = line[line.length - 1];
+          if (!drawn || !last || last.x !== x0 + sx || last.y !== y0 + sy) {
+            flush(line);
+            line = lines[k] = drawn ? [{ x: x0 + sx, y: y0 + sy }] : [];
+          }
+          if (drawn) line.push({ x: x1 + sx, y: y1 + sy });
+        }
+      }
+      lines.forEach(flush);
+    }
+    return pieces;
+  }
+
   process(graph, glCanvas) {
     const p = glCanvas._pInst;
     const pg = this.pg;
+    const now = performance.now() / 1000;
+    const dt = Math.min(Math.max(now - this.lastTime, 0), MAX_DT);
+    this.lastTime = now;
     
     this.updateGeometry();
 
     pg.background(0);
     pg.noStroke();
-    pg.fill(255, 255, 245);
+    pg.fill(...INK);
 
     for (let i = 0; i < this.nGestures; i++) {
       const gesture = this.gestureArray[i];
@@ -545,6 +604,9 @@ export class YellowtailModule extends Module {
     this.shader.setUniform('tex0', pg);
     this.renderQuad();
     this.outputFBO.end();
+
+    // With no gestures, the loop is all blank, so the beam rests unlit in the middle
+    this.xy.publish(this, this._gesturePieces(), this.w, this.h, dt, this.params.loopHz.value);
   }
 
   dispose() {
