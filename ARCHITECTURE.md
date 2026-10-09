@@ -19,6 +19,7 @@ js/main.js (p5.js loop)
 - `js/modules/Module.js` — base class for all modules; defines common behavior for shaders, FBOs, and parameters, plus seeded randomization and trigger params
 - `js/stringseed.js` — `StringSeed`, the SSoT seed-to-choice mapping behind `Module.randomize()` (ported from the StringSeedGenerator project)
 - `js/shaders/vert.js` — the shared vertex shader used by all modules for screen-quad rendering
+- `coi-serviceworker.js` — a service worker that cross-origin isolates the page, so ONNX Runtime's WASM backend can run threads (see Cross-Origin Isolation)
 - `workflows/` — contains JSON patches (connection graph state, module types, and parameter values) that can be loaded via Ctrl+O
 - `tools/convert-workflows.mjs` — converts patches saved before ids to the id format, using the frozen table in `tools/legacy-ids.json` (see Patch IDs)
 
@@ -850,6 +851,15 @@ Thickness changes only the video. Checked in Node with the browser stubbed: six 
 - Double-click the node preview to enter fullscreen.
 - Click, drag, and release to create repeating kinetic gestures.
 - ESC exits fullscreen; C clears the canvas.
+
+## Cross-Origin Isolation
+
+ONNX Runtime's WASM backend (`js/modules/gan/OnnxModel.js`) runs threads only in a cross-origin isolated page, because its threads share memory through `SharedArrayBuffer`. Isolation takes two response headers, `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy`, which neither `http-server` (`run.command`, `run.bat`) nor GitHub Pages can send. `coi-serviceworker.js` adds them instead. It is coi-serviceworker v0.1.6 (Guido Zuidhof, MIT) as edited for depth-anything-v2-js, and `index.html` loads it before anything else:
+- **First visit:** the page loads without isolation, registers the file as a service worker, and reloads once the worker is active.
+- **After that:** the worker re-serves every response with both headers, COEP as `credentialless`, so the page is isolated from the start.
+- **Whole origin:** the worker's scope is the whole origin, so another project served later from the same address and port gets the headers too.
+
+With isolation, ORT runs its default of min(4, ⌈cores / 2⌉) threads, which `OnnxModel.js` leaves alone. In headless Chrome on an M2 Max, through the proxy worker, InfrDrawings' 320 × 240 model took 1.41 s a frame on one thread and 0.41 s on four. Eight took 0.32 s. All three gave the same output on every value. Monitor's second-screen window still works: `window.open('', '_blank')` opens a blank page of the same origin, which COOP leaves scriptable from the opener.
 
 ## Development Conventions
 

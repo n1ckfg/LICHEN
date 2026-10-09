@@ -6,7 +6,9 @@
 // session after it:
 //   webgpu: on the main thread, which only queues the GPU's work
 //   wasm:   in ORT's proxy worker, so a slow run never stalls a frame. The
-//           page isn't cross-origin isolated, so the worker has one thread
+//           worker runs ORT's default of min(4, cores / 2) threads when
+//           coi-serviceworker.js has cross-origin isolated the page, and one
+//           when it hasn't yet (a first visit, before its reload)
 // A first model that fails to start on WebGPU (on a GPU without fp16
 // shaders, say) falls back to WASM. Models load one at a time, so the second
 // knows which backend the first settled on.

@@ -10,7 +10,7 @@ import { loadOnnxModel } from './gan/OnnxModel.js';
 // appended, never inserted
 const MODELS = [[160, 120], [320, 240], [640, 480]].map(([w, h]) => ({
   w, h, label: `${w} × ${h}`,
-  url: new URL(`../../files/models/informative-drawings/model_${w}x${h}_fp16.onnx`, import.meta.url).href,
+  url: new URL(`../../files/models/informative-drawings/informative-drawings_${w}x${h}_fp16.onnx`, import.meta.url).href,
 }));
 const MAX_TAPS = 8;          // the input shader's loop bound
 const INVERT = 1;            // Mode's options
