@@ -802,14 +802,20 @@ Loop Hz is now Latk's, since the source sets the loop's length.
 
 **Sound.** With Sound on, an `XYscope` loops the altered audio out of the sound card, X left and Y right, so what you hear is what you see. Browsers start audio only after a click or a key press. The example played as soon as its page was clicked; here Sound starts Off, so that adding a node makes no noise.
 
-**Worker.** The effects and the point streams run in `twoscilloscope/worker.js`, which holds the `ScopeRenderer`. Each frame the module sends it the loop from the pins, with the effect settings, the View and the Beam Size. It replies with the altered loop, for Sound and W, and that View's point stream, which the module draws. While it is busy, the newest loop waits and any older one is dropped, as in Skeleton. So a drawing shows from the frame after its loop came in, and a change of View a frame later. S asks the worker for the decoded strokes, and the SVG downloads when they come back.
+**Worker.** The effects and the point streams run in `twoscilloscope/worker.js`, which holds the `ScopeRenderer`. The module sends it the loop from the pins, with the effect settings, the View and the Beam Size. It replies with the altered loop, for Sound and W, and that View's point stream, which the module draws. While it is busy, the newest loop waits and any older one is dropped, as in Skeleton. So a drawing shows from the frame after its loop came in, and a change of View a frame later. S asks the worker for the decoded strokes, and the SVG downloads when they come back.
+
+Two kinds of work are skipped, neither of which changes the output:
+- **Unchanged loops:** a loop is sent only when it or the settings differ from the last one sent. The effects restart on every loop, so the same loop and settings come back the same. Latk's drawing changes 12 times a second, so of the 180 loops 3 s of Latk brought at 60 fps, 36 were sent. The last loop's lanes are kept as copies to compare against, so a source that rewrites its arrays in place still counts as a change.
+- **The library's decode:** `ScopeRenderer.update()` runs the transformer's effect chain itself rather than calling `XYTransformer.transform()`. That would also decode the whole loop into strokes, which nothing reads and which took as long as the effects, and copy the buffer twice. The library is unchanged.
 
 This was checked against the version before the worker in headless Chrome, with a seeded `Math.random`, a virtual clock and frames stepped by hand:
 - **Latk:** with Latk's X and Y cabled in, every Effect option in Beams, and every view with None and with Low Pass + Delay, match on every pixel, at Latk frames 0, 10 and 40 and at pixel density 1 and 2.
 - **Trail:** with two Oscillators cabled in, each of 40 frames matches the frame before it in the version before, at both densities.
 - **Files:** the SVG and WAV that S and W download are the same, byte for byte.
 
-**Cost.** At 1280×960 (a retina display) on an M2 Max, with Latk's drawing coming in, the module takes about 0.1 ms of a frame on the main thread, where it took 5.5–7 ms before the worker. The worker takes 6–8 ms a loop, from sending to reply, so at 60 fps a new drawing still shows every frame. Most of that is running the effects, and Decoded Strokes adds about 1.5 ms of decoding.
+The two skips were checked the same way against the version before them: the Latk cases match on every pixel, the Trail frames match frame for frame, and the files byte for byte, at both densities.
+
+**Cost.** At 1280×960 (a retina display) on an M2 Max, with Latk's drawing coming in, the module takes about 0.1 ms of a frame on the main thread, where it took 5.5–7 ms before the worker. Drawing the output takes about 0.03 ms of GPU time. A loop takes the worker 3.3 ms in Beams, 4.9 ms in Decoded Strokes and 3.0 ms in Original Lines, of which 2.8 ms is the effects, and Decoded Strokes' decoding is about 2 ms. Before the skips it took 6.1, 7.5 and 5.5 ms, every frame. In Beams, that is about 4% of a core, where it was about 37%.
 
 ## Audio Effects
 

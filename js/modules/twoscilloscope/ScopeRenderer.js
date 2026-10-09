@@ -92,13 +92,21 @@ export class ScopeRenderer {
       cycle[i * 3 + 2] = input.z ? input.z[i] : Z_ON;
     }
 
-    // XYTransformer runs the effects over a few loops, so that filters and
-    // echoes settle, and keeps the last one.
-    const loops = Math.max(0, this.transformer.settleCycles) + 1;
-    const encoded = new XYSoundBuffer(n * loops, 3, this.sampleRate);
-    for (let l = 0; l < loops; l++) encoded.samples.set(cycle, l * cycle.length);
-    this.transformer.transform(encoded);
-    const waves = this.transformer.getProcessedWaves();
+    // The effects run over a few loops, so that filters and echoes settle, and
+    // the last one is kept. This is XYTransformer.transform() without its last
+    // step, which decodes that loop into strokes: nothing here reads them, and
+    // it took as long as the effects. Its two copies of the buffer go too.
+    // getProcessedWaves() reads the transformer's processed and cycleFrames.
+    const t = this.transformer;
+    const loops = Math.max(0, t.settleCycles) + 1;
+    const processed = new XYSoundBuffer(n * loops, 3, this.sampleRate);
+    for (let l = 0; l < loops; l++) processed.samples.set(cycle, l * cycle.length);
+    if (!(processed.sampleRate > 0)) processed.sampleRate = t.getSampleRate();
+    t.effects.reset();
+    t.effects.process(processed);
+    t.processed = processed;
+    t.cycleFrames = Math.min(t.getCycleFrames(t.getFreq(), processed.sampleRate), processed.numFrames);
+    const waves = t.getProcessedWaves();
     this.x = waves.x;
     this.y = waves.y;
     this.z = waves.z;

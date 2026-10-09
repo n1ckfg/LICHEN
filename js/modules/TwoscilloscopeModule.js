@@ -32,10 +32,12 @@ const MENU = new EffectMenu([OPENING, NONE]);
 // its last Trail seconds.
 //
 // The effects run off the main thread (twoscilloscope/worker.js), which also
-// turns the altered loop into the view's point stream. A loop is sent every
-// frame, even while the worker runs the last one. The newest waits for the
-// worker, and any older is dropped, so each drawing is of the freshest loop,
-// and shows from the frame after it came in.
+// turns the altered loop into the view's point stream. A loop is sent whenever
+// it or the settings change, even while the worker runs the last one. The
+// effects restart on every loop, so the same loop would come back the same, and
+// Latk's drawing, for one, changes only 12 times a second. The newest loop
+// waits for the worker, and any older is dropped, so each drawing is of the
+// freshest loop, and shows from the frame after it came in.
 export class TwoscilloscopeModule extends Module {
   static uid = 'e44d2f20';
 
@@ -78,6 +80,7 @@ export class TwoscilloscopeModule extends Module {
     this.loop = null;        // the worker's latest loop, as it replied, or null with nothing coming in
     this.freq = 5;           // its loops a second, kept when nothing comes in
     this.pending = null;     // the newest loop sent while the worker was busy
+    this.sent = null;        // the last loop sent or waiting, to skip one the same (see _same)
     this.busy = false;       // the worker has a loop
     this.failed = false;     // the worker won't run
     this.connected = false;
@@ -130,12 +133,14 @@ export class TwoscilloscopeModule extends Module {
     if (!input) {
       this.loop = null;
       this.pending = null;
+      this.sent = null;
     } else if (!this.failed) {
-      // The whole round trip, every frame: audio -> effects -> strokes
-      this._queue({
+      // The whole round trip, whenever anything changes: audio -> effects -> strokes
+      const job = {
         input, width: glCanvas.width, height: glCanvas.height, beamSize: this.params.beamSize.value,
         fx, view: Math.round(this.params.view.value),
-      });
+      };
+      if (!this._same(job)) this._queue(job);
     }
 
     this.outputFBO.begin();
@@ -143,6 +148,20 @@ export class TwoscilloscopeModule extends Module {
     if (this.loop) this._draw(glCanvas, this.loop);
     this.outputFBO.end();
     if (this.soundOn) this._feedPlayer();
+  }
+
+  // Whether job's loop and settings are those of the last loop sent or waiting.
+  // That one's lanes are kept as copies, so a pin that rewrites its arrays in
+  // place still counts as a change
+  _same(job) {
+    const { input, fx, ...settings } = job;
+    const key = JSON.stringify({ ...settings, fx, sampleRate: input.sampleRate });
+    const last = this.sent;
+    if (last && last.key === key && sameLane(last.x, input.x) && sameLane(last.y, input.y) &&
+        sameLane(last.z, input.z) && sameLane(last.color, input.color)) return true;
+    const copy = (a) => (a ? a.slice() : null);
+    this.sent = { key, x: copy(input.x), y: copy(input.y), z: copy(input.z), color: copy(input.color) };
+    return false;
   }
 
   // To the worker, or to wait for it in place of any older loop
@@ -246,6 +265,14 @@ export class TwoscilloscopeModule extends Module {
     this.segments.dispose();
     super.dispose();
   }
+}
+
+// Two lanes of a loop hold the same samples, or are both missing
+function sameLane(a, b) {
+  if (!a || !b) return a === b;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
 }
 
 // One pin's samples over a loop of n: its own loop, stretched to n if it is
