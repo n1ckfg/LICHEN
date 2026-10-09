@@ -37,9 +37,19 @@ export class SkeletonModule extends Module {
         id: '8da7', value: 0, min: 0, max: 1, step: 1, label: 'Trace',
         widget: 'dropdown', valueLabels: ['White', 'Black'],
       },
+      // The share of a cell that must pass Threshold for the cell to be part of
+      // a shape. 0 takes any part of it, so a line thinner than a cell is kept
+      fill: { id: 'a35f', value: 0, min: 0, max: 1, step: 0.01, label: 'Fill' },
       // Cells across the tracer's grid. camera_trace used 256 x 256; here the
       // grid keeps the frame's shape, so 256 is 256 x 192
       resolution: { id: '95f2', value: 256, min: 64, max: 1024, step: 32, label: 'Resolution' },
+      // Keeps the last trace on X and Y, and starts no new one
+      hold: {
+        id: '9036', value: 0, min: 0, max: 1, step: 1, label: 'Hold',
+        widget: 'dropdown', valueLabels: ['Off', 'On'],
+      },
+      // Lines shorter than this, in px of the frame, are left out
+      minLength: { id: '4d81', value: 0, min: 0, max: 100, step: 1, label: 'Min Length' },
       // Loops a second on X and Y. A lower rate gives the lines more samples
       loopHz: { id: 'eded', value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
     };
@@ -60,7 +70,9 @@ export class SkeletonModule extends Module {
     this.pending = null;     // the newest mask read while the worker was busy
     this.tracing = null;     // the mask the worker has
     this.failed = false;     // the worker won't run
-    this.pieces = [];        // the latest trace, as pieces in px of the canvas
+    this.traced = [];        // the latest trace, as pieces in px of the canvas
+    this.pieces = [];        // those at least Min Length long, on X and Y
+    this.minLength = 0;      // the Min Length they were cut to
     this.dirty = true;       // the preview needs drawing
     this.connected = false;
 
@@ -89,6 +101,10 @@ export class SkeletonModule extends Module {
     return Math.min(p.max, Math.max(p.min, Math.round(p.value / p.step) * p.step));
   }
 
+  _held() {
+    return Math.round(this.params.hold.value) === 1;
+  }
+
   process(graph, glCanvas) {
     const now = performance.now() / 1000;
     const dt = Math.min(Math.max(now - this.lastTime, 0), MAX_DT);
@@ -97,14 +113,20 @@ export class SkeletonModule extends Module {
     if (this.reading) this._pollReadback();
     const input = this.getInput(graph, 0);
     this.connected = !!input;
-    if (!input) {
-      if (this.pieces.length > 0) this.dirty = true;
-      this.pieces = [];
+    if (this._held()) {
+      // The trace stays, plugged in or not, and no new mask starts
+      this.pending = null;
+    } else if (!input) {
+      if (this.traced.length > 0) {
+        this.traced = [];
+        this._cut();
+      }
       this.pending = null;
     } else if (!this.reading && !this.failed) {
       this._startMask(input, glCanvas);
     }
 
+    if (this.params.minLength.value !== this.minLength) this._cut();
     if (this.dirty) this._drawPreview(glCanvas);
     // With nothing traced, the loop is all blank, so the beam rests unlit in the middle
     this.xy.publish(this, this.pieces, glCanvas.width, glCanvas.height, dt, this.params.loopHz.value);
@@ -128,6 +150,7 @@ export class SkeletonModule extends Module {
     this.maskShader.setUniform('uStep', [1 / cols, 1 / rows]);
     this.maskShader.setUniform('uThreshold', this.params.threshold.value);
     this.maskShader.setUniform('uInvert', Math.round(this.params.trace.value) === 1 ? 1 : 0);
+    this.maskShader.setUniform('uFill', this.params.fill.value);
     this.renderQuad();
     this.maskFBO.end();
 
@@ -146,8 +169,10 @@ export class SkeletonModule extends Module {
     if (pixels) this._queue({ ...mask, pixels });
   }
 
-  // To the worker, or to wait for it in place of any older mask
+  // To the worker, or to wait for it in place of any older mask. A mask that
+  // was still being read when Hold went on is dropped
   _queue(mask) {
+    if (this._held()) return;
     if (this.tracing) this.pending = mask;
     else this._send(mask);
   }
@@ -160,9 +185,9 @@ export class SkeletonModule extends Module {
 
   // The worker's polylines, in cells, as pieces in px of the canvas: each
   // point at its cell's centre. A trace that finishes after the input was
-  // unplugged is dropped.
+  // unplugged, or after Hold went on, is dropped.
   _takeTrace({ w, h, lengths, points }) {
-    if (!this.connected) return;
+    if (!this.connected || this._held()) return;
     const { width, height } = this.tracing;
     const sx = width / w, sy = height / h;
     const pieces = [];
@@ -172,7 +197,15 @@ export class SkeletonModule extends Module {
       for (let k = 0; k < n; k++, o += 2) pts.push({ x: (points[o] + 0.5) * sx, y: (points[o + 1] + 0.5) * sy });
       for (const piece of polylinePieces(pts, null, width, height)) pieces.push(piece);
     }
-    this.pieces = pieces;
+    this.traced = pieces;
+    this._cut();
+  }
+
+  // The trace without its lines shorter than Min Length. Every point is inside
+  // the canvas, so each polyline is one piece
+  _cut() {
+    this.minLength = this.params.minLength.value;
+    this.pieces = this.traced.filter((piece) => piece.length >= this.minLength);
     this.dirty = true;
   }
 
