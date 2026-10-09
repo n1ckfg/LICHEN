@@ -503,6 +503,17 @@ Patches save Size as its index, so a new size is appended, never inserted.
 
 The newest frame waits while the model runs, and older ones are dropped. On WebGPU, ORT warns in the console, when the session starts, that some of the model's nodes were not assigned to WebGPU.
 
+Its runs take turns with InfrDrawings', in one queue in `OnnxModel.js`. ORT's WebGPU build keeps one run in progress for the whole runtime, not one a session. Each model used to queue only its own runs, so with both modules in a patch, a run of one started during the other's, and both failed ("Session already started", "Session mismatch") and stopped for good. With both fed the same picture on WebGPU, each now gives 66 results in 4 s. On WASM, ORT's proxy worker already ran them one at a time.
+
+**Failures.** A load or a run that fails is tried again, with `Backoff` from `OnnxModel.js`: 1 s after the first failure, doubling with each one after it up to 30 s, and at once after a success. Only the Size a run failed at waits. Its frames read back during the wait are dropped, and choosing another Size runs at once. InfrDrawings works the same way, with its Model in place of the Size, and the model before keeps drawing while a new one waits to load. Before, one failure stopped either module until the page was reloaded.
+
+`OnnxModel.js` also downloads a model before making a session from it, so a download that fails fails the load. A session made from the url used to fail on WebGPU instead, which sent every model after it to WASM for good.
+
+Checked in headless Chrome, with the failures put in by the test:
+- **Runs:** three failed runs were tried again after 1.0, 2.0 and 4.0 s, and the next ran.
+- **Size:** after a run failed at 434 × 322, choosing 336 × 252 gave a map 66 ms later.
+- **Downloads:** a download that failed twice with HTTP 503 was tried again after 1 and 2 s, and the model then loaded on WebGPU.
+
 **Checked** in headless Chrome on an M2 Max, with Vermeer's *Girl with a Pearl Earring* coming in from Image:
 - **Against ORT in Python:** the pixels each run was given went through the same model in ONNX Runtime 1.24 on the CPU. On WebGPU, at 238 × 182, 336 × 252 and 686 × 518, the depth correlates at 0.9995–0.9999, and the map as drawn differs by a mean of 1.7–2.7 levels, since WebGPU runs the model in fp16. On WASM, at 336 × 252, it correlates at 0.99999, and differs by a mean of 0.3 levels. ONNX Runtime 1.24 on the CPU loads this model only with its `SimplifiedLayerNormFusion` optimization turned off. ORT Web 1.30 loads it as it is, on both backends.
 - **Invert:** with Grey, the output with Invert off and on adds up to 255, to within a level.

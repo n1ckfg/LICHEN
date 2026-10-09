@@ -4,7 +4,7 @@ import { vertSrc } from '../shaders/vert.js';
 import { infrDrawingsInputFrag } from '../shaders/infr-drawings.js';
 import { depthAnythingOutputFrag } from '../shaders/depth-anything.js';
 import { PixelReadback } from './slowscanjam/PixelReadback.js';
-import { loadOnnxModel } from './img2img/OnnxModel.js';
+import { loadOnnxModel, Backoff } from './img2img/OnnxModel.js';
 
 // Depth Anything V2 Small in fp16, as depth-anything-v2-js runs it. Its input
 // sizes are dynamic, so the one model takes every Size
@@ -71,9 +71,14 @@ export class DepthAnythingModule extends Module {
     this.createShader(depthAnythingOutputFrag);
     this.createOutputFBO();
 
-    this.loading = false;     // the model has been asked for
+    this.loading = false;     // the model has been asked for, and hasn't come back
     this.model = null;        // the model, once it has loaded
-    this.failed = false;      // the model won't load or run
+    // After a failure, a load or a run is tried again later (see Backoff). Only
+    // the Size a run failed at waits: frames of it are dropped until the wait
+    // is over, and any other Size runs at once
+    this.loadRetry = new Backoff();
+    this.runRetry = new Backoff();
+    this.failedSize = null;   // the Size the last run failed at, until one succeeds
     this.hasMap = false;      // a depth map has been uploaded
     this.drawnLook = null;    // the Color and Invert the output was last drawn in, or null to redraw
     this.reading = null;      // the frame being read back
@@ -86,13 +91,18 @@ export class DepthAnythingModule extends Module {
   // The model is about 50 MB, so it is loaded the first time a node runs, and
   // then shared by every node
   _load() {
-    if (this.loading) return;
+    if (this.model || this.loading || !this.loadRetry.ready) return;
     this.loading = true;
     loadOnnxModel(MODEL_URL).then(
-      (model) => { this.model = model; },
+      (model) => {
+        this.loading = false;
+        this.model = model;
+        this.loadRetry.reset();
+      },
       (e) => {
-        console.error('DepthAnything: the model failed to load:', e);
-        this.failed = true;
+        this.loading = false;
+        const wait = this.loadRetry.fail();
+        console.error(`DepthAnything: the model failed to load, so it will try again in ${wait / 1000} s:`, e);
       },
     );
   }
@@ -103,12 +113,17 @@ export class DepthAnythingModule extends Module {
     if (this.result) this._uploadResult();
     this._drawOutput(glCanvas);
     const input = this.getInput(graph, 0);
-    if (input && this.model && !this.failed && !this.reading) this._startFrame(input, glCanvas);
+    const size = SIZES[Math.round(this.params.size.value)];
+    if (input && this.model && !this._waiting(size) && !this.reading) this._startFrame(input, size, glCanvas);
   }
 
-  // Shrink the input to the Size chosen and start reading it back
-  _startFrame(input, glCanvas) {
-    const size = SIZES[Math.round(this.params.size.value)];
+  // Frames of size wait while the last run failed at it, and the wait isn't over
+  _waiting(size) {
+    return size === this.failedSize && !this.runRetry.ready;
+  }
+
+  // Shrink the input to size and start reading it back
+  _startFrame(input, size, glCanvas) {
     const { w, h } = size;
     if (this.inputFBO.width !== w || this.inputFBO.height !== h) this.inputFBO.resize(w, h);
     // Input pixels across a model pixel, two to each tap
@@ -138,8 +153,10 @@ export class DepthAnythingModule extends Module {
     if (pixels) this._queue({ ...frame, pixels });
   }
 
-  // To the model, or to wait for it in place of any older frame
+  // To the model, or to wait for it in place of any older frame. A frame read
+  // back after its Size failed is dropped
   _queue(frame) {
+    if (this._waiting(frame.size)) return;
     if (this.running) this.pending = frame;
     else this._run(frame);
   }
@@ -163,14 +180,19 @@ export class DepthAnythingModule extends Module {
       // Relative inverse depth, larger nearer, as [1, H, W]
       const depth = results.predicted_depth;
       this.result = { depth: depth.data, w: depth.dims[2], h: depth.dims[1] };
+      this.runRetry.reset();
+      this.failedSize = null;
     } catch (e) {
-      console.error(`DepthAnything: the model failed to run at ${size.label}:`, e);
-      this.failed = true;
+      // A failure at a Size of its own starts its wait over
+      if (size !== this.failedSize) this.runRetry.reset();
+      const wait = this.runRetry.fail();
+      this.failedSize = size;
+      console.error(`DepthAnything: the model failed to run at ${size.label}, so it will try again in ${wait / 1000} s:`, e);
     }
     this.running = false;
     const next = this.pending;
     this.pending = null;
-    if (next && !this.failed && !this.disposed) this._run(next);
+    if (next && !this._waiting(next.size) && !this.disposed) this._run(next);
   }
 
   // Normalized to the map's own nearest and farthest points, as

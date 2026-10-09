@@ -3,7 +3,7 @@ import { registerModule } from '../moduleRegistry.js';
 import { vertSrc } from '../shaders/vert.js';
 import { infrDrawingsInputFrag, infrDrawingsOutputFrag } from '../shaders/infr-drawings.js';
 import { PixelReadback } from './slowscanjam/PixelReadback.js';
-import { loadOnnxModel } from './img2img/OnnxModel.js';
+import { loadOnnxModel, Backoff } from './img2img/OnnxModel.js';
 
 // informative-drawings-js's fixed-shape fp16 models, each of which takes and
 // gives one size. Patches save the choice as its index, so a new size is
@@ -60,13 +60,17 @@ export class InfrDrawingsModule extends Module {
     this.createShader(infrDrawingsOutputFrag);
     this.createOutputFBO();
 
-    this.chosen = null;       // the MODELS entry picked last, loaded or not
+    this.chosen = null;       // the MODELS entry loaded or loading, or null if it failed
+    this.asked = null;        // the MODELS entry asked for last, loaded or not
     this.loadToken = 0;       // so a slow model can't land after a newer choice
     this.model = null;        // the model new frames go to, once one has loaded
     this.spec = null;         // its MODELS entry
     this.hasDrawing = false;  // a drawing has been uploaded
     this.drawnMode = null;    // the Mode the output was last drawn in, or null to redraw
-    this.failed = false;      // the model won't run
+    // After a failure, a load or a run is tried again later (see Backoff). A
+    // new Model is loaded at once, and runs as soon as it is in
+    this.loadRetry = new Backoff();
+    this.runRetry = new Backoff();
     this.reading = null;      // the frame being read back
     this.pending = null;      // the newest frame read while the model was busy
     this.running = false;     // the model is drawing a frame
@@ -75,20 +79,28 @@ export class InfrDrawingsModule extends Module {
   }
 
   // Follow the Model drop-down, whether a click or a cable moved it. The
-  // previous model keeps drawing until the new one is ready
+  // previous model keeps drawing until the new one is ready, or while one that
+  // failed to load waits to be tried again
   _syncModel() {
     const spec = MODELS[Math.round(this.params.model.value)];
     if (spec === this.chosen) return;
-    this.chosen = spec;
+    if (spec === this.asked && !this.loadRetry.ready) return;
+    this.chosen = this.asked = spec;
     const token = ++this.loadToken;
     loadOnnxModel(spec.url).then(
       (model) => {
         if (token !== this.loadToken) return;
         this.model = model;
         this.spec = spec;
-        this.failed = false;
+        this.loadRetry.reset();
+        this.runRetry.reset();
       },
-      (e) => console.error(`InfrDrawings: the ${spec.label} model failed to load:`, e),
+      (e) => {
+        if (token !== this.loadToken) return;
+        this.chosen = null;
+        const wait = this.loadRetry.fail();
+        console.error(`InfrDrawings: the ${spec.label} model failed to load, so it will try again in ${wait / 1000} s:`, e);
+      },
     );
   }
 
@@ -98,7 +110,13 @@ export class InfrDrawingsModule extends Module {
     if (this.result) this._uploadResult();
     const input = this.getInput(graph, 0);
     this._drawOutput(input, glCanvas);
-    if (input && this.model && !this.failed && !this.reading) this._startFrame(input, glCanvas);
+    if (input && this.model && !this._waiting(this.model) && !this.reading) this._startFrame(input, glCanvas);
+  }
+
+  // Frames of model wait while it is the model new frames go to, its last run
+  // failed, and the wait isn't over
+  _waiting(model) {
+    return model === this.model && !this.runRetry.ready;
   }
 
   // Shrink the input to the model's size and start reading it back
@@ -132,8 +150,10 @@ export class InfrDrawingsModule extends Module {
     if (pixels) this._queue({ ...frame, pixels });
   }
 
-  // To the model, or to wait for it in place of any older frame
+  // To the model, or to wait for it in place of any older frame. A frame read
+  // back after its model failed is dropped
   _queue(frame) {
+    if (this._waiting(frame.model)) return;
     if (this.running) this.pending = frame;
     else this._run(frame);
   }
@@ -152,14 +172,20 @@ export class InfrDrawingsModule extends Module {
       const input = new model.ort.Tensor('float32', data, [1, 3, spec.h, spec.w]);
       const results = await model.run({ input });
       this.result = { grey: results.output.data, spec };   // grey in 0..1, as [1, 1, H, W]
+      if (model === this.model) this.runRetry.reset();
     } catch (e) {
-      console.error(`InfrDrawings: the ${spec.label} model failed to run:`, e);
-      if (model === this.model) this.failed = true;
+      // Only the model new frames go to waits: a frame of the one before it, still on its way, fails alone
+      if (model === this.model) {
+        const wait = this.runRetry.fail();
+        console.error(`InfrDrawings: the ${spec.label} model failed to run, so it will try again in ${wait / 1000} s:`, e);
+      } else {
+        console.error(`InfrDrawings: the ${spec.label} model failed to run:`, e);
+      }
     }
     this.running = false;
     const next = this.pending;
     this.pending = null;
-    if (next && !this.failed && !this.disposed) this._run(next);
+    if (next && !this._waiting(next.model) && !this.disposed) this._run(next);
   }
 
   _uploadResult() {
