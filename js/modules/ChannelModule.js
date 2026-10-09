@@ -3,8 +3,9 @@ import { channelFrag } from '../shaders/channel.js';
 import { registerModule } from '../moduleRegistry.js';
 
 // Builds a picture from three inputs' channels: red from r, green from g and
-// blue from b, each times its gain. An unplugged channel is black, so a lone
-// input shows only the channel of the pin it is on.
+// blue from b, each times its gain. A negative gain inverts its channel. An
+// unplugged channel is black, so a lone input shows only the channel of the
+// pin it is on.
 export class ChannelModule extends Module {
   static uid = '716017f8';
 
@@ -17,9 +18,9 @@ export class ChannelModule extends Module {
     ];
     this.outputs = [{ id: 'e90e', name: 'out', type: 'video' }];
     this.params = {
-      gainR: { id: '1f27', value: 1, min: 0, max: 3, step: 0.01, label: 'R Gain' },
-      gainG: { id: '7fb8', value: 1, min: 0, max: 3, step: 0.01, label: 'G Gain' },
-      gainB: { id: 'cf3a', value: 1, min: 0, max: 3, step: 0.01, label: 'B Gain' },
+      gainR: { id: '1f27', value: 1, min: -3, max: 3, step: 0.01, label: 'R Gain' },
+      gainG: { id: '7fb8', value: 1, min: -3, max: 3, step: 0.01, label: 'G Gain' },
+      gainB: { id: 'cf3a', value: 1, min: -3, max: 3, step: 0.01, label: 'B Gain' },
     };
     this.createShader(channelFrag);
     this.createOutputFBO();

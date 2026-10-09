@@ -11,7 +11,7 @@ export class BrcosaModule extends Module {
     this.outputs = [{ id: '4b92', name: 'out', type: 'video' }];
     this.params = {
       brightness: { id: '7213', value: 0, min: -1, max: 1, step: 0.01, label: 'Bright' },
-      contrast: { id: '0924', value: 1, min: 0, max: 3, step: 0.01, label: 'Contrast' },
+      contrast: { id: '0924', value: 1, min: -3, max: 3, step: 0.01, label: 'Contrast' },
       saturation: { id: '1459', value: 1, min: 0, max: 3, step: 0.01, label: 'Sat' },
     };
     this.createShader(brcosaFrag);
