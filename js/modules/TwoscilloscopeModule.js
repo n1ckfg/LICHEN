@@ -1,8 +1,7 @@
 import { Module } from './Module.js';
 import { registerModule } from '../moduleRegistry.js';
 import '../libraries/p5.twoscilloscope.js';   // a classic script: it puts its classes on window
-import { ScopeRenderer } from './twoscilloscope/ScopeRenderer.js';
-import { EffectMenu, EffectRack, NONE, knobFor } from './audiofx/EffectRack.js';
+import { EffectMenu, NONE, knobFor } from './audiofx/EffectRack.js';
 import { SegmentRenderer } from './latk/SegmentRenderer.js';
 import { latkSegmentVert } from '../shaders/latk.js';
 import { twoscilloscopeBeamFrag } from '../shaders/twoscilloscope.js';
@@ -11,7 +10,10 @@ const { Twoscilloscope, XYscope, XYDecoder, WavFile } = window;
 
 const LINE_WIDTH = 2;        // the example's strokeWeight, in output pixels
 
-const BEAMS = 0, STROKES = 1;
+const BEAMS = 0;             // the View drop-down's first option
+
+// The altered loop with nothing coming in, for the sound card
+const SILENCE = { x: new Float32Array(0), y: new Float32Array(0), z: new Float32Array(0) };
 
 // The Effect drop-down. Option 0 is the chain the example opens with: Low Pass
 // at 1500 Hz into Channel Delay with Y 0.6 ms late. Option 1 is its n key, and
@@ -28,6 +30,12 @@ const MENU = new EffectMenu([OPENING, NONE]);
 // it, blanking and stroke colours included. Any other control output works
 // too: one that brings only a 0..1 value each frame is drawn as a trail of
 // its last Trail seconds.
+//
+// The effects run off the main thread (twoscilloscope/worker.js), which also
+// turns the altered loop into the view's point stream. A loop is sent every
+// frame, even while the worker runs the last one. The newest waits for the
+// worker, and any older is dropped, so each drawing is of the freshest loop,
+// and shows from the frame after it came in.
 export class TwoscilloscopeModule extends Module {
   static uid = 'e44d2f20';
 
@@ -36,9 +44,6 @@ export class TwoscilloscopeModule extends Module {
     this.inputs = [{ id: '2dee', name: 'x', type: 'control' }, { id: '8a2f', name: 'y', type: 'control' }];
     this.outputs = [{ id: '68cc', name: 'out', type: 'video' }];
     this.historicalInfo = 'Twoscilloscope';
-
-    this.scope = new ScopeRenderer();
-    this.rack = new EffectRack(this.scope.transformer.effects);
 
     this.params = {
       view: {
@@ -56,7 +61,8 @@ export class TwoscilloscopeModule extends Module {
       // Seconds of a frame-rate control input drawn at once
       trail: { id: '3037', value: 1, min: 0.1, max: 10, step: 0.1, label: 'Trail' },
     };
-    this._applyEffects();
+    // Labels the Effect A and B knobs for the option
+    MENU.resolve(this.params);
 
     this.segments = new SegmentRenderer(glCanvas, 'Twoscilloscope');
     this.beamShader = glCanvas.createShader(latkSegmentVert, twoscilloscopeBeamFrag);
@@ -68,11 +74,37 @@ export class TwoscilloscopeModule extends Module {
     // own defaults are the example's setup(): 44.1 kHz in blocks of 512.
     this.player = new XYscope();
     this.soundOn = false;
-  }
 
-  // Which effects are on, and what Effect A and B set on them
-  _applyEffects() {
-    this.rack.apply(MENU.resolve(this.params));
+    this.loop = null;        // the worker's latest loop, as it replied, or null with nothing coming in
+    this.freq = 5;           // its loops a second, kept when nothing comes in
+    this.pending = null;     // the newest loop sent while the worker was busy
+    this.busy = false;       // the worker has a loop
+    this.failed = false;     // the worker won't run
+    this.connected = false;
+    this.svgs = [];          // SVGs waiting for the worker's strokes: { path, width, height }
+
+    this.worker = new Worker(new URL('./twoscilloscope/worker.js', import.meta.url), { type: 'module' });
+    this.worker.onmessage = (e) => {
+      if (e.data.strokes) {
+        const { path, width, height } = this.svgs.shift();
+        XYDecoder.saveSvg(path, e.data.strokes, width, height);
+        return;
+      }
+      this.busy = false;
+      // A loop that finishes after the pins are unplugged is dropped
+      if (this.connected) this._takeLoop(e.data);
+      if (this.pending) {
+        const job = this.pending;
+        this.pending = null;
+        this._send(job);
+      }
+    };
+    this.worker.onerror = (e) => {
+      console.error('Twoscilloscope worker:', e.message);
+      this.failed = true;
+      this.busy = false;
+      this.pending = null;
+    };
   }
 
   _setSound(on) {
@@ -84,27 +116,49 @@ export class TwoscilloscopeModule extends Module {
 
   // The altered loop, for the sound card or a WAV, Z (blanking) included
   _feedPlayer() {
-    this.player.freq(this.scope.getFreq());
-    this.player.setWaveforms(this.scope.x, this.scope.y, this.scope.z);
+    const loop = this.loop ?? SILENCE;
+    this.player.freq(this.freq);
+    this.player.setWaveforms(loop.x, loop.y, loop.z);
   }
 
   process(graph, glCanvas) {
     this._setSound(Math.round(this.params.sound.value) === 1);
-    this._applyEffects();
+    // Which effects are on, and what Effect A and B set on them
+    const fx = MENU.resolve(this.params);
     const input = this._readInputs(graph);
+    this.connected = !!input;
+    if (!input) {
+      this.loop = null;
+      this.pending = null;
+    } else if (!this.failed) {
+      // The whole round trip, every frame: audio -> effects -> strokes
+      this._queue({
+        input, width: glCanvas.width, height: glCanvas.height, beamSize: this.params.beamSize.value,
+        fx, view: Math.round(this.params.view.value),
+      });
+    }
 
     this.outputFBO.begin();
     glCanvas.background(0);
-    if (input) {
-      // The whole round trip, every frame: audio -> effects -> strokes
-      this.scope.beamSize = this.params.beamSize.value;
-      this.scope.update(input, glCanvas.width, glCanvas.height);
-      this._draw(glCanvas, Math.round(this.params.view.value));
-    } else {
-      this.scope.clear();
-    }
+    if (this.loop) this._draw(glCanvas, this.loop);
     this.outputFBO.end();
     if (this.soundOn) this._feedPlayer();
+  }
+
+  // To the worker, or to wait for it in place of any older loop
+  _queue(job) {
+    if (this.busy) this.pending = job;
+    else this._send(job);
+  }
+
+  _send(job) {
+    this.worker.postMessage(job);
+    this.busy = true;
+  }
+
+  _takeLoop(loop) {
+    this.loop = { ...loop, stream: { data: loop.stream, count: loop.count } };
+    this.freq = loop.freq;
   }
 
   // X and Y as one loop for the scope: { x, y, z, color, sampleRate }, or null
@@ -140,21 +194,19 @@ export class TwoscilloscopeModule extends Module {
     };
   }
 
-  _draw(glCanvas, view) {
-    const scope = this.scope;
-    if (view === BEAMS) {
-      scope.beamStream();
+  // A loop in the view the worker made its stream for, which lags a change of
+  // View by a frame
+  _draw(glCanvas, loop) {
+    if (loop.view === BEAMS) {
       // The beams add up, as OsciMesh's did
       const size = this.params.beamSize.value * 2 / glCanvas.height;
-      const intensity = this.params.intensity.value * scope.beamExposure;
-      this.segments.drawSegments(this.beamShader, scope.stream, glCanvas.ADD, (s) => {
+      const intensity = this.params.intensity.value * loop.beamExposure;
+      this.segments.drawSegments(this.beamShader, loop.stream, glCanvas.ADD, (s) => {
         s.setUniform('uSize', size);
         s.setUniform('uIntensity', intensity);
       });
     } else {
-      if (view === STROKES) scope.strokeStream();
-      else scope.lineStream();
-      this.segments.drawLines(scope.stream, LINE_WIDTH, this.pixelDensity);
+      this.segments.drawLines(loop.stream, LINE_WIDTH, this.pixelDensity);
     }
   }
 
@@ -172,7 +224,14 @@ export class TwoscilloscopeModule extends Module {
       this.setParam('sound', Math.round(this.params.sound.value) === 1 ? 0 : 1);
     } else if (k === 's') {
       const path = 'transformed_' + Twoscilloscope.timestamp('%Y%m%d_%H%M%S') + '.svg';
-      XYDecoder.saveSvg(path, this.scope.getStrokes(), this.glCanvas.width, this.glCanvas.height);
+      const { width, height } = this.glCanvas;
+      // The worker has the loop, so it decodes the strokes, and the file is saved when they come back
+      if (this.loop && !this.failed) {
+        this.svgs.push({ path, width, height });
+        this.worker.postMessage({ svg: true });
+      } else {
+        XYDecoder.saveSvg(path, [], width, height);
+      }
     } else if (k === 'w') {
       // four seconds of the altered loop, X Y Z
       this._feedPlayer();
@@ -182,6 +241,7 @@ export class TwoscilloscopeModule extends Module {
   }
 
   dispose() {
+    this.worker.terminate();
     this.player.closeAudioOut();
     this.segments.dispose();
     super.dispose();

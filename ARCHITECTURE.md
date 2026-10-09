@@ -702,9 +702,10 @@ Strokes are drawn in file order, later over earlier, with no depth test, as `exa
 The Twoscilloscope module (`js/modules/TwoscilloscopeModule.js`, `js/modules/twoscilloscope/`, `js/shaders/twoscilloscope.js`) is the scope half of `example-latk` in the Twoscilloscope project's p5.js library. One loop of XY audio comes in on its X and Y control pins, runs through an effect chain, and is drawn back from the altered audio, as the oscilloscope beam or decoded into strokes. The Latk module's X and Y outputs bring a Latk drawing, encoded as the example encoded it (see Latk Module). With nothing cabled in, it draws nothing.
 
 **Files:**
-- `js/libraries/p5.twoscilloscope.js` is the library. It is a classic script that puts its classes on the global scope, so the module imports it only for that side effect. It is copied unchanged apart from three lines that let SlowscanJam's worker load it: with no `document`, it skips the warning about p5 and finds its own URL from `location`, and it assigns its classes to `globalThis` instead of `window`.
+- `js/libraries/p5.twoscilloscope.js` is the library. It is a classic script that puts its classes on the global scope, so the module imports it only for that side effect. It is copied unchanged apart from three lines that let a worker load it (SlowscanJam's and Twoscilloscope's): with no `document`, it skips the warning about p5 and finds its own URL from `location`, and it assigns its classes to `globalThis` instead of `window`.
 - `audiofx/EffectRack.js` holds the effect chain, the Effect drop-down and the knobs, which SlowscanJam shares (see Audio Effects).
 - `twoscilloscope/ScopeRenderer.js` is the second half of the example's `LatkScopeRenderer`, which runs the loop through the effects and turns each view into a point stream. Its first half, projecting and encoding the drawing, is now in `latk/strokes.js`.
+- `twoscilloscope/worker.js` runs `ScopeRenderer` off the main thread (see Worker).
 
 **X and Y.** `_readInputs()` makes one loop from the two pins (see Module System):
 - **Loops:** a control signal on either pin sets the loop's length and sample rate. It also brings its blanking and colour lanes, X's if both pins bring a loop. A loop of another length is stretched to fit.
@@ -764,14 +765,21 @@ Loop Hz is now Latk's, since the source sets the loop's length.
 
 **Sound.** With Sound on, an `XYscope` loops the altered audio out of the sound card, X left and Y right, so what you hear is what you see. Browsers start audio only after a click or a key press. The example played as soon as its page was clicked; here Sound starts Off, so that adding a node makes no noise.
 
-**Cost.** At 1280×960 (a retina display) on an M2 Max, a frame costs 4.3–5.7 ms, depending on the view, with Latk's drawing coming in. Most of that is running the effects on the CPU, and Decoded Strokes adds about 1.5 ms of decoding.
+**Worker.** The effects and the point streams run in `twoscilloscope/worker.js`, which holds the `ScopeRenderer`. Each frame the module sends it the loop from the pins, with the effect settings, the View and the Beam Size. It replies with the altered loop, for Sound and W, and that View's point stream, which the module draws. While it is busy, the newest loop waits and any older one is dropped, as in Skeleton. So a drawing shows from the frame after its loop came in, and a change of View a frame later. S asks the worker for the decoded strokes, and the SVG downloads when they come back.
+
+This was checked against the version before the worker in headless Chrome, with a seeded `Math.random`, a virtual clock and frames stepped by hand:
+- **Latk:** with Latk's X and Y cabled in, every Effect option in Beams, and every view with None and with Low Pass + Delay, match on every pixel, at Latk frames 0, 10 and 40 and at pixel density 1 and 2.
+- **Trail:** with two Oscillators cabled in, each of 40 frames matches the frame before it in the version before, at both densities.
+- **Files:** the SVG and WAV that S and W download are the same, byte for byte.
+
+**Cost.** At 1280×960 (a retina display) on an M2 Max, with Latk's drawing coming in, the module takes about 0.1 ms of a frame on the main thread, where it took 5.5–7 ms before the worker. The worker takes 6–8 ms a loop, from sending to reply, so at 60 fps a new drawing still shows every frame. Most of that is running the effects, and Decoded Strokes adds about 1.5 ms of decoding.
 
 ## Audio Effects
 
 `js/modules/audiofx/EffectRack.js` holds the audio effects Twoscilloscope and SlowscanJam share: the eleven effects of `example-latk`'s chain, from p5.twoscilloscope, an Effect drop-down that turns them on, and the Effect A and Effect B knobs that set them. It touches neither the DOM nor p5, so SlowscanJam's worker imports it too.
 - **`CHAIN`** lists the effects in the example's order, and the setting each knob turns while one is on. `knobFor()` gives the knob position for a setting, so a module can set a knob's default from it.
 - **`EffectMenu`** builds a module's drop-down from that module's own options, followed by one option per effect. Twoscilloscope's are Low Pass + Delay and None (`NONE`); SlowscanJam's is None. Patches save the option as its index, so a module's own options never change, and a new effect is appended to `CHAIN`. `params()` gives the drop-down and both knobs as module params. `resolve()` turns their values into plain data, `{ on, set }`, and relabels the knobs for the option. `nextSolo()` and `none` are the example's E and N keys.
-- **`EffectRack`** holds one of each effect, added to an `XYEffectChain`. `apply()` puts every setting back to the library's default, turns on the effects in `on`, and then sets the knobs' settings from `set`. Twoscilloscope's rack is its `XYTransformer`'s chain, which restarts the effects every frame (see Twoscilloscope Module).
+- **`EffectRack`** holds one of each effect, added to an `XYEffectChain`. `apply()` puts every setting back to the library's default, turns on the effects in `on`, and then sets the knobs' settings from `set`. Twoscilloscope's rack, in its worker, is its `XYTransformer`'s chain, which restarts the effects every frame (see Twoscilloscope Module).
 - **`EffectStream`** runs a rack over a signal that runs on from one call to the next, as SlowscanJam's fields do, keeping the effects' state between calls (see SlowscanJam Module). It restarts them when the option changes, so an effect turned back on doesn't replay what it held before. It also restarts them when Noise Seed changes, the one setting an effect reads only on a restart. `process()` can protect part of the signal: given a mask, it feeds the effects only the masked samples, scales them going in and back coming out, clamps them, and leaves the rest as they were.
 
 ## Skeleton Module

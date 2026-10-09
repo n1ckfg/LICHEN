@@ -3,10 +3,10 @@
 // them on, and two knobs, Effect A and Effect B, that set them.
 //
 // A module's menu and knobs resolve to plain data ({ on, set }), which an
-// EffectRack applies to its effects. Twoscilloscope runs its rack on the main
-// thread, inside its XYTransformer, which restarts the effects on every loop
-// (see twoscilloscope/ScopeRenderer.js). SlowscanJam sends the data to its
-// worker, where an EffectStream keeps the effects running from field to field.
+// EffectRack applies to its effects. Both modules send the data to a worker.
+// Twoscilloscope's runs its rack inside an XYTransformer, which restarts the
+// effects on every loop (see twoscilloscope/worker.js). SlowscanJam's runs an
+// EffectStream, which keeps the effects running from field to field.
 // Nothing here touches the DOM or p5, so a worker can import it.
 import '../../libraries/p5.twoscilloscope.js';   // a classic script: it puts its classes on the global scope
 

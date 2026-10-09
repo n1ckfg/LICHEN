@@ -11,10 +11,13 @@
 // The drawing is not the example's: it drew with OsciMesh into a WEBGL canvas
 // of its own, and with p5 lines. Here each view becomes a point stream (see
 // latk/strokes.js), which the module draws in LICHEN's own GL context.
-import '../../libraries/p5.twoscilloscope.js';   // a classic script: it puts its classes on window
+//
+// This runs in the module's worker (worker.js), so nothing here touches the
+// DOM or p5.
+import '../../libraries/p5.twoscilloscope.js';   // a classic script: it puts its classes on the global scope
 import { PointStream, Z_OFF, Z_ON } from '../latk/strokes.js';
 
-const { XYTransformer, XYSoundBuffer, XYDecoder } = window;
+const { XYTransformer, XYSoundBuffer, XYDecoder } = globalThis;
 
 // The colour of a loop that brings none: white, where the library
 // Oscilloscope's default is amber (hue 50)
