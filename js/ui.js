@@ -37,6 +37,7 @@ const MODULE_CATEGORIES = {
   'Analog': ['SlowscanJam', 'Twoscilloscope'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Delay', 'DeeSeventySix', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'RuttEtra', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
+  'GAN': ['InfrDrawings'],
   'Archival': ['NAPLPS', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
 };
@@ -52,6 +53,7 @@ const color_utility = [85, 120, 100];
 const color_output = [170, 85, 34];
 const color_interactive = [160, 120, 40];
 const color_analog = [30, 125, 135];
+const color_gan = [150, 50, 80];
 
 const MODULE_COLORS = {
   // - - - SOURCES - - -
@@ -120,6 +122,8 @@ const MODULE_COLORS = {
   UnrealBloom: color_effect_op,
   VHSC: color_effect_op,
   VideoToasting: color_effect,
+  // - - - GAN - - -
+  InfrDrawings: color_gan,
   // - - - ARCHIVAL - - -
   NAPLPS: color_archival,
   QTVR: color_archival,
@@ -370,6 +374,7 @@ export class NodeGraphUI {
       'Analog': true,
       'Sandin': true,
       'Effects': true,
+      'GAN': true,
       'Archival': true,
       'Output': true,
     };
