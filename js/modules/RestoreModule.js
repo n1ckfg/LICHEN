@@ -46,7 +46,7 @@ export class RestoreModule extends Module {
       },
       // The networks add a small correction to the input; past 1 this scales it
       // up. Still saved as mix, so a patch from when it stopped at 1 loads as it was.
-      mix: { id: 'f938', value: 2, min: 0, max: 4, step: 0.01, label: 'Amount' },
+      mix: { id: 'f938', value: 2, min: 0, max: 10, step: 0.01, label: 'Amount' },
     };
     this.createShader(restoreMixFrag);
     this.createOutputFBO();
