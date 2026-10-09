@@ -11,16 +11,17 @@ import { loadOnnxModel, Backoff } from './img2img/OnnxModel.js';
 // model that draws light on dark, which Color then doesn't invert. Patches
 // save the choice as its index, so a new model is appended, never inserted
 const MODELS = [
-  { file: 'neuralcontours_140_net_G', label: 'Neural Contours', light: false },
-  { file: 'pix2pix003-002_140_net_G', label: 'pix2pix 003', light: true },
-  { file: 'pix2pix004-002_140_net_G', label: 'pix2pix 004', light: false },
-  { file: 'pix2pix002-001_60_net_G', label: 'pix2pix 002-001', light: false },
-  { file: 'pix2pix002-002_60_net_G', label: 'pix2pix 002-002', light: false },
-  { file: 'pix2pix002-004_60_net_G', label: 'pix2pix 002-004', light: false },
   // Light lines on black in, a shaded picture out: pix2pix 003's lines suit it
   { file: 'contour_pix2pix_195_net_G', label: 'Contour', light: true },
   // Lines or depth in, thick light strokes on black out
   { file: 'contour_reverse_pix2pix_195_net_G', label: 'Contour Reverse', light: true },
+  { file: 'neuralcontours_140_net_G', label: 'Neural Contours', light: false },
+  { file: 'pix2pix002-001_60_net_G', label: 'pix2pix 002-001', light: false },
+  { file: 'pix2pix002-002_60_net_G', label: 'pix2pix 002-002', light: false },
+  { file: 'pix2pix002-003_60_net_G', label: 'pix2pix 002-003', light: false },
+  { file: 'pix2pix002-004_60_net_G', label: 'pix2pix 002-004', light: false },
+  { file: 'pix2pix003-002_140_net_G', label: 'pix2pix 003', light: true },
+  { file: 'pix2pix004-002_140_net_G', label: 'pix2pix 004', light: false },
 ].map((m) => ({
   ...m,
   url: new URL(`../../files/models/pix2pix/${m.file}_q8_fp16.onnx`, import.meta.url).href,
