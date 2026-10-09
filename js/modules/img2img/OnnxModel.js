@@ -1,4 +1,4 @@
-// ONNX Runtime Web (js/libraries/ort/, v1.30.0) for the GAN modules. ort.min.js
+// ONNX Runtime Web (js/libraries/ort/, v1.30.0) for the img2img modules. ort.min.js
 // is a classic script that declares `var ort`, so it can't be imported as a
 // module: the first model asked for adds it to the page with a script tag.
 //

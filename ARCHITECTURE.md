@@ -42,7 +42,7 @@ Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs and Tw
 
 The UI renders each param in the `params` object: `{ paramName: { id, value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
-A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, InfrDrawings `model` and `mode`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Restore `model`, `size` and `clamp`, Sharpen `posterize`, Skeleton `trace` and `hold`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
+A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, DepthAnything `size`, `colormap` and `invert`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, InfrDrawings `model` and `mode`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Restore `model`, `size` and `clamp`, Sharpen `posterize`, Skeleton `trace` and `hold`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
 
 A param that sets `widget: 'trigger'` is drawn as a momentary button instead of a knob. It uses the same row as a drop-down: an inlet dot, then the label, then a button where the drop-down's box would be. Declare it as `{ value: 0, min: 0, max: 1, step: 1, label, widget: 'trigger' }`. Clicking the button calls `mod.fireTrigger(name)`. That records the time in `mod.triggeredAt[name]` and then calls `mod.onTrigger(name)`, which modules override to act on the trigger. A control cable fires it too. `ProcessingPipeline` fires the trigger on the cable's rising edge, when the value it applies crosses the param's midpoint (0.5) from below. The button still fires on a click while a cable is connected, since firing never touches the value. Its text is `mod.triggerText(name)`, which is empty by default and cut short with an ellipsis when it is too long. It is drawn fully lit on the first frame after it fires, however slow that frame is, then fades back over 250 ms. As with the drop-down, dragging the unconnected dot does nothing. A trigger's value is saved like any other param, but it only records where the last cable left it.
 
@@ -86,6 +86,7 @@ A node shows its output (a Monitor its input) in a preview on the 2D canvas. The
 - **Analog**: DeeSeventySix, RuttEtra, SlowscanJam, Twoscilloscope
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, GRASS, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
+- **img2img**: DepthAnything, InfrDrawings
 - **Archival**: NAPLPS, QTVR, VRML
 - **Output**: Monitor
 
@@ -472,6 +473,42 @@ These checks ran when Mix stopped at 1 and the clamp ran as a pass before it. Am
 | UL | 15 | 54 |
 
 Restore Soft costs the same, and Clamp adds about 0.2 ms at density 1. UL can't hold 60 fps on its own, and at density 2 neither can VL. The first frame drawn with a newly loaded model took up to 21 ms at density 1 and 69 ms at density 2.
+
+## DepthAnything Module
+
+The DepthAnything module (`js/modules/DepthAnythingModule.js`, `js/shaders/depth-anything.js`) runs Depth Anything V2 Small (Yang et al., 2024), a monocular depth model, on its input, as the depth-anything-v2-js project does. Its output is the model's relative depth: in Grey, near is white. It shares InfrDrawings' ONNX Runtime loader (`js/modules/img2img/OnnxModel.js`), which runs the model on WebGPU, or on WASM in ORT's proxy worker.
+
+**Model.** `files/models/depth-anything/depth-anything-v2-small_fp16.onnx`, about 50 MB, is loaded the first time a node runs and shared by every node. Its input size is dynamic, so the one file takes every Size. The other exports were slower on WebGPU, at 518 × 742 in headless Chrome on an M2 Max:
+- **fp16:** 78 ms.
+- **q4f16:** 259 ms. Its 4-bit `MatMulNBits` layers run on WebGPU, but more slowly here than fp16's.
+- **uint8:** 3.7 s. ORT Web 1.30 has no WebGPU kernels for its `MatMulInteger`, `ConvInteger` and `DynamicQuantizeLinear` nodes, so they ran on the CPU.
+
+Fixing the input size when the session starts (`freeDimensionOverrides`) made fp16 about a third slower on WebGPU, so the module leaves it dynamic.
+
+**Params.**
+
+| Param | Label | Options | Default | Sets |
+| --- | --- | --- | --- | --- |
+| `size` | Size | 238 × 182, 336 × 252, 434 × 322, 518 × 392, 686 × 518 | 336 × 252 | The model's input: depth-anything-v2-js's short sides, 182 to 518, with the long side fitted to the 4:3 frame. Both are multiples of the ViT's 14 px patches. 518 is the size the model was trained at |
+| `colormap` | Color | Grey, Turbo | Grey | Grey shows near as white. Turbo, depth-anything-v2-js's polynomial fit of Google's Turbo, runs from blue (far) to red (near) |
+| `invert` | Invert | Off, On | Off | Swaps near and far |
+
+Patches save Size as its index, so a new size is appended, never inserted.
+
+**Running.** A frame goes through InfrDrawings' four stages:
+1. **Input:** the frame shrinks to the Size, with InfrDrawings' input shader.
+2. **Reading:** it comes back through a fenced pixel buffer, so the main thread never waits on the GPU.
+3. **Depth:** its pixels are normalized by ImageNet's mean and standard deviation and run through the model, which gives relative inverse depth, larger nearer.
+4. **Output:** the map is normalized to its own nearest and farthest points, as depth-anything-v2-js does, so its contrast is always full but its scale changes from frame to frame. It is uploaded as an 8-bit grey texture, and `depthAnythingOutputFrag` scales it up to the canvas and applies Color and Invert.
+
+The newest frame waits while the model runs, and older ones are dropped. On WebGPU, ORT warns in the console, when the session starts, that some of the model's nodes were not assigned to WebGPU.
+
+**Checked** in headless Chrome on an M2 Max, with Vermeer's *Girl with a Pearl Earring* coming in from Image:
+- **Against ORT in Python:** the pixels each run was given went through the same model in ONNX Runtime 1.24 on the CPU. On WebGPU, at 238 × 182, 336 × 252 and 686 × 518, the depth correlates at 0.9995–0.9999, and the map as drawn differs by a mean of 1.7–2.7 levels, since WebGPU runs the model in fp16. On WASM, at 336 × 252, it correlates at 0.99999, and differs by a mean of 0.3 levels. ONNX Runtime 1.24 on the CPU loads this model only with its `SimplifiedLayerNormFusion` optimization turned off. ORT Web 1.30 loads it as it is, on both backends.
+- **Invert:** with Grey, the output with Invert off and on adds up to 255, to within a level.
+- **Patches:** a node saved with Size 518 × 392, Color Turbo and Invert On loads with them, and saves them again.
+
+**Cost.** On WebGPU, inference takes 18 ms at 238 × 182, 21 ms at 336 × 252, 33 ms at 434 × 322, 38 ms at 518 × 392 and 87 ms at 686 × 518. On WASM at 336 × 252 it takes 0.31 s with the page cross-origin isolated (4 threads, see Cross-Origin Isolation), and 1.0 s on one thread. On the main thread a frame costs about 1 ms. A node's first frames cost more, once: compiling its two shaders (about 40 and 25 ms), and its first readback (95 ms), while ORT sets the model up on the GPU.
 
 ## Edges Module
 
@@ -875,7 +912,7 @@ Thickness changes only the video. Checked in Node with the browser stubbed: six 
 
 ## Cross-Origin Isolation
 
-ONNX Runtime's WASM backend (`js/modules/gan/OnnxModel.js`) runs threads only in a cross-origin isolated page, because its threads share memory through `SharedArrayBuffer`. Isolation takes two response headers, `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy`, which neither `http-server` (`run.command`, `run.bat`) nor GitHub Pages can send. `coi-serviceworker.js` adds them instead. It is coi-serviceworker v0.1.6 (Guido Zuidhof, MIT) as edited for depth-anything-v2-js, and `index.html` loads it before anything else:
+ONNX Runtime's WASM backend (`js/modules/img2img/OnnxModel.js`) runs threads only in a cross-origin isolated page, because its threads share memory through `SharedArrayBuffer`. Isolation takes two response headers, `Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy`, which neither `http-server` (`run.command`, `run.bat`) nor GitHub Pages can send. `coi-serviceworker.js` adds them instead. It is coi-serviceworker v0.1.6 (Guido Zuidhof, MIT) as edited for depth-anything-v2-js, and `index.html` loads it before anything else:
 - **First visit:** the page loads without isolation, registers the file as a service worker, and reloads once the worker is active.
 - **After that:** the worker re-serves every response with both headers, COEP as `credentialless`, so the page is isolated from the start.
 - **Whole origin:** the worker's scope is the whole origin, so another project served later from the same address and port gets the headers too.

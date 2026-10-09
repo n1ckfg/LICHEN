@@ -3,7 +3,7 @@ import { registerModule } from '../moduleRegistry.js';
 import { vertSrc } from '../shaders/vert.js';
 import { infrDrawingsInputFrag, infrDrawingsOutputFrag } from '../shaders/infr-drawings.js';
 import { PixelReadback } from './slowscanjam/PixelReadback.js';
-import { loadOnnxModel } from './gan/OnnxModel.js';
+import { loadOnnxModel } from './img2img/OnnxModel.js';
 
 // informative-drawings-js's fixed-shape fp16 models, each of which takes and
 // gives one size. Patches save the choice as its index, so a new size is
@@ -22,7 +22,7 @@ const COLOR = 2;
 //   1. input:   the input shrinks to the model's size (GPU)
 //   2. reading: it comes back through a pixel buffer and a fence, as
 //               Skeleton's mask does, so the main thread never waits on the GPU
-//   3. drawing: the model runs on WebGPU, or in ORT's WASM worker (gan/OnnxModel.js)
+//   3. drawing: the model runs on WebGPU, or in ORT's WASM worker (img2img/OnnxModel.js)
 //   4. output:  its drawing is uploaded and scaled up to the canvas, in the
 //               Mode chosen: as drawn, inverted, or inverted and coloured
 // A frame is read every frame, even while the model draws the last one. The

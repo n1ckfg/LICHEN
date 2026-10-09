@@ -64,7 +64,8 @@ import './modules/RestoreModule.js';
 import './modules/SharpenModule.js';
 import './modules/SkeletonModule.js';
 import './modules/VideoMixerModule.js';
-// - - - GAN - - -
+// - - - IMG2IMG - - -
+import './modules/DepthAnythingModule.js';
 import './modules/InfrDrawingsModule.js';
 // - - - ARCHIVAL - - -
 import './modules/NAPLPSModule.js';

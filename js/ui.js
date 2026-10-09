@@ -37,7 +37,7 @@ const MODULE_CATEGORIES = {
   'Interactive': ['Conway', 'InkDrops', 'Latk', 'Yellowtail'],
   'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
   'Analog': ['DeeSeventySix', 'RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
-  'GAN': ['InfrDrawings'],
+  'img2img': ['DepthAnything', 'InfrDrawings'],
   'Archival': ['NAPLPS', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
 };
@@ -53,7 +53,7 @@ const color_utility = [85, 120, 100];
 const color_output = [170, 85, 34];
 const color_interactive = [160, 120, 40];
 const color_analog = [30, 125, 135];
-const color_gan = [150, 50, 80];
+const color_img2img = [150, 50, 80];
 
 const MODULE_COLORS = {
   // - - - SOURCES - - -
@@ -122,8 +122,9 @@ const MODULE_COLORS = {
   UnrealBloom: color_effect,
   VHSC: color_effect2,
   VideoToasting: color_effect2,
-  // - - - GAN - - -
-  InfrDrawings: color_gan,
+  // - - - IMG2IMG - - -
+  DepthAnything: color_img2img,
+  InfrDrawings: color_img2img,
   // - - - ARCHIVAL - - -
   NAPLPS: color_archival,
   QTVR: color_archival,
@@ -374,7 +375,7 @@ export class NodeGraphUI {
       'Analog': true,
       'Sandin': true,
       'Effects': true,
-      'GAN': true,
+      'img2img': true,
       'Archival': true,
       'Output': true,
     };
