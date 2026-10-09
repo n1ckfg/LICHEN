@@ -1,12 +1,15 @@
-# Converts a pix2pix generator exported to fp32 ONNX (the Latk models'
-# *_net_G_simplified.onnx) into the file the Pix2Pix module loads: int8 weights,
-# run in fp16, with float32 input and output (see Pix2Pix Module in
-# ARCHITECTURE.md, and docs/REPORT_PIX2PIX.md for why each step is there).
+# Converts a pix2pix generator into the file the Pix2Pix module loads: int8
+# weights, run in fp16, with float32 input and output (see Pix2Pix Module in
+# ARCHITECTURE.md, and docs/REPORT_PIX2PIX.md for why each step is there). It
+# takes either an fp32 ONNX export (the Latk models' *_net_G_simplified.onnx)
+# or a PyTorch checkpoint of pix2pix's unet_256 generator (*_net_G.pth).
 #
-# Usage: python tools/pix2pix-onnx.py <in.onnx> <out.onnx>
-# Needs: pip install onnx onnxconverter-common numpy
+# Usage: python tools/pix2pix-onnx.py <in.onnx | in.pth> <out.onnx>
+# Needs: pip install onnx onnxconverter-common numpy, and torch for a .pth
 #
 # Steps:
+#   0. A .pth is loaded into unet_256 and exported to fp32 ONNX, in eval mode,
+#      so BatchNorm uses its running statistics, as Latk ran it.
 #   1. Fold each BatchNormalization into the Conv or ConvTranspose before it.
 #      The deepest one's running_var is up to 207,805, above fp16's 65,504, and
 #      onnxconverter-common clamps anything over 10,000 to 10,000 unasked, which
@@ -18,6 +21,7 @@
 #      halves the file again, to 54.5 MB. Sessions should set the config entry
 #      session.disable_quant_qdq = '1', so that ONNX Runtime turns the weights
 #      back into fp16 once, when the session starts, instead of on every run.
+import io
 import sys
 import warnings
 import numpy as np
@@ -26,6 +30,65 @@ from onnx import helper, numpy_helper, version_converter, TensorProto
 from onnxconverter_common import float16
 
 FP16_CLAMP = 1e4    # onnxconverter-common's default max_finite_val
+SIZE = 256          # unet_256's input, which halves 8 times to 1 x 1
+
+
+# pix2pix's unet_256 generator (UnetGenerator in Zhu and Park's
+# pytorch-CycleGAN-and-pix2pix, with BatchNorm and no dropout), laid out as
+# theirs is so that a checkpoint's keys match it, from the outermost level in
+def export_pth(path):
+    import torch
+    from torch import nn
+
+    class Level(nn.Module):
+        def __init__(self, outer, inner, inside=None, input_nc=None, outermost=False):
+            super().__init__()
+            self.outermost = outermost
+            down = nn.Conv2d(input_nc or outer, inner, 4, 2, 1, bias=False)
+            if outermost:
+                layers = [down, inside, nn.ReLU(), nn.ConvTranspose2d(inner * 2, outer, 4, 2, 1), nn.Tanh()]
+            elif inside is None:
+                layers = [nn.LeakyReLU(0.2), down, nn.ReLU(),
+                          nn.ConvTranspose2d(inner, outer, 4, 2, 1, bias=False), nn.BatchNorm2d(outer)]
+            else:
+                layers = [nn.LeakyReLU(0.2), down, nn.BatchNorm2d(inner), inside, nn.ReLU(),
+                          nn.ConvTranspose2d(inner * 2, outer, 4, 2, 1, bias=False), nn.BatchNorm2d(outer)]
+            self.model = nn.Sequential(*layers)
+
+        def forward(self, x):
+            if self.outermost:
+                return self.model(x)
+            # pix2pix's LeakyReLU works in place, so its skip carries x after it
+            x = self.model[0](x)
+            return torch.cat([x, self.model[1:](x)], 1)
+
+    class Generator(nn.Module):
+        def __init__(self, input_nc, output_nc, ngf):
+            super().__init__()
+            level = Level(ngf * 8, ngf * 8)
+            for _ in range(3):
+                level = Level(ngf * 8, ngf * 8, level)
+            for mult in (4, 2, 1):
+                level = Level(ngf * mult, ngf * mult * 2, level)
+            self.model = Level(output_nc, ngf, level, input_nc=input_nc, outermost=True)
+
+        def forward(self, x):
+            return self.model(x)
+
+    state = torch.load(path, map_location='cpu', weights_only=True)
+    state = {k.removeprefix('module.'): v for k, v in state.items()}
+    ngf, input_nc = state['model.model.0.weight'].shape[:2]
+    output_nc = state['model.model.3.weight'].shape[1]
+    net = Generator(input_nc, output_nc, ngf)
+    net.load_state_dict(state)
+    net.eval()
+    buf = io.BytesIO()
+    with torch.no_grad(), warnings.catch_warnings():
+        # The TorchScript exporter is deprecated, but its graph is the one the Latk exports have
+        warnings.simplefilter('ignore', DeprecationWarning)
+        torch.onnx.export(net, torch.zeros(1, input_nc, SIZE, SIZE), buf, opset_version=13,
+                          input_names=['input'], output_names=['output'], dynamo=False)
+    return onnx.load_from_string(buf.getvalue())
 
 
 def fold_batchnorms(graph):
@@ -120,7 +183,7 @@ def quantize_weights(graph, weights):
 
 
 def main(src, dst):
-    model = onnx.load(src)
+    model = export_pth(src) if src.endswith('.pth') else onnx.load(src)
     graph = model.graph
     if len(graph.input) != 1 or len(graph.output) != 1:
         raise SystemExit(f'{src}: expected one input and one output')
@@ -149,5 +212,5 @@ def main(src, dst):
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        raise SystemExit('usage: python tools/pix2pix-onnx.py <in.onnx> <out.onnx>')
+        raise SystemExit('usage: python tools/pix2pix-onnx.py <in.onnx | in.pth> <out.onnx>')
     main(sys.argv[1], sys.argv[2])

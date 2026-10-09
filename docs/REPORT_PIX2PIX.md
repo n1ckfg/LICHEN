@@ -1,6 +1,6 @@
 # Pix2Pix Report
 
-2026-10-09. This report asks whether a pix2pix module would suit the img2img category alongside DepthAnything and InfrDrawings. It also asks whether Latk's pix2pix ONNX models (`Latk_x_informative-drawings/onnx/`) can be converted for the web, for example to fp16. Both answers are yes, and the Pix2Pix module is now built, but plain fp16 conversion was not enough. The module itself is documented under Pix2Pix Module in `ARCHITECTURE.md`.
+2026-10-09. This report asks whether a pix2pix module would suit the img2img category alongside DepthAnything and InfrDrawings. It also asks whether Latk's pix2pix ONNX models (`Latk_x_informative-drawings/onnx/`) can be converted for the web, for example to fp16. Both answers are yes, and the Pix2Pix module is now built, but plain fp16 conversion was not enough. Later the same day, the six PyTorch checkpoints in `Latk_x_informative-drawings/pytorch/` were converted as well, and five of them added to the module (see The PyTorch checkpoints). The module itself is documented under Pix2Pix Module in `ARCHITECTURE.md`.
 
 ## Summary
 
@@ -27,7 +27,7 @@ Latk ran them in `LIGHTNING_ARTIST/latk_ml_005` (`latk_onnx.py`, `Pix2Pix_Onnx`)
 - **Mode:** the PyTorch path calls `eval()`, so BatchNorm uses its running statistics, as the ONNX export does.
 - **Channel order:** `renderToNp()` returns RGB, and `detect()` then applies OpenCV's `COLOR_BGR2RGB`, so Latk actually fed the models BGR. pix2pix trains through PIL, in RGB. Swapping the channels changes the output by a mean of 3.0 (Neural Contours), 10.5 (003) and 8.2 (004) levels on the test image. The module uses RGB.
 
-The `pytorch/` folder holds other checkpoints of the same architecture, which were not evaluated: `pix2pix002-001…004` (60 epochs), `contour_pix2pix` and `contour_reverse_pix2pix` (195 epochs). They are the same size and could be converted the same way once exported. Going by its name, `contour_reverse` turns line art back into pictures, the other way round from every img2img module so far.
+The `pytorch/` folder holds six more checkpoints of the same architecture, covered under The PyTorch checkpoints below.
 
 ## fp16 conversion
 
@@ -85,7 +85,7 @@ The skips need every level of the UNet to match, so both sides must be multiples
 - **Output:** the drawing is RGB, mapped back with `(y + 1) × 127.5`, rather than one grey channel. `js/shaders/pix2pix.js` draws it in Default, Invert or Color. Neural Contours and 004 draw dark lines and 003 light ones, so each model carries a `light` flag that tells Color which way round its lines are. Color then always gives the lines in the input's colours, on black.
 - **Loading:** `loadOnnxModel(url, options)` in `OnnxModel.js` now takes session options. DepthAnything and InfrDrawings pass none, so their sessions are created with exactly the options they were before.
 
-It is registered as Adding a New Module in `ARCHITECTURE.md` describes, with a fresh uid (`f3b183da`) and param and port ids, the import in `js/main.js`, and entries in `MODULE_CATEGORIES` and `MODULE_COLORS`. `tools/pix2pix-onnx.py` makes the three files in `files/models/pix2pix/`. Run on the original exports, it reproduces the files benchmarked above exactly.
+It is registered as Adding a New Module in `ARCHITECTURE.md` describes, with a fresh uid (`f3b183da`) and param and port ids, the import in `js/main.js`, and entries in `MODULE_CATEGORIES` and `MODULE_COLORS`. `tools/pix2pix-onnx.py` makes the files in `files/models/pix2pix/`. Run on the original exports, it reproduces the files benchmarked above exactly.
 
 ## Checks in the app
 
@@ -97,20 +97,71 @@ Headless Chrome on an M2 Max, with the image going from Image into Pix2Pix:
 - **Other modules:** with DepthAnything, InfrDrawings and Pix2Pix fed the same picture, they gave 62, 63 and 62 results in 4 s, with no session errors. Alone, Pix2Pix gave 232 in 4 s. DepthAnything's and InfrDrawings' outputs are byte for byte the same at HEAD and with the change to `OnnxModel.js`, and across reruns of each.
 - **Main thread:** `process()` costs a median of 1.0 ms at density 1 and 1.2 ms at density 2.
 
+## The PyTorch checkpoints
+
+`Latk_x_informative-drawings/pytorch/` holds six checkpoints, each 217.7 MB:
+- **`pix2pix002-001…004_60_net_G.pth`:** 60 epochs each. They are what Latk's PyTorch backend loaded for PxP 001–004.
+- **`contour_pix2pix_195_net_G.pth` and `contour_reverse_pix2pix_195_net_G.pth`:** 195 epochs each.
+
+All six are `unet_256` with 3 channels in and 3 out, BatchNorm, and keys without DataParallel's `module.` prefix.
+
+**Export.** `tools/pix2pix-onnx.py` now takes a `.pth` as well. It builds `unet_256` with the same parameter layout as pix2pix's `UnetGenerator`, loads the checkpoint, and switches to eval mode, as Latk's `createPyTorchNetwork()` did. It then exports to fp32 ONNX at opset 13 and carries on as for an ONNX file. One detail of pix2pix needed care. Its LeakyReLU works in place, so each skip connection carries the activated tensor rather than the block's input, and the tool's copy does that explicitly. PyTorch 2.9 and later default to a new exporter. The tool uses the TorchScript one, deprecated but still there in 2.14, because its graph matches Latk's exports.
+
+**Checked:**
+- **Against pix2pix:** each export matches pix2pix's own `UnetGenerator`, from Latk's copy of `networks.py`, to within 2.6 × 10⁻⁵.
+- **Operators:** each has exactly the operators of Latk's ONNX exports: 8 Conv, 7 LeakyRelu, 8 Relu, 8 ConvTranspose, 7 BatchNormalization, 7 Concat and 1 Tanh.
+- **Clamping:** no value was left over 10,000 after folding. The tool would have stopped if one had been.
+
+Against PyTorch on the CPU, on the photo, in levels:
+
+| Checkpoint | Mean | Max |
+| --- | --- | --- |
+| `contour_pix2pix_195` | 0.82 | 8 |
+| `contour_reverse_pix2pix_195` | 0.44 | 19 |
+| `pix2pix002-001_60` | 0.66 | 20 |
+| `pix2pix002-002_60` | 0.62 | 42 |
+| `pix2pix002-003_60` | 1.45 | 37 |
+| `pix2pix002-004_60` | 0.48 | 7 |
+
+**What they draw.** Latk could feed any model either its RGB render or a depth pass. The depth pass is Z × 0.08, clamped and inverted, so near is white, as in DepthAnything's Grey. So every model was run on the photo, on a DepthAnything map of it, and on line art from the other models:
+
+| Checkpoint | Photo | Depth | Line art |
+| --- | --- | --- | --- |
+| `pix2pix002-001_60` | Soft grey shading and lines on white | Shaded relief | — |
+| `pix2pix002-002_60` | Bold dark lines on white | Outlines with patterned fill | — |
+| `pix2pix002-003_60` | Checkerboard | Checkerboard | — |
+| `pix2pix002-004_60` | Pale grey shading on white | Embossed outlines | — |
+| `contour_pix2pix_195` | A washed-out painted picture | Stripes and noise | From light lines on black (pix2pix 003's), a shaded, sculpted picture. From dark lines, stripes |
+| `contour_reverse_pix2pix_195` | Grey blobs on black | Rough light strokes on black | Thick light strokes on black |
+
+The names turned out to be misleading:
+- **`contour_pix2pix`:** it is the one that turns lines into a picture, but only light lines on black, so in LICHEN it goes after pix2pix 003.
+- **`contour_reverse`:** it turns lines or depth into thick strokes.
+- **The first three on depth:** Neural Contours and 003 draw clean outlines, better than they do on the photo, so DepthAnything into Pix2Pix is worth trying. 004 draws noise.
+
+`pix2pix002-003_60` draws a checkerboard over everything. PyTorch draws the same from the checkpoint, so it is the model, not the conversion. Latk ran it in eval mode too, so it showed the same there. It was converted but left off the menu.
+
+**In the module.** The other five are appended to Model as pix2pix 002-001, pix2pix 002-002, pix2pix 002-004, Contour and Contour Reverse. Contour and Contour Reverse count as light for Color, so Color multiplies Contour's picture by the input. Checked in the app on WebGPU at density 1:
+- **Against PyTorch:** the drawings differ by a mean of 0.57 (002-001), 0.66 (002-002), 0.65 (002-004), 1.38 (Contour) and 0.57 (Contour Reverse) levels, with at most 53.
+- **Orientation and Mode:** as for the first three.
+- **Patches:** a node saved with Contour Reverse saves `c338: 7`, and loads with it.
+- **Speed:** they share the architecture, so they cost the same. The GPU was busier during these runs, and back to back pix2pix 004 took 30.2 ms, 002-002 took 29.1 ms and Contour 31.2 ms.
+
 ## Open questions
 
 - **Channel order:** RGB matches training. BGR would match what Latk showed. Changing it is one line in `_run()`.
-- **Repo size:** the three files add 163 MB to the repo. Each is fetched only when a node first picks it.
-- **GPU memory:** each model's session stays loaded for the page's life, as InfrDrawings' do. Its weights are back in fp16 by then, so each model should take about 109 MB of GPU memory, about 330 MB if all three are picked, though this wasn't measured. Releasing a session when no node uses it would need reference counting in `OnnxModel.js`.
+- **Repo size:** the nine files in `files/models/pix2pix/` add 490 MB to the repo, and bring `files/models/` to 574 MB. A file is fetched only when a node first picks it. GitHub Pages caps a published site at 1 GB.
+- **pix2pix 002-003:** its file is in `files/models/pix2pix/` but nothing loads it. Delete it before committing unless you know what input it wants.
+- **GPU memory:** each model's session stays loaded for the page's life, as InfrDrawings' do. Its weights are back in fp16 by then, so each model should take about 109 MB of GPU memory, about 870 MB if all eight are picked, though this wasn't measured. Releasing a session when no node uses it would need reference counting in `OnnxModel.js`.
 - **Shared code:** Pix2Pix is the third module with this read, queue, run and upload machinery, about 150 lines each time. A shared base class in `img2img/` would remove the duplication, but would change DepthAnything and InfrDrawings, so it should come with a before-and-after pixel comparison.
-- **More models:** the `pytorch/` checkpoints, `contour_reverse` especially, need a PyTorch export first, using pix2pix's `networks.py` (`_more/pytorch-CycleGAN-and-pix2pix`), and then `tools/pix2pix-onnx.py`.
 - **Historical info:** like DepthAnything and InfrDrawings, Pix2Pix has no entry in `js/historical-info.json`.
 
 ## Reproducing
 
 ```
-pip install onnx onnxconverter-common numpy
+pip install onnx onnxconverter-common numpy torch
 python tools/pix2pix-onnx.py <Latk_x_informative-drawings>/onnx/neuralcontours_140_net_G_simplified.onnx files/models/pix2pix/neuralcontours_140_net_G_q8_fp16.onnx
+python tools/pix2pix-onnx.py <Latk_x_informative-drawings>/pytorch/contour_pix2pix_195_net_G.pth files/models/pix2pix/contour_pix2pix_195_net_G_q8_fp16.onnx
 ```
 
-The same works for `pix2pix003-002_140_net_G` and `pix2pix004-002_140_net_G`. The measurements used onnx 1.23.2, onnxconverter-common 1.16.0 and ONNX Runtime 1.31.0 in Python, with ORT Web 1.30.0 in system Chrome driven by Playwright.
+The same works for the other ONNX exports and checkpoints. torch is only needed for a `.pth`. The measurements used onnx 1.23.2, onnxconverter-common 1.16.0, ONNX Runtime 1.31.0 and PyTorch 2.14.1 in Python, with ORT Web 1.30.0 in system Chrome driven by Playwright.

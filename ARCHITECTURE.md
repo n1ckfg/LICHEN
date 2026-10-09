@@ -22,7 +22,7 @@ js/main.js (p5.js loop)
 - `coi-serviceworker.js` — a service worker that cross-origin isolates the page, so ONNX Runtime's WASM backend can run threads (see Cross-Origin Isolation)
 - `workflows/` — contains JSON patches (connection graph state, module types, and parameter values) that can be loaded via Ctrl+O
 - `tools/convert-workflows.mjs` — converts patches saved before ids to the id format, using the frozen table in `tools/legacy-ids.json` (see Patch IDs)
-- `tools/pix2pix-onnx.py` — converts a pix2pix generator exported to fp32 ONNX into the int8/fp16 file Pix2Pix loads (see Pix2Pix Module)
+- `tools/pix2pix-onnx.py` — converts a pix2pix generator, exported to fp32 ONNX or as a PyTorch checkpoint, into the int8/fp16 file Pix2Pix loads (see Pix2Pix Module)
 
 ### Module System (`js/modules/`)
 
@@ -524,9 +524,9 @@ Checked in headless Chrome, with the failures put in by the test:
 
 ## Pix2Pix Module
 
-The Pix2Pix module (`js/modules/Pix2PixModule.js`, `js/shaders/pix2pix.js`) runs pix2pix generators (Isola, Zhu, Zhou and Efros, 2017) trained to turn pictures into line art for Latk, as Latk's `latk_ml` add-on ran them. It shares InfrDrawings' ONNX Runtime loader and run queue (`js/modules/img2img/OnnxModel.js`). The evaluation behind it is in `docs/REPORT_PIX2PIX.md`.
+The Pix2Pix module (`js/modules/Pix2PixModule.js`, `js/shaders/pix2pix.js`) runs pix2pix generators (Isola, Zhu, Zhou and Efros, 2017) trained for Latk, as Latk's `latk_ml` add-on ran them. Most turn pictures into line art. Contour turns line art into a shaded picture. It shares InfrDrawings' ONNX Runtime loader and run queue (`js/modules/img2img/OnnxModel.js`). The evaluation behind it is in `docs/REPORT_PIX2PIX.md`.
 
-**Models.** Each is pix2pix's `unet_256` generator: 54.4 M parameters, a fixed 256 × 256 RGB input in −1..1, and RGB out in −1..1. They live in `files/models/pix2pix/`, 54.5 MB each, and are loaded the first time a node picks one, then shared by every node. `tools/pix2pix-onnx.py` made them from the fp32 exports (217.7 MB each):
+**Models.** Each is pix2pix's `unet_256` generator: 54.4 M parameters, a fixed 256 × 256 RGB input in −1..1, and RGB out in −1..1. They live in `files/models/pix2pix/`, 54.5 MB each, and are loaded the first time a node picks one, then shared by every node. `tools/pix2pix-onnx.py` made them from Latk's fp32 ONNX exports (217.7 MB each) and PyTorch checkpoints. It exports a checkpoint first, through its own copy of pix2pix's `unet_256`, in eval mode, as Latk ran it:
 - **BatchNorm folded:** each of the 7 BatchNormalizations is folded into the ConvTranspose before it. The deepest one's `running_var` reaches 207,805, above fp16's 65,504, and `onnxconverter-common` clamps anything over 10,000 to 10,000 without asking. Converted unfolded, pix2pix 004 came out a mean of 8 levels off, and up to 194.
 - **fp16:** the model runs in fp16, with float32 input and output.
 - **int8 weights:** each Conv and ConvTranspose weight is stored as int8, one scale per output channel, behind `DequantizeLinear` and a `Cast` to fp16. In fp16 alone a model is 108.8 MB, over GitHub's 100 MB limit on a file.
@@ -537,16 +537,31 @@ The module creates its sessions with the config entry `session.disable_quant_qdq
 
 | Param | Label | Options | Default | Sets |
 | --- | --- | --- | --- | --- |
-| `model` | Model | Neural Contours, pix2pix 003, pix2pix 004 | Neural Contours | The generator: `neuralcontours_140`, `pix2pix003-002_140` and `pix2pix004-002_140`. Neural Contours and 004 draw dark lines on white, 004 with coloured fringes. 003 draws light lines on black |
+| `model` | Model | Neural Contours, pix2pix 003, pix2pix 004, pix2pix 002-001, pix2pix 002-002, pix2pix 002-004, Contour, Contour Reverse | Neural Contours | The generator (see What each draws) |
 | `mode` | Mode | Default, Invert, Color | Default | Default is the drawing as it comes. Invert inverts it. Color gives the lines in the input's colours, on black, whichever way round the model draws them |
 
 Patches save Model as its index, so a new model is appended, never inserted.
+
+**What each draws.** On a photo, and on a DepthAnything map of it (Latk could feed any of them its render or a depth pass, near white):
+
+| Model | Checkpoint | Draws |
+| --- | --- | --- |
+| Neural Contours | `neuralcontours_140` | Thin dark contours on white. On depth, clean outlines |
+| pix2pix 003 | `pix2pix003-002_140` | Thick light lines on black, with grey fill. On depth, clean light outlines |
+| pix2pix 004 | `pix2pix004-002_140` | Bold dark lines on white with coloured fringes. On depth, noise |
+| pix2pix 002-001 | `pix2pix002-001_60` | Soft grey shading and lines on white. On depth, shaded relief |
+| pix2pix 002-002 | `pix2pix002-002_60` | Bold dark lines on white. On depth, outlines with patterned fill |
+| pix2pix 002-004 | `pix2pix002-004_60` | Pale grey shading on white. On depth, embossed outlines |
+| Contour | `contour_pix2pix_195` | Takes light lines on black and paints a shaded, sculpted picture, as from pix2pix 003. Dark lines, photos and depth give stripes and noise |
+| Contour Reverse | `contour_reverse_pix2pix_195` | Thick light strokes on black, from line art or depth. On a photo, grey blobs |
+
+`pix2pix002-003_60` was converted too, but isn't on the menu. It draws a checkerboard over photos, depth and line art alike. PyTorch draws the same from the checkpoint, so the conversion isn't the cause. Its file is in `files/models/pix2pix/`.
 
 **Running.** A frame goes through InfrDrawings' four stages:
 1. **Input:** the frame is squashed to 256 × 256, as Latk did, with InfrDrawings' input shader.
 2. **Reading:** it comes back through a fenced pixel buffer.
 3. **Drawing:** its pixels are scaled to −1..1 (`x / 127.5 − 1`), in RGB order, as pix2pix trained. Latk passed Blender's RGB pixels through OpenCV's `COLOR_BGR2RGB`, so it gave the models BGR, which changes the drawing by a mean of 3–10 levels.
-4. **Output:** the drawing is mapped back to 0..255 (`(y + 1) × 127.5`), uploaded, and stretched back to the canvas by `pix2pixOutputFrag` in the Mode chosen. Each model's `light` flag tells Color which way round its lines are.
+4. **Output:** the drawing is mapped back to 0..255 (`(y + 1) × 127.5`), uploaded, and stretched back to the canvas by `pix2pixOutputFrag` in the Mode chosen. Each model's `light` flag tells Color which way round its lines are. Contour's picture counts as light, so Color multiplies it by the input.
 
 The newest frame waits while the model runs, and older ones are dropped. Model switching, `Backoff` after a failed load or run, and the previous model drawing while a new one loads all work as in InfrDrawings. The UNet needs both sides to be a multiple of 256. A 1024 × 768 copy ran (85 ms on WebGPU), but its 4 × 3 bottleneck sees far less of the picture than the 1 × 1 one the models trained with, and covered the drawing in speckles and cross-hatching, so the module stays at 256 × 256.
 
@@ -554,10 +569,11 @@ The newest frame waits while the model runs, and older ones are dropped. Model s
 - **Against ORT in Python:** the pixels each run was given went through the fp32 export in ONNX Runtime 1.31 on the CPU. On WebGPU, at pixel density 1 and 2, the drawings differ by a mean of 0.34 levels (Neural Contours), 0.95–0.96 (003) and 0.93–1.06 (004), with up to 3.8%, 12.9% and 14.0% of values more than 2 levels off and at most 51. On WASM the means are 0.25, 0.90 and 0.89. At 1× the drawings look the same as fp32. Their differences, scaled by 4, show only as faint edges.
 - **Orientation:** the model's input correlates with the Image node's output, squashed, at 0.9987 (0.18 flipped), and the output with the drawing scaled up at 1.0000 (0.15–0.23 flipped).
 - **Mode:** Default and Invert add up to 255, to within a level. Color is within a level of the lines times the input, for light and dark models.
-- **Patches:** a node saved with Model pix2pix 004 and Mode Invert loads with them.
+- **Checkpoints:** each checkpoint's export matches pix2pix's own `UnetGenerator`, from Latk's copy of the code, to within 2.6 × 10⁻⁵, and has the same operators as Latk's ONNX exports. Against PyTorch, on WebGPU at density 1, the five on the menu differ by a mean of 0.57 (002-001), 0.66 (002-002), 0.65 (002-004), 1.38 (Contour) and 0.57 (Contour Reverse) levels, with at most 53.
+- **Patches:** nodes saved with Model pix2pix 004 or Contour Reverse, and Mode Invert, load with them.
 - **Other models:** with DepthAnything, InfrDrawings and Pix2Pix fed the same picture on WebGPU, they gave 62, 63 and 62 results in 4 s. DepthAnything and InfrDrawings output the same bytes as before `loadOnnxModel()` took options.
 
-**Cost.** On WebGPU a run takes 14–16 ms, so with nothing else running the module keeps up with the frame rate: 232 results in 4 s. On WASM, through the proxy worker with the page cross-origin isolated, it takes 115–135 ms. On the main thread a frame costs about 1 ms, at pixel density 1 or 2. Creating a session takes about 0.4 s. A model's session, once loaded, stays for the rest of the page's life, as InfrDrawings' do. Its weights are back in fp16 by then, so each model should hold about 109 MB of GPU memory, though this wasn't measured.
+**Cost.** On WebGPU a run takes 14–16 ms, so with nothing else running the module keeps up with the frame rate: 232 results in 4 s. Every model costs the same: they share one architecture, and with the GPU busier, all took 29–31 ms back to back. On WASM, through the proxy worker with the page cross-origin isolated, it takes 115–135 ms. On the main thread a frame costs about 1 ms, at pixel density 1 or 2. Creating a session takes about 0.4 s. A model's session, once loaded, stays for the rest of the page's life, as InfrDrawings' do. Its weights are back in fp16 by then, so each model should hold about 109 MB of GPU memory, though this wasn't measured.
 
 ## Edges Module
 
