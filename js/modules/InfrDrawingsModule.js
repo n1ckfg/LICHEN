@@ -8,7 +8,7 @@ import { loadOnnxModel, Backoff } from './img2img/OnnxModel.js';
 // informative-drawings-js's fixed-shape fp16 models, each of which takes and
 // gives one size. Patches save the choice as its index, so a new size is
 // appended, never inserted
-const MODELS = [[160, 120], [320, 240], [640, 480]].map(([w, h]) => ({
+const MODELS = [[128, 128], [160, 120], [256, 256], [320, 240], [512, 512], [640, 480]].map(([w, h]) => ({
   w, h, label: `${w} × ${h}`,
   url: new URL(`../../files/models/informative-drawings/informative-drawings_${w}x${h}_fp16.onnx`, import.meta.url).href,
 }));
