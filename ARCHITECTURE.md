@@ -22,6 +22,7 @@ js/main.js (p5.js loop)
 - `coi-serviceworker.js` — a service worker that cross-origin isolates the page, so ONNX Runtime's WASM backend can run threads (see Cross-Origin Isolation)
 - `workflows/` — contains JSON patches (connection graph state, module types, and parameter values) that can be loaded via Ctrl+O
 - `tools/convert-workflows.mjs` — converts patches saved before ids to the id format, using the frozen table in `tools/legacy-ids.json` (see Patch IDs)
+- `tools/pix2pix-onnx.py` — converts a pix2pix generator exported to fp32 ONNX into the int8/fp16 file Pix2Pix loads (see Pix2Pix Module)
 
 ### Module System (`js/modules/`)
 
@@ -42,7 +43,7 @@ Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs and Tw
 
 The UI renders each param in the `params` object: `{ paramName: { id, value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
-A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, DepthAnything `size`, `colormap` and `invert`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, InfrDrawings `model` and `mode`, LUT `preset`, Oscillator `waveform` and `direction`, QTVR `projection`, Restore `model`, `size` and `clamp`, Sharpen `posterize`, Skeleton `trace` and `hold`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
+A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, DepthAnything `size`, `colormap` and `invert`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, InfrDrawings `model` and `mode`, LUT `preset`, Oscillator `waveform` and `direction`, Pix2Pix `model` and `mode`, QTVR `projection`, Restore `model`, `size` and `clamp`, Sharpen `posterize`, Skeleton `trace` and `hold`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
 
 A param that sets `widget: 'trigger'` is drawn as a momentary button instead of a knob. It uses the same row as a drop-down: an inlet dot, then the label, then a button where the drop-down's box would be. Declare it as `{ value: 0, min: 0, max: 1, step: 1, label, widget: 'trigger' }`. Clicking the button calls `mod.fireTrigger(name)`. That records the time in `mod.triggeredAt[name]` and then calls `mod.onTrigger(name)`, which modules override to act on the trigger. A control cable fires it too. `ProcessingPipeline` fires the trigger on the cable's rising edge, when the value it applies crosses the param's midpoint (0.5) from below. The button still fires on a click while a cable is connected, since firing never touches the value. Its text is `mod.triggerText(name)`, which is empty by default and cut short with an ellipsis when it is too long. It is drawn fully lit on the first frame after it fires, however slow that frame is, then fades back over 250 ms. As with the drop-down, dragging the unconnected dot does nothing. A trigger's value is saved like any other param, but it only records where the last cable left it.
 
@@ -86,7 +87,7 @@ A node shows its output (a Monitor its input) in a preview on the 2D canvas. The
 - **Analog**: DeeSeventySix, RuttEtra, SlowscanJam, Twoscilloscope
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, GRASS, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
-- **img2img**: DepthAnything, InfrDrawings
+- **img2img**: DepthAnything, InfrDrawings, Pix2Pix
 - **Archival**: NAPLPS, QTVR, VRML
 - **Output**: Monitor
 
@@ -503,7 +504,7 @@ Patches save Size as its index, so a new size is appended, never inserted.
 
 The newest frame waits while the model runs, and older ones are dropped. On WebGPU, ORT warns in the console, when the session starts, that some of the model's nodes were not assigned to WebGPU.
 
-Its runs take turns with InfrDrawings', in one queue in `OnnxModel.js`. ORT's WebGPU build keeps one run in progress for the whole runtime, not one a session. Each model used to queue only its own runs, so with both modules in a patch, a run of one started during the other's, and both failed ("Session already started", "Session mismatch") and stopped for good. With both fed the same picture on WebGPU, each now gives 66 results in 4 s. On WASM, ORT's proxy worker already ran them one at a time.
+Its runs take turns with InfrDrawings' and Pix2Pix's, in one queue in `OnnxModel.js`. ORT's WebGPU build keeps one run in progress for the whole runtime, not one a session. Each model used to queue only its own runs, so with both modules in a patch, a run of one started during the other's, and both failed ("Session already started", "Session mismatch") and stopped for good. With both fed the same picture on WebGPU, each now gives 66 results in 4 s. On WASM, ORT's proxy worker already ran them one at a time.
 
 **Failures.** A load or a run that fails is tried again, with `Backoff` from `OnnxModel.js`: 1 s after the first failure, doubling with each one after it up to 30 s, and at once after a success. Only the Size a run failed at waits. Its frames read back during the wait are dropped, and choosing another Size runs at once. InfrDrawings works the same way, with its Model in place of the Size, and the model before keeps drawing while a new one waits to load. Before, one failure stopped either module until the page was reloaded.
 
@@ -520,6 +521,43 @@ Checked in headless Chrome, with the failures put in by the test:
 - **Patches:** a node saved with Size 518 × 392, Color Turbo and Invert On loads with them, and saves them again.
 
 **Cost.** On WebGPU, inference takes 18 ms at 238 × 182, 21 ms at 336 × 252, 33 ms at 434 × 322, 38 ms at 518 × 392 and 87 ms at 686 × 518. On WASM at 336 × 252 it takes 0.31 s with the page cross-origin isolated (4 threads, see Cross-Origin Isolation), and 1.0 s on one thread. On the main thread a frame costs about 1 ms. A node's first frames cost more, once: compiling its two shaders (about 40 and 25 ms), and its first readback (95 ms), while ORT sets the model up on the GPU.
+
+## Pix2Pix Module
+
+The Pix2Pix module (`js/modules/Pix2PixModule.js`, `js/shaders/pix2pix.js`) runs pix2pix generators (Isola, Zhu, Zhou and Efros, 2017) trained to turn pictures into line art for Latk, as Latk's `latk_ml` add-on ran them. It shares InfrDrawings' ONNX Runtime loader and run queue (`js/modules/img2img/OnnxModel.js`). The evaluation behind it is in `docs/REPORT_PIX2PIX.md`.
+
+**Models.** Each is pix2pix's `unet_256` generator: 54.4 M parameters, a fixed 256 × 256 RGB input in −1..1, and RGB out in −1..1. They live in `files/models/pix2pix/`, 54.5 MB each, and are loaded the first time a node picks one, then shared by every node. `tools/pix2pix-onnx.py` made them from the fp32 exports (217.7 MB each):
+- **BatchNorm folded:** each of the 7 BatchNormalizations is folded into the ConvTranspose before it. The deepest one's `running_var` reaches 207,805, above fp16's 65,504, and `onnxconverter-common` clamps anything over 10,000 to 10,000 without asking. Converted unfolded, pix2pix 004 came out a mean of 8 levels off, and up to 194.
+- **fp16:** the model runs in fp16, with float32 input and output.
+- **int8 weights:** each Conv and ConvTranspose weight is stored as int8, one scale per output channel, behind `DequantizeLinear` and a `Cast` to fp16. In fp16 alone a model is 108.8 MB, over GitHub's 100 MB limit on a file.
+
+The module creates its sessions with the config entry `session.disable_quant_qdq = '1'` (`loadOnnxModel(url, options)`), so ORT turns the weights back into fp16 once, when the session starts. Without it ORT keeps the `DequantizeLinear` nodes and runs them every time, which took a run from 14.2 to 17.7 ms on WebGPU.
+
+**Params.**
+
+| Param | Label | Options | Default | Sets |
+| --- | --- | --- | --- | --- |
+| `model` | Model | Neural Contours, pix2pix 003, pix2pix 004 | Neural Contours | The generator: `neuralcontours_140`, `pix2pix003-002_140` and `pix2pix004-002_140`. Neural Contours and 004 draw dark lines on white, 004 with coloured fringes. 003 draws light lines on black |
+| `mode` | Mode | Default, Invert, Color | Default | Default is the drawing as it comes. Invert inverts it. Color gives the lines in the input's colours, on black, whichever way round the model draws them |
+
+Patches save Model as its index, so a new model is appended, never inserted.
+
+**Running.** A frame goes through InfrDrawings' four stages:
+1. **Input:** the frame is squashed to 256 × 256, as Latk did, with InfrDrawings' input shader.
+2. **Reading:** it comes back through a fenced pixel buffer.
+3. **Drawing:** its pixels are scaled to −1..1 (`x / 127.5 − 1`), in RGB order, as pix2pix trained. Latk passed Blender's RGB pixels through OpenCV's `COLOR_BGR2RGB`, so it gave the models BGR, which changes the drawing by a mean of 3–10 levels.
+4. **Output:** the drawing is mapped back to 0..255 (`(y + 1) × 127.5`), uploaded, and stretched back to the canvas by `pix2pixOutputFrag` in the Mode chosen. Each model's `light` flag tells Color which way round its lines are.
+
+The newest frame waits while the model runs, and older ones are dropped. Model switching, `Backoff` after a failed load or run, and the previous model drawing while a new one loads all work as in InfrDrawings. The UNet needs both sides to be a multiple of 256. A 1024 × 768 copy ran (85 ms on WebGPU), but its 4 × 3 bottleneck sees far less of the picture than the 1 × 1 one the models trained with, and covered the drawing in speckles and cross-hatching, so the module stays at 256 × 256.
+
+**Checked** in headless Chrome on an M2 Max, with Vermeer's *Girl with a Pearl Earring* coming in from Image:
+- **Against ORT in Python:** the pixels each run was given went through the fp32 export in ONNX Runtime 1.31 on the CPU. On WebGPU, at pixel density 1 and 2, the drawings differ by a mean of 0.34 levels (Neural Contours), 0.95–0.96 (003) and 0.93–1.06 (004), with up to 3.8%, 12.9% and 14.0% of values more than 2 levels off and at most 51. On WASM the means are 0.25, 0.90 and 0.89. At 1× the drawings look the same as fp32. Their differences, scaled by 4, show only as faint edges.
+- **Orientation:** the model's input correlates with the Image node's output, squashed, at 0.9987 (0.18 flipped), and the output with the drawing scaled up at 1.0000 (0.15–0.23 flipped).
+- **Mode:** Default and Invert add up to 255, to within a level. Color is within a level of the lines times the input, for light and dark models.
+- **Patches:** a node saved with Model pix2pix 004 and Mode Invert loads with them.
+- **Other models:** with DepthAnything, InfrDrawings and Pix2Pix fed the same picture on WebGPU, they gave 62, 63 and 62 results in 4 s. DepthAnything and InfrDrawings output the same bytes as before `loadOnnxModel()` took options.
+
+**Cost.** On WebGPU a run takes 14–16 ms, so with nothing else running the module keeps up with the frame rate: 232 results in 4 s. On WASM, through the proxy worker with the page cross-origin isolated, it takes 115–135 ms. On the main thread a frame costs about 1 ms, at pixel density 1 or 2. Creating a session takes about 0.4 s. A model's session, once loaded, stays for the rest of the page's life, as InfrDrawings' do. Its weights are back in fp16 by then, so each model should hold about 109 MB of GPU memory, though this wasn't measured.
 
 ## Edges Module
 

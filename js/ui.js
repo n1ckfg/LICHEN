@@ -37,7 +37,7 @@ const MODULE_CATEGORIES = {
   'Interactive': ['Conway', 'InkDrops', 'Latk', 'Yellowtail'],
   'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
   'Analog': ['DeeSeventySix', 'RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
-  'img2img': ['DepthAnything', 'InfrDrawings'],
+  'img2img': ['DepthAnything', 'InfrDrawings', 'Pix2Pix'],
   'Archival': ['NAPLPS', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
 };
@@ -125,6 +125,7 @@ const MODULE_COLORS = {
   // - - - IMG2IMG - - -
   DepthAnything: color_img2img,
   InfrDrawings: color_img2img,
+  Pix2Pix: color_img2img,
   // - - - ARCHIVAL - - -
   NAPLPS: color_archival,
   QTVR: color_archival,

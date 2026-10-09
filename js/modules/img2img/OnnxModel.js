@@ -58,12 +58,12 @@ async function fetchModel(url) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
-async function start(url) {
+async function start(url, options) {
   const ort = await loadOrt();
   const bytes = await fetchModel(url);
   if (backend === 'webgpu' || (backend === null && await hasWebGPU())) {
     try {
-      const session = await ort.InferenceSession.create(bytes, { executionProviders: ['webgpu'] });
+      const session = await ort.InferenceSession.create(bytes, { ...options, executionProviders: ['webgpu'] });
       backend = 'webgpu';
       return new OnnxModel(ort, session, backend);
     } catch (e) {
@@ -73,16 +73,18 @@ async function start(url) {
     }
   }
   ort.env.wasm.proxy = true;
-  const session = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] });
+  const session = await ort.InferenceSession.create(bytes, { ...options, executionProviders: ['wasm'] });
   backend = 'wasm';
   return new OnnxModel(ort, session, backend);
 }
 
 // The model at url, with one session shared by every node that runs it. One
-// that fails to load is forgotten, so asking for it again tries again
-export function loadOnnxModel(url) {
+// that fails to load is forgotten, so asking for it again tries again.
+// options go to the session along with its execution provider (Pix2Pix's
+// config entry, say). Only the first ask for a url sets them
+export function loadOnnxModel(url, options = {}) {
   if (!models.has(url)) {
-    const model = loading.then(() => start(url));
+    const model = loading.then(() => start(url, options));
     loading = model.catch(() => {});
     models.set(url, model);
     model.catch(() => models.delete(url));
