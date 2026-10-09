@@ -79,12 +79,12 @@ A node shows its output (a Monitor its input) in a preview on the 2D canvas. The
 ### Module Categories
 
 - **Sources**: Camera, Image, VideoPlayer
-- **Utility**: Blur, Brcosa, Channel, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, Skeleton, VideoMixer
+- **Utility**: Blur, Brcosa, Channel, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, Skeleton, VideoMixer
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
-- **Interactive**: Conway, GRASS, InkDrops, Latk, Yellowtail
-- **Analog**: RuttEtra, SlowscanJam, Twoscilloscope
-- **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, Oscillator, SyncGenerator, ValueScrambler
-- **Effects**: BooleanLogic, BufferSmear, Cyberlace, DeeSeventySix, Delay, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
+- **Interactive**: Conway, InkDrops, Latk, Yellowtail
+- **Analog**: DeeSeventySix, RuttEtra, SlowscanJam, Twoscilloscope
+- **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, GRASS, Oscillator, SyncGenerator, ValueScrambler
+- **Effects**: BooleanLogic, BufferSmear, Cyberlace, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
 - **Archival**: NAPLPS, QTVR, VRML
 - **Output**: Monitor
 
