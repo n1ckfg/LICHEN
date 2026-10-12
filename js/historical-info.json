@@ -63,7 +63,7 @@
 		"name": "Yellowtail",
 		"year": 1998,
 		"title": "<a href='https://www.flong.com/archive/projects/yellowtail/index.html'>Yellowtail</a>",
-		"body": "An interactive software system for the gestural creation and performance of realtime abstract animation, by <a href='https://www.flong.com'>Golan Levin</a>."		
+		"body": "Gestural animation system by <a href='https://www.flong.com'>Golan Levin</a>."		
 	},
 	{
 		"name": "UnrealBloom",
@@ -81,7 +81,7 @@
 		"name": "VRML",
 		"year": 1994,
 		"title": "<a href='https://en.wikipedia.org/wiki/VRML'>Virtual Reality Modeling Language</a>",
-		"body": "Based on <a href='https://github.com/n1ckfg/vrml-qtvr-viewer'>vrml-qtvr-viewer</a>, whose parser comes from the <a href='https://threejs.org/'>three.js</a> VRMLLoader."
+		"body": "Based on <a href='https://github.com/n1ckfg/vrml-qtvr-viewer'>vrml-qtvr-viewer</a>."
 	},
 	{
 		"name": "Whitney",
@@ -98,13 +98,13 @@
 	{
 		"name": "Latk",
 		"title": "<a href='https://github.com/n1ckfg/latk.js'>Lightning Artist Toolkit</a>",
-		"body": "Tools for animated 3D drawings, by <a href='https://fox-gieg.com'>Nick Fox-Gieg</a>, developed with support from the Canada Council for the Arts, Eyebeam Art + Technology Center, Ontario Arts Council and Toronto Arts Council."
+		"body": "Loads Latk animation files, by <a href='https://fox-gieg.com'>Nick Fox-Gieg</a>."
 	},
 	{
 		"name": "Twoscilloscope",
 		"year": 2026,
 		"title": "<a href='https://github.com/n1ckfg/Twoscilloscope'>Twoscilloscope</a>",
-		"body": "Vector drawings to oscilloscope audio and back again, by <a href='https://fox-gieg.com'>Nick Fox-Gieg</a>. It joins <a href='https://teddavis.org/xyscope'>XYscope</a> by Ted Davis and <a href='https://github.com/kritzikratzi/Oscilloscope'>Oscilloscope</a> by Hansi Raber at the audio. The drawing is made with the <a href='https://github.com/n1ckfg/latk.js'>Lightning Artist Toolkit</a>."
+		"body": "Oscilloscope-like render engine by <a href='https://fox-gieg.com'>Nick Fox-Gieg</a>, based on <a href='https://teddavis.org/xyscope'>XYscope</a> by Ted Davis and <a href='https://github.com/kritzikratzi/Oscilloscope'>Oscilloscope</a> by Hansi Raber."
 	},
 	{
 		"name": "Skeleton",
@@ -113,6 +113,15 @@
 		"body": "Based on the <a href='https://github.com/LingDong-/skeleton-tracing'>skeleton-tracing</a> implementation by <a href='https://github.com/LingDong-'>Lingdong Huang</a>."
 	},
 	{
-		"name": "Restore"
+		"name": "Restore",
+		"year": 2019,
+		"title": "<a href='https://github.com/bloc97/Anime4K'>Anime4K Upscaler</a>",
+		"body": "High-quality real-time anime upscaler by <a href='https://github.com/bloc97'>Bowen Peng</a>"
+	},
+	{
+		"name": "InfrDrawings",
+		"year": 2022,
+		"title": "<a href='https://github.com/carolineec/informative-drawings'>Informative-Drawings</a>",
+		"body": "Unpaired method for creating line drawings from photographs by <a href='https://people.csail.mit.edu/cmchan/'>Caroline Chan</a>, model conversion by <a href='https://huggingface.co/rocca/informative-drawings-line-art-onnx/'>Joe Rocca</a>"
 	}
 ]

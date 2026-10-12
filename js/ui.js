@@ -36,7 +36,7 @@ const MODULE_CATEGORIES = {
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
   'Interactive': ['Conway', 'InkDrops', 'Latk', 'Yellowtail'],
   'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
-  'Analog': ['DeeSeventySix', 'RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
+  'Emulation': ['DeeSeventySix', 'ESP32', 'RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
   'img2img': ['DepthAnything', 'InfrDrawings', 'Pix2Pix'],
   'Archival': ['NAPLPS', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
@@ -52,7 +52,7 @@ const color_effect2 = [125, 85, 129];
 const color_utility = [85, 120, 100];
 const color_output = [170, 85, 34];
 const color_interactive = [160, 120, 40];
-const color_analog = [30, 125, 135];
+const color_emulation = [30, 125, 135];
 const color_img2img = [150, 50, 80];
 
 const MODULE_COLORS = {
@@ -87,11 +87,12 @@ const MODULE_COLORS = {
   InkDrops: color_interactive,
   Latk: color_interactive,
   Yellowtail: color_interactive,
-  // - - - ANALOG - - -
-  DeeSeventySix: color_analog,
-  RuttEtra: color_analog,
-  SlowscanJam: color_analog,
-  Twoscilloscope: color_analog,
+  // - - - EMULATION - - -
+  DeeSeventySix: color_emulation,
+  ESP32: color_emulation,
+  RuttEtra: color_emulation,
+  SlowscanJam: color_emulation,
+  Twoscilloscope: color_emulation,
   // - - - SANDIN - - -
   AdderMultiplier: color_sandin,
   ColorEncoder: color_sandin,
@@ -425,7 +426,7 @@ export class NodeGraphUI {
       'Utility': true,
       'Generative': true,
       'Interactive': true,
-      'Analog': true,
+      'Emulation': true,
       'Sandin': true,
       'Effects': true,
       'img2img': true,

@@ -2,6 +2,8 @@
 // them as a loop of XY audio for the Latk module's X and Y outputs, and
 // packing them as a point stream for the segment shader. NAPLPS publishes its
 // drawing on X and Y outputs of its own the same way (polylinePieces, XYOutputs).
+// Twoscilloscope and ESP32 take a loop in on X and Y pins (XYInputs) and find
+// its strokes (findPieces).
 import { OrbitCamera } from './OrbitCamera.js';
 
 // Cuts the segment a-b to the canvas (Liang-Barsky). Returns null if none of
@@ -214,6 +216,89 @@ export class XYOutputs {
     mod.controlValues.x = (loop.x[i] + 1) / 2;
     mod.controlValues.y = (loop.y[i] + 1) / 2;
   }
+}
+
+// The colour of a loop that brings none: white, where the library
+// Oscilloscope's default is amber (hue 50)
+const DEFAULT_KEY = 0xffffff;
+
+// The runs of lit samples in a loop's blanking, each with the colour of its
+// first sample: { start, lit, key }. start is the blank sample before the run,
+// or -1 if the run starts the loop. A loop without blanking is one run, lit
+// from end to end.
+export function findPieces(z, color, n) {
+  const keyAt = (i) => (color && color[i] >= 0 ? color[i] : DEFAULT_KEY);
+  if (!z) return [{ start: -1, lit: n, key: keyAt(0) }];
+  const isLit = (i) => z[i] > (Z_OFF + Z_ON) / 2;
+  const pieces = [];
+  let i = 0;
+  while (i < n) {
+    if (!isLit(i)) {
+      i++;
+      continue;
+    }
+    const first = i;
+    while (i < n && isLit(i)) i++;
+    pieces.push({ start: first - 1, lit: i - first, key: keyAt(first) });
+  }
+  return pieces;
+}
+
+// A module's X and Y control input pins, as Twoscilloscope's (see Module
+// System in ARCHITECTURE.md). read() makes one loop of the two.
+export class XYInputs {
+  constructor() {
+    this.history = [];   // { t, x, y } a frame, while only 0..1 values come in
+  }
+
+  // X and Y as one loop: { x, y, z, color, sampleRate }, or null with nothing
+  // cabled in. A loop on either pin sets the length, and brings its blanking
+  // and colours (X's, if both bring a loop). An unplugged pin stays at 0, the
+  // centre. xPort and yPort are the pins' port numbers, and trail the seconds
+  // kept of a pin that brings only a 0..1 value each frame.
+  read(mod, graph, trail, xPort = 0, yPort = 1) {
+    const xIn = mod.getControlInput(graph, xPort);
+    const yIn = mod.getControlInput(graph, yPort);
+    const looped = [xIn, yIn].find((c) => c && c.signal && c.signal.samples.length >= 2);
+    if (looped) {
+      this.history = [];
+      const { samples, sampleRate, z, color } = looped.signal;
+      const n = samples.length;
+      return { x: lane(xIn, n), y: lane(yIn, n), z: z ?? null, color: color ?? null, sampleRate };
+    }
+    if (!xIn && !yIn) {
+      this.history = [];
+      return null;
+    }
+
+    // Only 0..1 values each frame: the last trail seconds of them are the
+    // loop, as on a scope with a long persistence
+    const now = performance.now() / 1000;
+    this.history.push({ t: now, x: xIn ? xIn.value * 2 - 1 : 0, y: yIn ? yIn.value * 2 - 1 : 0 });
+    while (now - this.history[0].t > trail) this.history.shift();
+    const n = this.history.length;
+    return {
+      x: Float32Array.from(this.history, (h) => h.x),
+      y: Float32Array.from(this.history, (h) => h.y),
+      z: null, color: null, sampleRate: n / trail,
+    };
+  }
+}
+
+// One pin's samples over a loop of n: its own loop, stretched to n if it is
+// another length, its 0..1 value held across the loop, or 0 when unplugged
+function lane(input, n) {
+  if (!input) return new Float32Array(n);
+  const s = input.signal?.samples;
+  if (!s || s.length < 2) return new Float32Array(n).fill(input.value * 2 - 1);
+  if (s.length === n) return s;
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const at = i * (s.length - 1) / (n - 1);
+    const i0 = Math.min(Math.floor(at), s.length - 2);
+    out[i] = s[i0] + (s[i0 + 1] - s[i0]) * (at - i0);
+  }
+  return out;
 }
 
 // What the segment shader draws: four floats a point, x and y in scope units

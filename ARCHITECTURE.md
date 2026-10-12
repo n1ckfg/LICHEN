@@ -39,11 +39,11 @@ A control value is one number a frame, and a parameter cable applies it after ev
 - **Control signals:** a control output can also publish a loop in `this.controlSignals['portName']`, as `{ samples, sampleRate, z, color }`. `samples` is a `Float32Array` in −1..1. `z` (blanking, XYscope's −1 off and 1 on) and `color` (0xRRGGBB a sample) are optional lanes the same length, or `null`. It should still set a numeric `controlValues` entry for the same port, because a knob cable sees only that.
 - **Control input pins:** an input declared `{ name, type: 'control' }` is drawn green, as is a cable into it, and takes a control output's cable. The cable is stored in `connections`, like a video cable, so the topological sort runs the source first, in the same frame. `this.getControlInput(graph, portIndex)` returns `{ value, signal }`: the source's control value and its control signal, or `null` for the signal if it has none. It returns `null` when nothing is cabled to the pin, or when a video output is.
 
-Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs and Twoscilloscope's X and Y pins are the only ones so far (see Latk Module, NAPLPS Module, RuttEtra Module, Skeleton Module and Yellowtail Module).
+Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs, and Twoscilloscope's and ESP32's X and Y pins, are the only ones so far (see Latk Module, NAPLPS Module, RuttEtra Module, Skeleton Module, Yellowtail Module and ESP32 Module).
 
 The UI renders each param in the `params` object: `{ paramName: { id, value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
-A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, DepthAnything `size`, `colormap` and `invert`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, FunctionGenerator `curve`, InfrDrawings `model` and `mode`, LUT `preset`, Oscillator `waveform` and `direction`, Pix2Pix `model` and `mode`, QTVR `projection`, Restore `model`, `size` and `clamp`, Sharpen `posterize`, Skeleton `trace` and `hold`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
+A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, DepthAnything `size`, `colormap` and `invert`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, ESP32 `color`, `grid` and `aspect`, FunctionGenerator `curve`, InfrDrawings `model` and `mode`, LUT `preset`, Oscillator `waveform` and `direction`, Pix2Pix `model` and `mode`, QTVR `projection`, Restore `model`, `size` and `clamp`, Sharpen `posterize`, Skeleton `trace` and `hold`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
 
 A param that sets `widget: 'trigger'` is drawn as a momentary button instead of a knob. It uses the same row as a drop-down: an inlet dot, then the label, then a button where the drop-down's box would be. Declare it as `{ value: 0, min: 0, max: 1, step: 1, label, widget: 'trigger' }`. Clicking the button calls `mod.fireTrigger(name)`. That records the time in `mod.triggeredAt[name]` and then calls `mod.onTrigger(name)`, which modules override to act on the trigger. A control cable fires it too. `ProcessingPipeline` fires the trigger on the cable's rising edge, when the value it applies crosses the param's midpoint (0.5) from below. The button still fires on a click while a cable is connected, since firing never touches the value. Its text is `mod.triggerText(name)`, which is empty by default and cut short with an ellipsis when it is too long. It is drawn fully lit on the first frame after it fires, however slow that frame is, then fades back over 250 ms. As with the drop-down, dragging the unconnected dot does nothing. A trigger's value is saved like any other param, but it only records where the last cable left it.
 
@@ -103,7 +103,7 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 - **Utility**: Blur, Brcosa, Channel, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, Skeleton, VideoMixer
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
 - **Interactive**: Conway, InkDrops, Latk, Yellowtail
-- **Analog**: DeeSeventySix, RuttEtra, SlowscanJam, Twoscilloscope
+- **Emulation**: DeeSeventySix, ESP32, RuttEtra, SlowscanJam, Twoscilloscope
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, GRASS, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
 - **img2img**: DepthAnything, InfrDrawings, Pix2Pix
@@ -446,7 +446,7 @@ The Restore module (`js/modules/RestoreModule.js`, `js/modules/anime4k/`, `js/sh
 | `model` | Model | Restore, Restore Soft | Restore | Anime4K's two families: Restore is tuned for blur and upsampling artifacts, Restore Soft for downsampling artifacts and aliasing |
 | `size` | Size | S, M, L, VL, UL | M | The network's size; each step costs about twice the last (see Cost). Anime4K's Fast presets use M |
 | `clamp` | Clamp | Off, On | On | Anime4K's Clamp_Highlights, which Anime4K recommends always using. After Amount, it pulls each pixel's luminance down to the input's maximum over the 5 × 5 pixels around it, so edges don't ring or overshoot |
-| `mix` | Amount | 0–4 | 2 | How far the picture moves from the input (0) toward the restored picture (1), and past it above 1 |
+| `mix` | Amount | 0–10 | 2 | How far the picture moves from the input (0) toward the restored picture (1), and past it above 1 |
 | `width`, `height` | Width, Height | Input, or up to 3840 and 2160 px | Input | The output's size (see Width and Height) |
 
 Patches save Model and Size as indexes, so a new model (Anime4K's GAN ones, say) is appended, never inserted.
@@ -805,6 +805,7 @@ The Latk module (`js/modules/LatkModule.js`, `js/modules/latk/`, `js/shaders/lat
   - `projectFrame()` is the example's `project()`. It puts the current frame of each layer through the camera, breaks a stroke where it goes behind the camera, and cuts it where it leaves the canvas.
   - `encodeLoop()` is the first half of the example's `encode()`, which turns those pieces into one loop of XY audio (see X and Y).
   - `XYOutputs` publishes that loop on a module's X and Y outputs each frame, and keeps the beam's place in it for knob cables. NAPLPS, RuttEtra, Skeleton and Yellowtail use it too, with `polylinePieces()`, which cuts a polyline at the canvas edge into pieces as `projectFrame()` cuts strokes. A polyline given no colour gets none on X and Y, so Twoscilloscope draws it in its default white.
+  - `XYInputs` reads a module's X and Y pins as one loop, for Twoscilloscope and ESP32, and `findPieces()` finds the strokes in it: the lit runs of its blanking (see Twoscilloscope's X and Y).
   - `PointStream` packs lines for the segment shader (see Rendering).
 - `latk/SegmentRenderer.js` draws a point stream. Twoscilloscope draws with it too.
 
@@ -845,7 +846,7 @@ The Twoscilloscope module (`js/modules/TwoscilloscopeModule.js`, `js/modules/two
 - `twoscilloscope/ScopeRenderer.js` is the second half of the example's `LatkScopeRenderer`, which runs the loop through the effects and turns each view into a point stream. Its first half, projecting and encoding the drawing, is now in `latk/strokes.js`.
 - `twoscilloscope/worker.js` runs `ScopeRenderer` off the main thread (see Worker).
 
-**X and Y.** `_readInputs()` makes one loop from the two pins (see Module System):
+**X and Y.** `XYInputs.read()`, in `latk/strokes.js`, makes one loop from the two pins (see Module System):
 - **Loops:** a control signal on either pin sets the loop's length and sample rate. It also brings its blanking and colour lanes, X's if both pins bring a loop. A loop of another length is stretched to fit.
 - **Values only:** a pin with only a 0..1 control value, such as an Oscillator's, holds it across the loop as −1..1. If neither pin brings a loop, the last Trail seconds of values, one a frame, are the loop, as on a scope with long persistence. Two Oscillators draw a Lissajous figure this way.
 - **Unplugged:** a pin with nothing cabled in stays at 0, the centre.
@@ -916,6 +917,8 @@ This was checked against the version before the worker in headless Chrome, with 
 
 The two skips were checked the same way against the version before them: the Latk cases match on every pixel, the Trail frames match frame for frame, and the files byte for byte, at both densities.
 
+Reading the pins and finding the strokes later moved into `latk/strokes.js`, for ESP32 to share. Against commit 5103e34, with a virtual clock, the output matches on every pixel at both densities: Latk's drawing in six pairs of View and Effect, and two Oscillators' Trail at five points in 40 frames and with one pin unplugged.
+
 **Cost.** At 1280×960 (a retina display) on an M2 Max, with Latk's drawing coming in, the module takes about 0.1 ms of a frame on the main thread, where it took 5.5–7 ms before the worker. Drawing the output takes about 0.03 ms of GPU time. A loop takes the worker 3.3 ms in Beams, 4.9 ms in Decoded Strokes and 3.0 ms in Original Lines, of which 2.8 ms is the effects, and Decoded Strokes' decoding is about 2 ms. Before the skips it took 6.1, 7.5 and 5.5 ms, every frame. In Beams, that is about 4% of a core, where it was about 37%.
 
 ## Audio Effects
@@ -925,6 +928,53 @@ The two skips were checked the same way against the version before them: the Lat
 - **`EffectMenu`** builds a module's drop-down from that module's own options, followed by one option per effect. Twoscilloscope's are Low Pass + Delay and None (`NONE`); SlowscanJam's is None. Patches save the option as its index, so a module's own options never change, and a new effect is appended to `CHAIN`. `params()` gives the drop-down and both knobs as module params. `resolve()` turns their values into plain data, `{ on, set }`, and relabels the knobs for the option. `nextSolo()` and `none` are the example's E and N keys.
 - **`EffectRack`** holds one of each effect, added to an `XYEffectChain`. `apply()` puts every setting back to the library's default, turns on the effects in `on`, and then sets the knobs' settings from `set`. Twoscilloscope's rack, in its worker, is its `XYTransformer`'s chain, which restarts the effects every frame (see Twoscilloscope Module).
 - **`EffectStream`** runs a rack over a signal that runs on from one call to the next, as SlowscanJam's fields do, keeping the effects' state between calls (see SlowscanJam Module). It restarts them when the option changes, so an effect turned back on doesn't replay what it held before. It also restarts them when Noise Seed changes, the one setting an effect reads only on a restart. `process()` can protect part of the signal: given a mask, it feeds the effects only the masked samples, scales them going in and back coming out, clamps them, and leaves the rest as they were.
+
+## ESP32 Module
+
+The ESP32 module (`js/modules/ESP32Module.js`, `js/modules/esp32/u8g2.js`, `js/shaders/esp32.js`) is an ESP32 drawing on a 128 × 64 1-bit SSD1306 OLED through the U8g2 library. It comes from the JavaScript port of QtPy Death Star Plans by Okubo Heavy Industries (`Deathstar_plans/index.html` in the DeathStarTrenchRuns project). The port played that sketch's animation. The module has X and Y control pins instead and draws what comes in on them, in the form Twoscilloscope takes, so Latk's X and Y outputs put a Latk drawing on the display.
+
+**Kept from the port:**
+- **The display:** `esp32/u8g2.js` is the port's software display, a draw buffer and the buffer the panel shows, with its `drawPixel()` and its `drawLine()`, a port of U8g2's Bresenham line.
+- **The pace:** a buffer goes to the panel every 30 ms, the time the ESP32 takes to send a full buffer over a 400 kHz I2C bus, so the picture changes 33 times a second at most. Each buffer is due 30 ms after the last was, as the port's `delay()` scheduled them, and a stall of more than 250 ms isn't caught up.
+- **The panel:** `esp32Frag` is the port's shader: each display pixel is a slightly inset rounded square, with a halo from the lit pixels within three cells of it and a white-hot core where they are dense. The panel is the largest 2:1 one that fits the frame with a small margin, in whole-pixel cells, which is 512 × 256 in the 640×480 frame, with 4 px cells.
+
+**Not kept:** the animation and its 190 KB of bitmaps and vertices, and the display's clip window, draw colour, boxes, frames and bitmaps, which only the animation used. The port's C and G keys are the Color and Grid drop-downs, and its R key restarted the animation.
+
+**Params.**
+
+| Param | Label | Options | Default | Sets |
+| --- | --- | --- | --- | --- |
+| `color` | Color | Cool White, Blue, Amber, Green | Cool White | The panel's colour, the port's four |
+| `grid` | Grid | Off, On | On | Whether unlit pixels show faintly |
+| `aspect` | Aspect | Fit, Stretch | Fit | How the canvas is put on the 2:1 display (see X and Y) |
+| `trail` | Trail | 0.1–10 s | 1 | How much of a values-only input is drawn, as Twoscilloscope's |
+
+Patches save Color and Aspect as indexes, so a new option is appended, never inserted.
+
+**X and Y.** The pins are read as Twoscilloscope's are, by `XYInputs` (see Twoscilloscope's X and Y): a loop on either pin, values only, or nothing, which leaves the display blank. They are read every frame, so a values-only input keeps a trail of 60 points a second, though the display shows it 33 times a second. For each buffer, `_page()` does one pass of a sketch's loop: clear the buffer, draw, send.
+- **Strokes:** `findPieces()` gives the lit runs of the loop's blanking. Each is drawn as U8g2 lines from one sample to the next, and a run of one sample as a pixel.
+- **No colour:** the display has one bit a pixel, so the loop's colour lane is ignored, and every stroke is drawn in the panel's Color.
+- **Aspect:** the loop's −1..1 is the canvas, which is 4:3, and the display is 2:1. Fit keeps the canvas's shape, 85.3 × 64 pixels in the middle of the display, much as the sketch drew its plans in a 72 × 64 box. Stretch fills all 128 × 64.
+- **Edges:** samples are clamped to −1..1, and one on the far edge goes to the last row or column, so an Oscillator's peak is not cut off.
+
+**Checked against the port.** In headless Chrome on an M2 Max, at pixel density 1 and 2:
+- **The display:** 14 loops went into the module, and through the port's own `u8g2` in its page, with the strokes found and placed by the test's own code. They were Latk's jellyfish at Loop Hz 100, 5 and 1 with Fit and with Stretch at 5, and five made-up loops in both: a box on the display's edges, no blanking, single lit samples, samples past ±1, and all blank. Every pixel of every buffer is the same.
+- **The panel:** the port's page was given the module's buffer and photographed. In a 640×480 window it lays its panel out as the module does at density 1, and in an 1100×960 one it has the 8 px cells of density 2. In all four colours, with Grid on and off, every value is within one level of the module's output, across the whole frame at density 1 and the panel and its halo at density 2.
+- **The pace:** over 10 s of 60 fps frames on a virtual clock, 333 buffers went to the panel. In the second after a 2 s stall, 36 did.
+- **Patches:** a node saved with Color Amber, Grid Off, Aspect Stretch and Trail 3.5, with an Oscillator on X, loads with them and the cable.
+
+**Optimizations.** A first version drew as a sketch would: a `drawLine()` for every pair of samples, the panel uploaded on every buffer, and the output drawn on every frame, as the port did. Three changes followed. None changes a pixel, and the checks above ran after them.
+- **Lines only where a sample moves on:** Latk's loop has 8,820 samples at the default Loop Hz, and its jellyfish lights 281 pixels, so nearly every pair of samples falls in one pixel. U8g2's line between two points in the same pixel is that pixel. So after a stroke's first line, one is drawn only when a sample lands in another pixel than the one before. Drawing a buffer went from 161 to 75 µs, and from 737 to 299 µs for the 44,100 samples of Loop Hz 1.
+- **The output only when the panel changes:** `sendBuffer()` compares the buffer with the one showing, and leaves the panel clean when they are the same. The output is drawn only for a changed panel, or a changed Color or Grid. With Latk at its 12 frames a second, it is drawn 11 times a second instead of 60, and not at all for a still drawing.
+- **No halo far from the panel:** past three cells from the panel a fragment can't be lit, and that is half the frame, so those fragments return black before the halo's 49 taps. A draw costs about half as much at density 2, and 13–22% less at density 1.
+
+In the real loop at density 2, with Latk at its defaults, the module's share of a frame on the main thread went from 0.33 ms to 0.15 ms, and from 0.72 ms to 0.37 ms at Loop Hz 1.
+
+Two more were tried and left out:
+- **A worker:** a worker drawing the display was measured, as Twoscilloscope and Skeleton have one. The main thread then pays only to copy the loop to it: 21 µs where it now draws the buffer in 75, and 64 where it draws in 299 at Loop Hz 1. Latk's lanes are shared with whatever else reads them, so they can't be transferred. Measured back to back, that is 0.03 ms a frame less at the defaults and 0.13 ms less at Loop Hz 1, and it can't be more than the module's whole 0.15 and 0.37 ms. The display would show each buffer a frame later, after a round trip of 0.2–0.9 ms, and each node would hold a thread. Twoscilloscope's worker saved 5.5–7 ms a frame.
+- **A separable halo:** the halo's weight is its x part times its y part, so 14 exponentials can stand in for 49. On top of the early return it made no difference that could be measured, and at density 1 it changed one value by one level.
+
+**Cost.** When the output is drawn, it takes about 0.2 ms of GPU time at 1280×960, where it took 0.37–0.89 ms before the early return. These were measured by throughput, and vary about twofold from run to run with the GPU's power state. Uploading a changed buffer takes 22 µs.
 
 ## Skeleton Module
 

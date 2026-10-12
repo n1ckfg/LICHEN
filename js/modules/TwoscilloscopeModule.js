@@ -3,6 +3,7 @@ import { registerModule } from '../moduleRegistry.js';
 import '../libraries/p5.twoscilloscope.js';   // a classic script: it puts its classes on window
 import { EffectMenu, NONE, knobFor } from './audiofx/EffectRack.js';
 import { SegmentRenderer } from './latk/SegmentRenderer.js';
+import { XYInputs } from './latk/strokes.js';
 import { latkSegmentVert } from '../shaders/latk.js';
 import { twoscilloscopeBeamFrag } from '../shaders/twoscilloscope.js';
 
@@ -70,7 +71,7 @@ export class TwoscilloscopeModule extends Module {
     this.beamShader = glCanvas.createShader(latkSegmentVert, twoscilloscopeBeamFrag);
     // The beams and lines are geometry, so the output keeps p5's MSAA (see Framebuffers in ARCHITECTURE.md)
     this.outputFBO = glCanvas.createFramebuffer();
-    this.history = [];        // { t, x, y } a frame, while only 0..1 values come in
+    this.xy = new XYInputs();   // the X and Y pins as one loop
 
     // Loops the altered audio out of the sound card while Sound is on. XYscope's
     // own defaults are the example's setup(): 44.1 kHz in blocks of 512.
@@ -128,7 +129,7 @@ export class TwoscilloscopeModule extends Module {
     this._setSound(Math.round(this.params.sound.value) === 1);
     // Which effects are on, and what Effect A and B set on them
     const fx = MENU.resolve(this.params);
-    const input = this._readInputs(graph);
+    const input = this.xy.read(this, graph, this.params.trail.value);
     this.connected = !!input;
     if (!input) {
       this.loop = null;
@@ -178,39 +179,6 @@ export class TwoscilloscopeModule extends Module {
   _takeLoop(loop) {
     this.loop = { ...loop, stream: { data: loop.stream, count: loop.count } };
     this.freq = loop.freq;
-  }
-
-  // X and Y as one loop for the scope: { x, y, z, color, sampleRate }, or null
-  // with nothing cabled in. A loop on either pin sets the length, and brings
-  // its blanking and colours (X's, if both bring a loop). An unplugged pin
-  // stays at 0, the centre.
-  _readInputs(graph) {
-    const xIn = this.getControlInput(graph, 0);
-    const yIn = this.getControlInput(graph, 1);
-    const looped = [xIn, yIn].find((c) => c && c.signal && c.signal.samples.length >= 2);
-    if (looped) {
-      this.history = [];
-      const { samples, sampleRate, z, color } = looped.signal;
-      const n = samples.length;
-      return { x: lane(xIn, n), y: lane(yIn, n), z: z ?? null, color: color ?? null, sampleRate };
-    }
-    if (!xIn && !yIn) {
-      this.history = [];
-      return null;
-    }
-
-    // Only 0..1 values each frame: draw the last Trail seconds of them, as a
-    // scope with a long persistence would
-    const now = performance.now() / 1000;
-    const trail = this.params.trail.value;
-    this.history.push({ t: now, x: xIn ? xIn.value * 2 - 1 : 0, y: yIn ? yIn.value * 2 - 1 : 0 });
-    while (now - this.history[0].t > trail) this.history.shift();
-    const n = this.history.length;
-    return {
-      x: Float32Array.from(this.history, (h) => h.x),
-      y: Float32Array.from(this.history, (h) => h.y),
-      z: null, color: null, sampleRate: n / trail,
-    };
   }
 
   // A loop in the view the worker made its stream for, which lags a change of
@@ -273,22 +241,6 @@ function sameLane(a, b) {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
   return true;
-}
-
-// One pin's samples over a loop of n: its own loop, stretched to n if it is
-// another length, its 0..1 value held across the loop, or 0 when unplugged
-function lane(input, n) {
-  if (!input) return new Float32Array(n);
-  const s = input.signal?.samples;
-  if (!s || s.length < 2) return new Float32Array(n).fill(input.value * 2 - 1);
-  if (s.length === n) return s;
-  const out = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const at = i * (s.length - 1) / (n - 1);
-    const i0 = Math.min(Math.floor(at), s.length - 2);
-    out[i] = s[i0] + (s[i0 + 1] - s[i0]) * (at - i0);
-  }
-  return out;
 }
 
 registerModule('Twoscilloscope', TwoscilloscopeModule);

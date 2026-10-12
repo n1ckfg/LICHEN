@@ -15,13 +15,9 @@
 // This runs in the module's worker (worker.js), so nothing here touches the
 // DOM or p5.
 import '../../libraries/p5.twoscilloscope.js';   // a classic script: it puts its classes on the global scope
-import { PointStream, Z_OFF, Z_ON } from '../latk/strokes.js';
+import { PointStream, findPieces, Z_ON } from '../latk/strokes.js';
 
 const { XYTransformer, XYSoundBuffer, XYDecoder } = globalThis;
-
-// The colour of a loop that brings none: white, where the library
-// Oscilloscope's default is amber (hue 50)
-const DEFAULT_KEY = 0xffffff;
 
 export class ScopeRenderer {
 
@@ -37,8 +33,7 @@ export class ScopeRenderer {
     this.canvasW = 0;
     this.canvasH = 0;
 
-    // runs of lit samples, one per stroke piece: { start, lit, key }. start is
-    // the blank sample before the run, or -1 if the run starts the loop.
+    // runs of lit samples, one per stroke piece (see findPieces in latk/strokes.js)
     this.pieces = [];
     // one loop of the audio before the effects, and after
     this.input = { x: new Float32Array(0), y: new Float32Array(0) };
@@ -219,24 +214,4 @@ export class ScopeRenderer {
     }
   }
 
-}
-
-// The runs of lit samples in a loop's blanking, each with the colour of its
-// first sample. A loop without blanking is one run, lit from end to end.
-function findPieces(z, color, n) {
-  const keyAt = (i) => (color && color[i] >= 0 ? color[i] : DEFAULT_KEY);
-  if (!z) return [{ start: -1, lit: n, key: keyAt(0) }];
-  const isLit = (i) => z[i] > (Z_OFF + Z_ON) / 2;
-  const pieces = [];
-  let i = 0;
-  while (i < n) {
-    if (!isLit(i)) {
-      i++;
-      continue;
-    }
-    const first = i;
-    while (i < n && isLit(i)) i++;
-    pieces.push({ start: first - 1, lit: i - first, key: keyAt(first) });
-  }
-  return pieces;
 }

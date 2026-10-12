@@ -28,6 +28,7 @@ import './modules/DeeSeventySixModule.js';
 import './modules/DisplacerModule.js';
 import './modules/DelayModule.js';
 import './modules/CyberlaceModule.js';
+import './modules/ESP32Module.js';
 import './modules/FilmGrainModule.js';
 import './modules/GameBoyModule.js';
 import './modules/GlitchModule.js';
