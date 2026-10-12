@@ -63,8 +63,12 @@ import './modules/LUTModule.js';
 import './modules/MosaicModule.js';
 import './modules/RestoreModule.js';
 import './modules/SharpenModule.js';
-import './modules/SkeletonModule.js';
 import './modules/VideoMixerModule.js';
+// - - - CONTROL - - -
+import './modules/CalculatorModule.js';
+import './modules/ConstantModule.js';
+import './modules/RandomModule.js';
+import './modules/SkeletonModule.js';
 // - - - IMG2IMG - - -
 import './modules/DepthAnythingModule.js';
 import './modules/InfrDrawingsModule.js';

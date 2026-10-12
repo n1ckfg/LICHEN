@@ -31,7 +31,8 @@ void main() {
 
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
-  'Utility': ['Blur', 'Brcosa', 'Channel', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'Skeleton', 'VideoMixer'],
+  'Utility': ['Blur', 'Brcosa', 'Channel', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'VideoMixer'],
+  'Control': ['Calculator', 'Constant', 'Random', 'Skeleton'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
   'Interactive': ['Conway', 'InkDrops', 'Latk', 'Yellowtail'],
@@ -50,6 +51,7 @@ const color_archival = [68, 102, 136];
 const color_effect = [108, 102, 186];
 const color_effect2 = [125, 85, 129];
 const color_utility = [85, 120, 100];
+const color_control = [96, 140, 56];
 const color_output = [170, 85, 34];
 const color_interactive = [160, 120, 40];
 const color_emulation = [30, 125, 135];
@@ -72,8 +74,12 @@ const MODULE_COLORS = {
   Mosaic: color_utility,
   Restore: color_utility,
   Sharpen: color_utility,
-  Skeleton: color_utility,
   VideoMixer: color_utility,
+  // - - - CONTROL - - -
+  Calculator: color_control,
+  Constant: color_control,
+  Random: color_control,
+  Skeleton: color_control,
   // - - - GENERATIVE - - -
   Cloudy: color_generative,
   Coils: color_generative,
@@ -424,6 +430,7 @@ export class NodeGraphUI {
     const sectionInitialState = {
       'Sources': true,
       'Utility': true,
+      'Control': true,
       'Generative': true,
       'Interactive': true,
       'Emulation': true,
@@ -574,7 +581,11 @@ export class NodeGraphUI {
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
       mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk';
     const fileBtnSection = hasFileBtn ? 24 : 0;
-    return HEADER_HEIGHT + portSection + paramSection + previewSection + monitorSection + fileBtnSection + 12;
+    // Output ports sit at a node's bottom edge, over the foot of its preview.
+    // A node with none (Calculator, Constant, Random) gives them a row of
+    // their own, or they would land on its last param
+    const outputSection = !hasPreview && !monitorSection && mod.outputs.length > 0 ? PORT_SPACING : 0;
+    return HEADER_HEIGHT + portSection + paramSection + previewSection + monitorSection + fileBtnSection + outputSection + 12;
   }
 
   getInputPortPos(mod, index) {
