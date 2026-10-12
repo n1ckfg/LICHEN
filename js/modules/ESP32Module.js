@@ -16,8 +16,6 @@ const COLORS = [
   [0.42, 1.00, 0.62], // green
 ];
 
-const FIT = 0;               // the Aspect drop-down's first option
-
 // An ESP32 drawing on a 1-bit SSD1306 OLED through U8g2, from the JavaScript
 // port of QtPy Death Star Plans by Okubo Heavy Industries. The port played
 // that sketch's animation. Here the display draws whatever comes in on the X
@@ -25,8 +23,9 @@ const FIT = 0;               // the Aspect drop-down's first option
 // audio, whose lit runs are the strokes (see latk/strokes.js). Each stroke is
 // drawn with U8g2's lines, a buffer goes to the panel every 30 ms as on the
 // hardware, and the port's shader draws the panel. Width and Height are the
-// display's pixels, the port's 128 x 64 unless changed, for a grid of another
-// size.
+// display's pixels: 128 x 96 unless changed, the canvas's shape, where the
+// port's display was 128 x 64. The longer of the two spans the canvas, and the
+// other shows its share of it.
 export class ESP32Module extends Module {
   static uid = '6b72b69a';
 
@@ -36,7 +35,7 @@ export class ESP32Module extends Module {
     this.outputs = [{ id: '172f', name: 'out', type: 'video' }];
     this.params = {
       width: { id: '7812', value: 128, min: 1, max: 256, step: 1, label: 'Width' },
-      height: { id: '8b4e', value: 64, min: 1, max: 256, step: 1, label: 'Height' },
+      height: { id: '8b4e', value: 96, min: 1, max: 256, step: 1, label: 'Height' },
       color: {
         id: 'e549', value: 0, min: 0, max: COLORS.length - 1, step: 1, label: 'Color',
         widget: 'dropdown', valueLabels: ['Cool White', 'Blue', 'Amber', 'Green'],
@@ -44,10 +43,6 @@ export class ESP32Module extends Module {
       grid: {
         id: '5675', value: 1, min: 0, max: 1, step: 1, label: 'Grid',
         widget: 'dropdown', valueLabels: ['Off', 'On'],
-      },
-      aspect: {
-        id: '9a5f', value: FIT, min: 0, max: 1, step: 1, label: 'Aspect',
-        widget: 'dropdown', valueLabels: ['Fit', 'Stretch'],
       },
       // Seconds of a frame-rate control input drawn at once, as Twoscilloscope's
       trail: { id: '84d1', value: 1, min: 0.1, max: 10, step: 0.1, label: 'Trail' },
@@ -116,20 +111,26 @@ export class ESP32Module extends Module {
     u8g2.clearBuffer();
     if (input) {
       const { x, y } = input;
-      // Scope units to display pixels. Fit keeps the canvas's shape, centred,
-      // as the sketch drew in a box; Stretch fills the display.
-      const fit = Math.round(this.params.aspect.value) === FIT;
-      const sw = fit ? Math.min(W, H * glCanvas.width / glCanvas.height) : W;
-      const sh = fit ? Math.min(H, W * glCanvas.height / glCanvas.width) : H;
+      // Scope units to display pixels. The canvas keeps its shape, centred: the
+      // display's longer side spans the canvas's, and the other side is in
+      // proportion, so the canvas is cut off where it runs past the display
+      // and leaves a margin where it stops short.
+      const cw = glCanvas.width, ch = glCanvas.height;
+      const sw = W >= H ? W : H * cw / ch;
+      const sh = W >= H ? W * ch / cw : H;
       const ox = (W - sw) / 2, oy = (H - sh) / 2;
+      // The canvas's last column and row
+      const lastX = Math.ceil(ox + sw) - 1, lastY = Math.ceil(oy + sh) - 1;
       for (const piece of findPieces(input.z, input.color, x.length)) {
         const first = piece.start + 1;
         let ax = 0, ay = 0;       // the pixel of the sample before
         let drawn = false;
         for (let i = first; i < first + piece.lit; i++) {
-          // A point on the far edge belongs to the last pixel, not the one past it
-          const bx = Math.min(W - 1, Math.trunc(ox + (Math.min(1, Math.max(-1, x[i])) + 1) / 2 * sw));
-          const by = Math.min(H - 1, Math.trunc(oy + (1 - Math.min(1, Math.max(-1, y[i]))) / 2 * sh));
+          // A point on the canvas's far edge belongs to its last pixel, not
+          // the one past it. A pixel may be off the display, where U8g2 here
+          // draws nothing, so a line to it is cut at the display's edge.
+          const bx = Math.min(lastX, Math.floor(ox + (Math.min(1, Math.max(-1, x[i])) + 1) / 2 * sw));
+          const by = Math.min(lastY, Math.floor(oy + (1 - Math.min(1, Math.max(-1, y[i]))) / 2 * sh));
           // A loop has many samples a display pixel, and a line between two
           // in the same pixel is that pixel, so after a stroke's first line
           // one is drawn only when a sample moves on to another
@@ -172,13 +173,14 @@ export class ESP32Module extends Module {
   }
 
   _drawPanel(glCanvas) {
-    // The port's layout: the largest panel of the display's shape that fits
-    // with a small margin, in whole-pixel cells when big enough. In px of the
-    // logical frame, so the panel is the same size at any pixel density.
+    // The largest panel of the display's shape that fits the frame, edge to
+    // edge, so a display of the frame's shape fills it. The port left a small
+    // margin and kept its cells to whole pixels; here a cell is whatever
+    // fraction of one that takes. In px of the logical frame, so the panel is
+    // the same size at any pixel density.
     const { w: W, h: H } = this.u8g2;
     const fw = glCanvas.width, fh = glCanvas.height;
-    let cell = Math.min(fw * 0.96 / W, fh * 0.92 / H);
-    if (cell >= 4) cell = Math.floor(cell);
+    const cell = Math.min(fw / W, fh / H);
     const pw = cell * W, ph = cell * H;
     // The port placed the panel from the left and from the bottom, so its
     // margins are rounded from there
