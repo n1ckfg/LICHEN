@@ -76,7 +76,26 @@ A node shows its output (a Monitor its input) in a preview on the 2D canvas. The
 - **Transparency:** a picture with alpha below 1 was blended over whatever glCanvas held, which was the last node's preview. A tile replaces what is there, so the picture now shows over the preview's black. Delay does this, for example, and so does Image with no file loaded.
 - **Outlines:** each copy used to flush the 2D canvas, which changed how Chrome antialiased the edges of some knob arcs and port rings, mostly at zoom 2 and above, by up to 117 levels on single edge pixels. They now draw as they would with no previews at all.
 
-**Full-size copies.** Fullscreen, the second-screen window and the recording still copy glCanvas whole: `_blitFBO()` fills glCanvas with one framebuffer, which leaves no page in it, and `_drawFBO()` copies it. A tile that won't fit on glCanvas is drawn that way too, which can't happen at the UI's zoom limits.
+**Full-size copies.** Fullscreen, the second-screen window and the recording copy a picture whole, from the canvas `_fullSize()` gives them:
+- **A picture that fits glCanvas:** `_blitFBO()` fills glCanvas with the framebuffer, which leaves no page in it, and glCanvas is the copy, as it always was.
+- **A bigger one:** an upscaling Restore's output has more pixels than glCanvas (see Restore Module). It is drawn into glCanvas a tile at a time with `previewFrag`, one pixel to one, and each tile is copied to its place on a 2D canvas of the picture's size. That canvas is the copy.
+
+`_drawFBO()` draws the copy on screen. A preview tile that won't fit on glCanvas is drawn that way too, which can't happen at the UI's zoom limits. Fullscreen and the second-screen window still letterbox every picture to 4:3, and the recording still stretches it to the Monitor's Width and Height.
+
+Checked in headless Chrome on an M2 Max, at pixel density 1 and 2:
+- **Pictures that fit:** a fullscreen Monitor, its recording from fullscreen and from the node view, and its second-screen copy all match commit 4970850 on every pixel.
+- **Bigger ones:** the copy matches Restore's framebuffer on every pixel at 1440×1080, 1920×1440, 2560×1440, 1281×961 and 3840×2160. So does a recording at the same Width and Height, from fullscreen and from the node view, and a fullscreen window of 1440×1080 device pixels. Copied through glCanvas, as before, that window differed from the framebuffer on 35% of values at density 1, by up to 26 levels.
+
+Each tile costs a copy of glCanvas, about 1 ms. At density 1, where glCanvas is 640×480, showing a bigger picture can therefore cost more than making it:
+
+| Picture | Tiles at density 1 | Tiles at density 2 |
+| --- | --- | --- |
+| 1440×1080 | 9 | 4 |
+| 1920×1440 | 9 | 4 |
+| 2560×1920 | 16 | 4 |
+| 3840×2160 | 30 | 9 |
+
+With a fullscreen Monitor on a Restore M and nothing else in the patch, the page held 60 fps up to 1920×1440 at density 1 and up to 2560×1920 at density 2. It gave 38 fps at 2560×1920 and 21–22 fps at 3840×2160 at density 1, and 36–38 fps at 3840×2160 at density 2.
 
 ### Module Categories
 
@@ -418,7 +437,7 @@ The Channel module (`js/modules/ChannelModule.js`, `js/shaders/channel.js`) buil
 
 ## Restore Module
 
-The Restore module (`js/modules/RestoreModule.js`, `js/modules/anime4k/`, `js/shaders/anime4k/`, `js/shaders/restore.js`) runs the Restore CNNs from bloc97's Anime4K v4.0. They are small convolutional networks trained to rebuild anime line art that blur, resampling and compression have softened. They don't change the frame's size, so Restore is an ordinary utility filter. Because they were trained on line art, they sharpen edges in any picture, and in camera or generative video they can invent line structure.
+The Restore module (`js/modules/RestoreModule.js`, `js/modules/anime4k/`, `js/shaders/anime4k/`, `js/shaders/restore.js`) runs the Restore CNNs from bloc97's Anime4K v4.0. They are small convolutional networks trained to rebuild anime line art that blur, resampling and compression have softened. They keep their input's size, so the module can scale its input to another size first and run them there (see Width and Height). Because they were trained on line art, they sharpen edges in any picture, and in camera or generative video they can invent line structure.
 
 **Params.**
 
@@ -428,6 +447,7 @@ The Restore module (`js/modules/RestoreModule.js`, `js/modules/anime4k/`, `js/sh
 | `size` | Size | S, M, L, VL, UL | M | The network's size; each step costs about twice the last (see Cost). Anime4K's Fast presets use M |
 | `clamp` | Clamp | Off, On | On | Anime4K's Clamp_Highlights, which Anime4K recommends always using. After Amount, it pulls each pixel's luminance down to the input's maximum over the 5 × 5 pixels around it, so edges don't ring or overshoot |
 | `mix` | Amount | 0–4 | 2 | How far the picture moves from the input (0) toward the restored picture (1), and past it above 1 |
+| `width`, `height` | Width, Height | Input, or up to 3840 and 2160 px | Input | The output's size (see Width and Height) |
 
 Patches save Model and Size as indexes, so a new model (Anime4K's GAN ones, say) is appended, never inserted.
 
@@ -438,12 +458,20 @@ Patches save Model and Size as indexes, so a new model (Anime4K's GAN ones, say)
 
 Two other ways of strengthening it were tried in numpy and dropped. Running the network at half or quarter resolution changed the picture a little less than Amount 1 (means of 3.1 and 3.3), and softened fine detail. Running it twice in a row changed it about as much as Amount 2, at twice the cost.
 
+**Width and Height.** Restore is the one module whose output can be another size than the frame. It scales its input to Width × Height and runs the network at that size, so the network works on the blur the scaling leaves, which is what the Restore family is tuned for.
+- **Real pixels:** both are in real pixels, as Monitor's Width and Height are, not in pixels of the logical frame. On a retina display the frame is already 1280×960, so 1440×1080 is 1.125 times its size there, and 2.25 times on a standard display.
+- **Input:** at 0 a knob reads Input, and that axis takes the input's own size. Both default to it, so a new node, and a patch saved before the knobs, give the output they gave before. A Restore at Input after an upscaling one takes that one's size.
+- **Whole pixels:** a dragged or cabled knob gives fractions, which are rounded. A typed value is used as it is, so 1366 × 768 works. Every new size reallocates the module's buffers, so a cable on either knob reallocates them on every frame it moves.
+- **Shape:** the input is stretched to fill, whatever the two sizes' shapes. Everything downstream still shows the picture as the 4:3 frame.
+- **Scaling:** there is no scaling pass. Every pass that reads the input is told the input has the output's size, so its taps fall an output pixel apart, and the input texture's own bilinear filter scales it. A size below the input's is read the same way, with no averaging, so below half size it aliases.
+- **Downstream:** other modules read the bigger picture by uv, as they read any input, and write the frame's size. The extra pixels are only seen by a Monitor cabled straight to Restore, whose fullscreen, second-screen and recording copies take the picture at its own size (see Full-size copies in Node Previews). A recording is pixel for pixel when Monitor's Width and Height match Restore's.
+
 **Files.** Each model is one of Anime4K's mpv user shaders, copied unchanged from its `glsl/Restore/` at commit 7684e95 into `js/shaders/anime4k/` as a JS default export, MIT licence included. A file is a list of passes, each a block of `//!` directives and a `hook()` that reads named textures through mpv's macros. `anime4k/mpvHook.js` turns each pass into a p5 shader:
 - **Textures:** each bound texture becomes a sampler and a size uniform, and the macros read it at the fragment's own uv, offset in texels.
 - **Orientation:** mpv puts +y down the image, as a LICHEN framebuffer does (v = 0 is the top row), so offsets carry over unchanged.
 - **Scope:** it handles what Restore uses and no more. Every pass is its input's size, and any other WIDTH, HEIGHT, WHEN or hook is rejected.
 
-**Running.** The module runs the passes in order, each into its own half-float buffer, which later passes bind by its SAVE name. The features are signed, so 8-bit buffers would lose half of them, and without half-float framebuffers the module passes its input through. With Clamp on, Clamp_Highlights' two statistics passes run first, on the input. `restoreMixFrag` then applies Amount and writes `outputFBO`, keeping the input's alpha. With Clamp on, it also does Clamp_Highlights' clamp, reading the statistics. In mpv the clamp is the file's PREKERNEL pass, after the model. Here it comes after Amount, so a large Amount can't bring back the overshoot it removes. The file is still copied unchanged, and its PREKERNEL pass is compiled but never run. The passes run under `blendMode(REPLACE)`, as Blur's do, since the alpha channel carries a feature like the others.
+**Running.** The module runs the passes in order, each into its own half-float buffer of the output's size, which later passes bind by its SAVE name. The features are signed, so 8-bit buffers would lose half of them, and without half-float framebuffers the module passes its input through. With Clamp on, Clamp_Highlights' two statistics passes run first, on the input. `restoreMixFrag` then applies Amount and writes `outputFBO`, keeping the input's alpha. With Clamp on, it also does Clamp_Highlights' clamp, reading the statistics. In mpv the clamp is the file's PREKERNEL pass, after the model. Here it comes after Amount, so a large Amount can't bring back the overshoot it removes. The file is still copied unchanged, and its PREKERNEL pass is compiled but never run. The passes run under `blendMode(REPLACE)`, as Blur's do, since the alpha channel carries a feature like the others.
 
 **Loading.** A model's file is imported the first time any node picks it, since the UL files are 300 KB each, and its compiled passes are shared by every node. As with LUT's presets, the previous model stays on until the new one is ready, and a choice that finishes loading after a newer one is dropped. Until the first model is ready, the output is the input.
 
@@ -463,6 +491,12 @@ These checks ran when Mix stopped at 1 and the clamp ran as a pass before it. Am
 - **Against numpy:** Amount 0, 1, 2 and 4 with Clamp on, and 2 with Clamp off, are within one level of the numpy result on every pixel, at pixel density 1 and 2. The numpy result applies Amount, then the clamp. Amount 0 gives back the input exactly.
 - **Against the old version:** at Amount 1, the output matches the version before Amount on all but 0.16% of pixels, which are one level off. Mix 0 matches exactly.
 
+Width and Height were checked in headless Chrome on an M2 Max, with a 640×480 test picture coming in from Image, at pixel density 1 and 2:
+- **At Input:** the output matches commit 4970850, from before the knobs, on every pixel: M, S with Clamp off at Amount 1, Restore Soft L at Amount 4, VL, and UL at Amount 0.4. Width and Height typed in as the input's own size give the same pixels again.
+- **Scaled:** the input was scaled to 1440×1080 by the GPU's bilinear filter into a float buffer, and that went into a Restore at Input. A Restore at 1440×1080, fed the input itself, matches it on every pixel: M, M with Clamp off at Amount 1, Restore Soft S at Amount 4, and UL.
+- **Sizes:** the output and every pass buffer are the size asked for. One knob alone leaves the other axis at the input's size, 1365.6 × 767.7 gives 1366×768, and a second Restore at Input after one at 1440×1080 is 1440×1080. Turned up to 2560×1920, down to 320×240 and back to Input, a node gives its first output again on every pixel.
+- **Patches:** a node saves its Width and Height, and Sharpen and Blur after a 1440×1080 Restore still write the frame's size.
+
 **Cost.** In ms per frame on an M2 Max, with Clamp on:
 
 | Size | Density 1 (640×480) | Density 2 (1280×960) |
@@ -474,6 +508,8 @@ These checks ran when Mix stopped at 1 and the clamp ran as a pass before it. Am
 | UL | 15 | 54 |
 
 Restore Soft costs the same, and Clamp adds about 0.2 ms at density 1. UL can't hold 60 fps on its own, and at density 2 neither can VL. The first frame drawn with a newly loaded model took up to 21 ms at density 1 and 69 ms at density 2.
+
+The table is for an output of the frame's size. Cost follows the output's pixel count: measured for M from 1280×960 to 3840×2160, the time per pixel varied by under 10%. So 1440×1080 costs 1.3 times the Density 2 column, 1920×1440 2.25 times, and 3840×2160 6.75 times. Memory follows it too. A pass buffer takes 8 bytes a pixel, and with Clamp on M holds 10 of them and UL 27: 124 MB and 336 MB at 1440×1080, and 664 MB and 1.8 GB at 3840×2160. Showing a bigger output on a Monitor costs more again (see Full-size copies in Node Previews).
 
 ## DepthAnything Module
 
@@ -639,7 +675,7 @@ Sampling ahead moves the picture the other way, as in After Effects. Where the m
 
 **Edges.** The `edges` drop-down says what a pixel sampled from beyond the frame shows. Clamp (the default) repeats the edge pixels. Wrap tiles the input, which is After Effects' Wrap Pixels Around. Mirror reflects it, and Black shows opaque black. Wrap shows a seam one pixel wide, because the input textures clamp at their edges, so the bilinear filter can't blend across the join.
 
-**Inputs.** A lone input feeds both, as in VideoMixer, so a video connected on its own displaces itself. After Effects' Displacement Map Behavior (centre, stretch or tile the map) and Expand Output have no counterpart here, because every module's output has the same size.
+**Inputs.** A lone input feeds both, as in VideoMixer, so a video connected on its own displaces itself. After Effects' Displacement Map Behavior (centre, stretch or tile the map) and Expand Output have no counterpart here, because every module's output covers the same frame.
 
 **Checked against a model.** The comparison ran in headless Chrome at 640×480. The input held each texel's own uv in a float buffer, so the output read back exactly where every pixel had sampled. That was compared with a JS model of the formula on a map of coloured blocks, grey columns and rows pinned to 128 and 255. Every channel on both axes, and every edge mode at shifts up to a whole frame, matched to within 0.002 px. The exceptions were 80 pixels in Wrap and 48 in Black. All of them sample within 0.00003 px of the frame's edge, so float32 and float64 rounding land on opposite sides of it.
 
@@ -997,6 +1033,7 @@ With isolation, ORT runs its default of min(4, ⌈cores / 2⌉) threads, which `
 - **Parameters**: Module parameters are normalized or use specific ranges defined in the `params` object. The UI handles scaling these values for display.
 - **Coordinate System**: p5.js uses a 2D coordinate system for the UI (top-left 0,0), while the WebGL `glCanvas` uses standard GL coordinates (centered 0,0 or screen-space depending on usage).
 - **Pixel Density**: framebuffers are allocated at the graphics' pixel density, so on a retina display `gl_FragCoord` runs over twice as many pixels as `glCanvas.width` / `glCanvas.height` report. A shader that works in `gl_FragCoord` space — or that derives a texel step from a resolution — must be given `Module.fragResolution()` rather than the logical size, and any pixel-valued uniform the shader compares against `gl_FragCoord` must be scaled by `Module.pixelDensity` (Conway's spawn position, radius and cell size; GridGuys' target). Getting this wrong confines the output to one quadrant, and in a feedback shader it also reads off the clamped edge. Shaders that address themselves through `vTexCoord` are unaffected, which is most of them — only `conway`, `dither`, `gridguys-simulation`, `inkdrops` and `spiralgalaxy` read `gl_FragCoord` (`cyberlace` uses it for a `mod(…, 2.0)` dither that is deliberately one physical pixel wide, and RuttEtra's grid pass to count the texels of a buffer of density 1).
+- **Output Sizes**: every module's output is the frame's size, except Restore's, which is its Width × Height (see Restore Module). An input read by uv works at any size. A module that needs its input's size in pixels reads `fbo.width * fbo.density` from the framebuffer, as DepthAnything does, instead of assuming `fragResolution()`.
 - **Framebuffer Orientation**: `NodeGraphUI` blits an FBO to the P2D canvas through a shader that flips `v`, so within a framebuffer `gl_FragCoord.y = 0` is the *top* of the displayed image. A pass that reads a buffer it also writes (feedback, ping-pong) must address it with the unflipped `gl_FragCoord.xy / resolution`: `v = y / H` is by definition the row being written, and reading through a flipped uv mirrors the buffer on every iteration. `InkDrops` and `SpiralGalaxy` both carry notes on this.
 - **No `glCanvas.image()` in `process()`**: p5 draws `image()` through the bound shader whenever that shader has a sampler, not through its own texture shader. Between frames the bound shader is one of `NodeGraphUI`'s preview shaders, because `framebuffer.end()` pops each module's own `shader()` call back off. An `image()` copy therefore draws whatever the UI blitted last, instead of the image. This is what turned Dither's error diffusion solid black. To read an upstream frame, bind it as a sampler uniform. To copy one, draw it through a shader you bind yourself.
 - **Give a hand-built `p5.Geometry` its own `gid`**: `model()` caches a geometry's GPU buffers under `geometry.gid`, and `new p5.Geometry()` leaves it undefined. Two such geometries then share the cache key `undefined`, and the second draws the first's buffers. Whitney sets `geometry.gid = 'Whitney|<n>'` and frees it with `freeGeometry()` in `dispose()`. `SegmentRenderer` does the same, named for the module it draws for (`'Latk|<n>'`, `'Twoscilloscope|<n>'`), and so do SlowscanJam and RuttEtra. RuttEtra rebuilds its geometry, so it also frees the one each replaces. A geometry with many faces should also get one edge of its own, as RuttEtra's does, unless it is drawn with strokes: otherwise the first `model()` builds stroke geometry for every edge.

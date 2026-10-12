@@ -4,9 +4,10 @@ import { buildHook } from './anime4k/mpvHook.js';
 import { registerModule } from '../moduleRegistry.js';
 
 // Anime4K's Restore CNNs, from the Anime4K project: small convolutional networks
-// that rebuild line art blurred or softened by resampling and compression,
-// without changing the frame's size. Each model is one of Anime4K's mpv shader
-// files, vendored unchanged in js/shaders/anime4k/ and run by anime4k/mpvHook.js.
+// that rebuild line art blurred or softened by resampling and compression. They
+// keep their input's size, so the module scales the input to Width x Height
+// first and runs them there. Each model is one of Anime4K's mpv shader files,
+// vendored unchanged in js/shaders/anime4k/ and run by anime4k/mpvHook.js.
 const MODELS = ['Restore', 'Restore Soft'];
 const SIZES = ['S', 'M', 'L', 'VL', 'UL'];
 
@@ -47,15 +48,21 @@ export class RestoreModule extends Module {
       // The networks add a small correction to the input; past 1 this scales it
       // up. Still saved as mix, so a patch from when it stopped at 1 loads as it was.
       mix: { id: 'f938', value: 2, min: 0, max: 10, step: 0.01, label: 'Amount' },
+      // The output's size in real pixels, as Monitor's. 0 is the input's own.
+      width: { id: 'e255', value: 0, min: 0, max: 3840, step: 160, label: 'Width', valueLabels: ['Input'] },
+      height: { id: 'c6fd', value: 0, min: 0, max: 2160, step: 120, label: 'Height', valueLabels: ['Input'] },
     };
     this.createShader(restoreMixFrag);
-    this.createOutputFBO();
+    // Sized by _resize() when a frame comes in. Density 1, so its width and
+    // height are real pixels.
+    this.outputFBO = this.createFramebuffer({ width: glCanvas.width, height: glCanvas.height, density: 1 });
 
     this.buffers = [];          // one half-float buffer per pass, reused by every model
     this.restorePasses = null;  // the active model's passes; null passes the input through
     this.clampPasses = null;
     this._shownFile = null;     // the file the active (or loading) model comes from
     this._loadToken = 0;        // so a slow model can't land after a newer choice
+    this._asked = null;         // the size last asked of the buffers, as 'w x h'
 
     // The networks' features are signed, so 8-bit buffers would cut off half of them
     this.hasFloat = this._detectFloat(glCanvas);
@@ -88,10 +95,25 @@ export class RestoreModule extends Module {
       e => console.error(`Could not load ${name}:`, e));
   }
 
+  // Give the output, and every buffer made so far, Width x Height real pixels,
+  // where 0 is the input's own size. p5 cuts a size the GPU can't make, so the
+  // size to work at is read back from the output.
+  _resize(input) {
+    const w = Math.round(this.params.width.value) || Math.round(input.width * input.density);
+    const h = Math.round(this.params.height.value) || Math.round(input.height * input.density);
+    const asked = `${w} x ${h}`;
+    if (asked === this._asked) return;
+    this._asked = asked;
+    for (const fbo of [this.outputFBO, ...this.buffers]) fbo.resize(w, h);
+  }
+
   _buffer(i) {
     if (!this.buffers[i]) {
       const g = this.glCanvas;
-      this.buffers[i] = this.createFramebuffer({ format: g.HALF_FLOAT, textureFiltering: g.NEAREST });
+      const { width, height } = this.outputFBO;
+      this.buffers[i] = this.createFramebuffer({
+        width, height, density: 1, format: g.HALF_FLOAT, textureFiltering: g.NEAREST,
+      });
     }
     return this.buffers[i];
   }
@@ -100,10 +122,12 @@ export class RestoreModule extends Module {
   // buffer and saves it under its SAVE name (MAIN if it has none), where later
   // passes bind it. Returns the buffers by name. REPLACE so p5's default blend
   // can't fold the alpha channel, which holds a feature like the others, into
-  // the colour; end() pops it back.
+  // the colour; end() pops it back. Every texture is given the output's size,
+  // the input too, so a pass's taps on the input fall an output pixel apart: it
+  // reads the input as scaled to that size, with the input's own filtering.
   _run(passes, input) {
     const g = this.glCanvas;
-    const size = this.fragResolution();
+    const size = [this.outputFBO.width, this.outputFBO.height];
     const tex = { MAIN: input };
     passes.forEach((pass, i) => {
       const fbo = this._buffer(i);
@@ -125,6 +149,7 @@ export class RestoreModule extends Module {
   process(graph, glCanvas) {
     const inputFBO = this.getInput(graph, 0);
     if (!inputFBO) return;
+    this._resize(inputFBO);
     if (this.hasFloat) this._syncModel();
 
     let restored = null;

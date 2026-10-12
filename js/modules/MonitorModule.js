@@ -139,16 +139,13 @@ export class MonitorModule extends Module {
     });
   }
 
-  _blitToExtWindow(glCanvas) {
+  // srcCanvas holds the picture at full size (NodeGraphUI._fullSize)
+  _blitToExtWindow(srcCanvas) {
     if (!this._extWindow || this._extWindow.closed || !this._extCanvas || !this.displayTexture) return;
 
     const canvas = this._extCanvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    // Use the blit shader to render the FBO onto glCanvas, then drawImage from glCanvas's underlying canvas
-    const g = glCanvas;
-    const srcCanvas = g.elt; // the underlying <canvas> element of the p5 WEBGL graphics
 
     // Letterbox: maintain 640x480 aspect ratio
     const aspect = 640 / 480;
@@ -166,14 +163,13 @@ export class MonitorModule extends Module {
     ctx.drawImage(srcCanvas, dx, dy, dw, dh);
   }
 
-  _blitToRecordingCanvas(glCanvas) {
+  // srcCanvas holds the picture at full size (NodeGraphUI._fullSize)
+  _blitToRecordingCanvas(srcCanvas) {
     if (!this._recordingCanvas || !this.displayTexture) return;
 
     const canvas = this._recordingCanvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    const srcCanvas = glCanvas.elt;
 
     // Draw to fill 1440x1080 (same 4:3 aspect as source)
     ctx.drawImage(srcCanvas, 0, 0, canvas.width, canvas.height);

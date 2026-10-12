@@ -2,9 +2,10 @@
 // uMix, past it above 1, then applies Clamp_Highlights' clamp when uClamp is on,
 // keeping the input's alpha. The clamp runs here, after the gain, so a gain
 // can't bring back the overshoot it removes: each pixel's luminance is pulled
-// down to uStats, the input's maximum over the 5 x 5 pixels around it.
+// down to uStats, the input's maximum over the 5 x 5 pixels around it. highp,
+// because mediump may not tell the texels of a wide output apart.
 export const restoreMixFrag = `
-precision mediump float;
+precision highp float;
 
 uniform sampler2D tex0;
 uniform sampler2D uRestored;

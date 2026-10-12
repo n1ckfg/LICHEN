@@ -238,11 +238,63 @@ export class NodeGraphUI {
     return this._historicalInfo.has(mod.type) ? mod.type : null;
   }
 
-  // Render a Framebuffer onto the P2D main canvas by blitting through glCanvas
+  // Render a Framebuffer onto the P2D main canvas from a copy of it at full
+  // size. Returns the canvas holding that copy.
   _drawFBO(fbo, x, y, w, h) {
-    if (!fbo) return;
-    this._blitFBO(fbo);
-    this.p.image(this.pipeline.glCanvas, x, y, w, h);
+    if (!fbo) return null;
+    const full = this._fullSize(fbo);
+    const g = this.pipeline.glCanvas;
+    if (full === g.elt) this.p.image(g, x, y, w, h);
+    else this.p.drawingContext.drawImage(full, x, y, w, h);
+    return full;
+  }
+
+  // A canvas holding a Framebuffer whole, to copy from. That is glCanvas,
+  // unless the picture has more pixels than glCanvas does, as an upscaling
+  // Restore's has. Then it is drawn into glCanvas a tile at a time, one pixel
+  // to one, and the tiles are put together on a 2D canvas of the picture's size.
+  _fullSize(fbo) {
+    const g = this.pipeline.glCanvas;
+    const gl = g.drawingContext;
+    const bw = gl.drawingBufferWidth, bh = gl.drawingBufferHeight;
+    const w = Math.round(fbo.width * fbo.density), h = Math.round(fbo.height * fbo.density);
+    if (!(w > bw || h > bh)) {
+      this._blitFBO(fbo);
+      return g.elt;
+    }
+    if (!this._fullCanvas) this._fullCanvas = document.createElement('canvas');
+    const canvas = this._fullCanvas;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    const ctx = canvas.getContext('2d');
+    // Last frame's copy is still there, and would show through a tile's alpha
+    ctx.clearRect(0, 0, w, h);
+    if (!this._previewShader) {
+      this._previewShader = g.createShader(vertSrc, previewFrag);
+    }
+    const sh = this._previewShader;
+    g.shader(sh);
+    g.noStroke();
+    g.blendMode(g.REPLACE);
+    for (let y = 0; y < h; y += bh) {
+      for (let x = 0; x < w; x += bw) {
+        const tw = Math.min(bw, w - x), th = Math.min(bh, h - y);
+        // The tile goes in glCanvas's top-left corner, and GL counts rows from the bottom
+        gl.viewport(0, bh - th, tw, th);
+        sh.setUniform('tex0', fbo);
+        sh.setUniform('uTile', [tw, th]);
+        sh.setUniform('uOffset', [-x, -y]);
+        sh.setUniform('uSize', [w, h]);
+        g.rect(-g.width / 2, -g.height / 2, g.width, g.height);
+        ctx.drawImage(g.elt, 0, 0, tw, th, x, y, tw, th);
+      }
+    }
+    gl.viewport(0, 0, bw, bh);
+    g.blendMode(g.BLEND);
+    this._previewPage = -1;
+    return canvas;
   }
 
   // Fill glCanvas with a Framebuffer, for a copy at full size
@@ -1262,10 +1314,10 @@ export class NodeGraphUI {
           mod.showFullscreenUI();
         } else if (mod.type === 'Monitor') {
           if (mod.displayTexture) {
-            this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
+            const full = this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
             // Blit to recording canvas for single-monitor recording
             if (mod._recordingCanvas && mod.isRecording && mod.isRecording()) {
-              mod._blitToRecordingCanvas(this.pipeline.glCanvas);
+              mod._blitToRecordingCanvas(full);
             }
           }
         } else if (mod.outputFBO) {
@@ -1748,17 +1800,17 @@ export class NodeGraphUI {
       p.rect(mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
       if (mod.displayTexture) {
         this._drawPreview(mod, preview);
-        // The second-screen window and the recording copy glCanvas whole, so it needs the picture at full size
+        // The second-screen window and the recording copy the picture whole, so they need it at full size
         const ext = mod.hasExtWindow && mod.hasExtWindow();
         const rec = mod._recordingCanvas && mod.isRecording && mod.isRecording();
-        if (ext || rec) this._blitFBO(mod.displayTexture);
+        const full = (ext || rec) ? this._fullSize(mod.displayTexture) : null;
         // Blit to external second-screen window if open
         if (ext) {
-          mod._blitToExtWindow(this.pipeline.glCanvas);
+          mod._blitToExtWindow(full);
         }
         // Blit to recording canvas for single-monitor recording
         if (rec) {
-          mod._blitToRecordingCanvas(this.pipeline.glCanvas);
+          mod._blitToRecordingCanvas(full);
         }
       }
       // FPS display
