@@ -1,5 +1,5 @@
-// The OLED panel of the Death Star Plans port: each of the display's 128 x 64
-// pixels as a slightly inset rounded square, with a halo from the lit pixels
+// The OLED panel of the Death Star Plans port: each of the display's pixels,
+// 128 x 64 of them in the port, as a slightly inset rounded square, with a halo from the lit pixels
 // round it and a white-hot core where they are dense. The port worked in
 // gl_FragCoord; this works in vTexCoord, where v = 0 is already the top row,
 // so it is the same at any pixel density.
@@ -8,26 +8,26 @@ precision highp float;
 
 varying vec2 vTexCoord;
 
-uniform sampler2D uTex;   // the display: 128 x 64, a lit pixel is 1 in red
+uniform sampler2D uTex;   // the display, a texel a pixel: a lit one is 1 in red
+uniform vec2 uRes;        // the display's size in pixels
 uniform vec2 uFrame;      // the output's size, in px of the logical frame
 uniform vec4 uRect;       // the panel in those px (x, y, w, h), from the top-left
 uniform float uCellPx;    // a display pixel's size, in real pixels
 uniform vec3 uColor;
 uniform float uGrid;      // visibility of unlit pixel cells
-const vec2 RES = vec2(128.0, 64.0);
 
 float lit(vec2 cell) {
-  if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= RES.x || cell.y >= RES.y) return 0.0;
-  return texture2D(uTex, (cell + 0.5) / RES).r;
+  if (cell.x < 0.0 || cell.y < 0.0 || cell.x >= uRes.x || cell.y >= uRes.y) return 0.0;
+  return texture2D(uTex, (cell + 0.5) / uRes).r;
 }
 
 void main() {
-  vec2 pix = (vTexCoord * uFrame - uRect.xy) / uRect.zw * RES;   // row 0 at the top, like the OLED
+  vec2 pix = (vTexCoord * uFrame - uRect.xy) / uRect.zw * uRes;   // row 0 at the top, like the OLED
   vec2 cell = floor(pix);
   vec2 f = pix - cell;
   // Past the halo's three cells round the panel nothing is lit, which is half
   // the frame, so those fragments skip the halo's 49 taps
-  if (cell.x < -3.0 || cell.y < -3.0 || cell.x >= RES.x + 3.0 || cell.y >= RES.y + 3.0) {
+  if (cell.x < -3.0 || cell.y < -3.0 || cell.x >= uRes.x + 3.0 || cell.y >= uRes.y + 3.0) {
     gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     return;
   }
@@ -41,7 +41,7 @@ void main() {
   float sdf = length(q) - r;
   float shape = 1.0 - smoothstep(-aa, aa, sdf);
 
-  float inside = step(0.0, cell.x) * step(0.0, cell.y) * step(cell.x, RES.x - 1.0) * step(cell.y, RES.y - 1.0);
+  float inside = step(0.0, cell.x) * step(0.0, cell.y) * step(cell.x, uRes.x - 1.0) * step(cell.y, uRes.y - 1.0);
   float on = lit(cell);
 
   // halo from neighbouring lit pixels
