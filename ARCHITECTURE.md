@@ -650,7 +650,24 @@ Modes 0–7 and Overlay work on each RGB channel separately. Color, Saturation a
 
 ## VideoToasting Module
 
-The VideoToasting module (`js/modules/VideoToastingModule.js`) ports the 14 NewTek Video Toaster transitions from the VideoToasting project. Input A is the outgoing source (the Toaster's Main bus) and B the incoming one (its Preview bus), and each effect wipes between them on its own loop. The `effect` drop-down picks the effect and `speed` scales its clock. As in VideoMixer, a lone input feeds both A and B.
+The VideoToasting module (`js/modules/VideoToastingModule.js`) ports the 14 NewTek Video Toaster transitions from the VideoToasting project. Each effect's shader has two buses, A for the outgoing source (the Toaster's Main bus) and B for the incoming one (its Preview bus), and wipes between them on its own loop. The `effect` drop-down picks the effect, `speed` scales its clock, and `inputCount` (Inputs) sets how many video inputs the node has, from 2 to 6, named A–F. With more than two connected, the module steps through them, two at a time. As in VideoMixer, a lone input feeds both buses.
+
+**Inputs.** The knob shows the first n of `INPUT_PORTS`. Inputs share one row across the node, and past six their ports' hit areas overlap. A and B kept their ids, so a patch saved before the knob loads with those two:
+- **Cables:** the knob won't remove a port with a cable in it. `setParam()` keeps the count at least `portsInUse`, which `process()` counts each frame. Nothing else drops a cable on a port that has gone, and `toJSON()` would throw on one. A patch's params load before its cables, so a saved cable on F finds its port.
+- **Ids:** `checkIds()` sees only the ports a new node has, A and B, so the ids of C–F aren't checked at startup.
+
+**Stepping through inputs.** The buses take two of the connected inputs, in port order, skipping empty ports. Each effect in `js/shaders/videotoasting/index.js` says how. Its clock is cut into segments of `segment` seconds, segment k starting at `offset + k × segment`, and each effect is one of two kinds:
+- **Chain** (Push/Pull, Swap, Neon Bands, Camera Iris, Tumble, Blinds 3 Expand): segment k takes input k to input k + 1, with input k on the bus `outgoing` names for it, its letters taken in turn. Each segment starts on the picture the last one ended on, so the inputs follow one another with no cut but Tumble's own. Push/Pull, Swap and Neon Bands end on B alone and start on A alone; Camera Iris closes from B onto A and opens from A onto B; Blinds 3 Expand passes through black; and Tumble's buses each change half way through the other's turn.
+- **Reveal** (the other eight): A stays on the first input, and B shows the next of the rest each segment. B changes unseen in Bear and Giraffe, while the shape is off screen, and in Squeeze/Zoom, as its frame shrinks through nothing on its way to flipping. Elsewhere B is always on screen, so its change is a cut in B's part of the frame: in Blinds as the slats jump back at the wrap, in Split and Trajectory where B is smallest (a fifth of the frame, and a 0.2-wide box), and in Trails and Transporter in the blob.
+
+`uTime` reaches the shader as a 32-bit float, so the module picks the buses from `Math.fround(time)`. A chain effect's wrap and its bus change then fall on the same frame. Picked from the 64-bit time, a frame just before the wrap can show the input after next.
+
+**Two inputs.** With two inputs, the reveal effects, Tumble and Camera Iris give the same output as before the Inputs knob on every pixel. Push/Pull, Swap, Neon Bands and Blinds 3 Expand now go back from B to A on every other loop, where they used to jump back to A at the wrap.
+
+Checked in headless Chrome on an M2 Max, with solid-colour inputs sampled on a 64 × 48 grid every frame:
+- **Against the old module:** at two inputs, with ports C and D empty, for 8 s of each effect. The differences are the four above, from their second loop on.
+- **Order:** with up to four inputs, every effect shows them in order. At three and four, its biggest one-frame cut and the biggest share of a source appearing from nowhere match its two-input ones, except the reveal cuts above. Started at 36000 s, the results were the same.
+- **Boundaries:** at the 32-bit floats either side of 300 segment boundaries per effect, out to about 28 hours, no frame showed a source from outside its segment. Moving Push/Pull's offset by 0.01 s, or dropping `Math.fround`, made hundreds of frames do so.
 
 **Effect files.** Each effect is its own fragment shader in `js/shaders/videotoasting/`, kept apart from the main shaders folder. `js/shaders/videotoasting/index.js` lists them in the order of the VideoToasting project's `index.html`, and that list supplies the drop-down's options. Patches save the effect as its index, so a new effect is appended to that list, never inserted. The module creates one p5 shader per effect, and since p5 compiles a shader the first time it is bound, an effect costs nothing until it is chosen.
 
@@ -1134,6 +1151,7 @@ With isolation, ORT runs its default of min(4, ⌈cores / 2⌉) threads, which `
 ## Development Conventions
 
 - **State Management**: The `ConnectionGraph` is the source of truth for the patch state.
+- **Node Height**: a node's inputs share one row under its header, and its outputs sit on its bottom edge, so `NodeGraphUI._portSection()` gives its ports one row however many it has, and none when it has no ports. Every height and position below the ports is measured from it. It used to give a row for each port on the side with more, which left an empty band of 24 px a row on 16 module types, such as VideoMixer, Channel, Latk and NAPLPS. Checked against commit 2718dcb in headless Chrome: on every module type, every port, param, drop-down and preview is where it was, or higher by the rows the node lost. The 54 types that lost none draw the same on every pixel.
 - **Rendering**: Modules should always render to their `outputFBO` during `process()`. Calculator, Constant and Random have none, since they output only control values. The `Monitor` and `GRASS` modules provide previews by blitting their FBOs to the main P2D canvas in `js/ui.js`.
 - **Parameters**: Module parameters are normalized or use specific ranges defined in the `params` object. The UI handles scaling these values for display.
 - **Coordinate System**: p5.js uses a 2D coordinate system for the UI (top-left 0,0), while the WebGL `glCanvas` uses standard GL coordinates (centered 0,0 or screen-space depending on usage).
