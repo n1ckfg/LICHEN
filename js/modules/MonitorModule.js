@@ -6,6 +6,21 @@ function isChromium() {
   return /Chrome\//.test(ua) && !/Edg\//.test(ua) || /Chromium\//.test(ua);
 }
 
+function timestamp() {
+  return new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export class MonitorModule extends Module {
   static uid = 'b1f08cff';
 
@@ -175,6 +190,26 @@ export class MonitorModule extends Module {
     ctx.drawImage(srcCanvas, 0, 0, canvas.width, canvas.height);
   }
 
+  /**
+   * Save the picture as a PNG at Width x Height, stretched as the recording is.
+   * @param {HTMLCanvasElement} srcCanvas - the picture at full size (NodeGraphUI._fullSize)
+   */
+  saveScreenshot(srcCanvas) {
+    const canvas = document.createElement('canvas');
+    canvas.width = this.params.width.value;
+    canvas.height = this.params.height.value;
+    canvas.getContext('2d').drawImage(srcCanvas, 0, 0, canvas.width, canvas.height);
+    const filename = `lichen-screenshot-${timestamp()}.png`;
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        console.error('Screenshot failed');
+        return;
+      }
+      downloadBlob(blob, filename);
+      console.log(`Downloaded: ${filename}`);
+    }, 'image/png');
+  }
+
   closeExtWindow() {
     if (this.isRecording()) {
       this.stopRecording();
@@ -309,21 +344,11 @@ export class MonitorModule extends Module {
     }
 
     const blob = new Blob(this._recordingChunks, { type: this._recordingMimeType });
-    const url = URL.createObjectURL(blob);
-
     const extension = this._recordingMimeType.includes('mp4') ? 'mp4' : 'webm';
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const filename = `lichen-recording-${timestamp}.${extension}`;
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const filename = `lichen-recording-${timestamp()}.${extension}`;
+    downloadBlob(blob, filename);
 
     // Clean up
-    URL.revokeObjectURL(url);
     this._recordingChunks = [];
     this._recorder = null;
     this._recordingCanvas = null;

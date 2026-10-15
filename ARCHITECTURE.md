@@ -76,11 +76,11 @@ A node shows its output (a Monitor its input) in a preview on the 2D canvas. The
 - **Transparency:** a picture with alpha below 1 was blended over whatever glCanvas held, which was the last node's preview. A tile replaces what is there, so the picture now shows over the preview's black. Delay does this, for example, and so does Image with no file loaded.
 - **Outlines:** each copy used to flush the 2D canvas, which changed how Chrome antialiased the edges of some knob arcs and port rings, mostly at zoom 2 and above, by up to 117 levels on single edge pixels. They now draw as they would with no previews at all.
 
-**Full-size copies.** Fullscreen, the second-screen window and the recording copy a picture whole, from the canvas `_fullSize()` gives them:
+**Full-size copies.** Fullscreen, the second-screen window, the recording and the screenshot copy a picture whole, from the canvas `_fullSize()` gives them:
 - **A picture that fits glCanvas:** `_blitFBO()` fills glCanvas with the framebuffer, which leaves no page in it, and glCanvas is the copy, as it always was.
 - **A bigger one:** an upscaling Restore's output has more pixels than glCanvas (see Restore Module). It is drawn into glCanvas a tile at a time with `previewFrag`, one pixel to one, and each tile is copied to its place on a 2D canvas of the picture's size. That canvas is the copy.
 
-`_drawFBO()` draws the copy on screen. A preview tile that won't fit on glCanvas is drawn that way too, which can't happen at the UI's zoom limits. Fullscreen and the second-screen window still letterbox every picture to 4:3, and the recording still stretches it to the Monitor's Width and Height.
+`_drawFBO()` draws the copy on screen. A preview tile that won't fit on glCanvas is drawn that way too, which can't happen at the UI's zoom limits. Fullscreen and the second-screen window still letterbox every picture to 4:3, and the recording still stretches it to the Monitor's Width and Height. Monitor's Screenshot button, under Record, stretches it the same way and saves it as a PNG (`MonitorModule.saveScreenshot()`). It copies when clicked, outside `draw()`: glCanvas keeps no picture between frames, but a copy made in the same task as the drawing reads it.
 
 Checked in headless Chrome on an M2 Max, at pixel density 1 and 2:
 - **Pictures that fit:** a fullscreen Monitor, its recording from fullscreen and from the node view, and its second-screen copy all match commit 4970850 on every pixel.

@@ -528,9 +528,11 @@ export class NodeGraphUI {
   _addDefaultNodes() {
     const mod = createModule('Monitor', this.pipeline.glCanvas, this.pipeline.graph.nextId);
     const h = this.getModuleHeight(mod);
-    // Halfway between window center and lower-right corner = 75% of each dimension
+    // Halfway between window center and lower-right corner = 75% of each dimension,
+    // raised as far as it takes to keep the whole node on screen
+    const margin = 20;
     mod.x = this.p.width * 0.75 - MODULE_WIDTH / 2;
-    mod.y = this.p.height * 0.75 - h / 2;
+    mod.y = Math.max(margin, Math.min(this.p.height * 0.75 - h / 2, this.p.height - h - margin));
     this.pipeline.graph.addNode(mod);
   }
 
@@ -576,7 +578,7 @@ export class NodeGraphUI {
     const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
     let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail') ? MONITOR_PREVIEW_H + 8 : 0;
     if (mod.type === 'Monitor') {
-      monitorSection += 124; // Extra space for param padding + FPS counter + record/fullscreen/load+save+link buttons
+      monitorSection += 148; // Extra space for param padding + FPS counter + record/screenshot/fullscreen/load+save+link buttons
     }
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
       mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk';
@@ -1157,7 +1159,7 @@ export class NodeGraphUI {
     return null;
   }
 
-  hitTestFullscreenBtn(wx, wy) {
+  hitTestScreenshotBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'Monitor') continue;
@@ -1167,6 +1169,24 @@ export class NodeGraphUI {
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
       const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
       const btnY = py + MONITOR_PREVIEW_H + 44; // Below record button
+      if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
+          wy >= btnY && wy <= btnY + 20) {
+        return id;
+      }
+    }
+    return null;
+  }
+
+  hitTestFullscreenBtn(wx, wy) {
+    const graph = this.pipeline.graph;
+    for (const [id, mod] of graph.nodes) {
+      if (mod.type !== 'Monitor') continue;
+      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
+      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const paramCount = Object.keys(mod.params).length;
+      const paramSection = paramCount * PARAM_ROW_HEIGHT;
+      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
+      const btnY = py + MONITOR_PREVIEW_H + 68; // Below screenshot button
       if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
         return id;
@@ -1185,7 +1205,7 @@ export class NodeGraphUI {
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
       const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
-      const btnY = py + MONITOR_PREVIEW_H + 68; // Below fullscreen button
+      const btnY = py + MONITOR_PREVIEW_H + 92; // Below fullscreen button
       if (wx >= mod.x + 10 && wx <= mod.x + 10 + halfW &&
           wy >= btnY && wy <= btnY + 20) {
         return id;
@@ -1204,7 +1224,7 @@ export class NodeGraphUI {
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
       const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
-      const btnY = py + MONITOR_PREVIEW_H + 68; // Same row as load button
+      const btnY = py + MONITOR_PREVIEW_H + 92; // Same row as load button
       if (wx >= mod.x + 14 + halfW && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
         return id;
@@ -1222,7 +1242,7 @@ export class NodeGraphUI {
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
       const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
-      const btnY = py + MONITOR_PREVIEW_H + 92; // Below load/save row
+      const btnY = py + MONITOR_PREVIEW_H + 116; // Below load/save row
       if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
         return id;
@@ -1845,8 +1865,20 @@ export class NodeGraphUI {
       p.textAlign(p.CENTER, p.CENTER);
       p.text(isRec ? 'Stop Recording' : 'Record', mod.x + MODULE_WIDTH / 2, btnY + 10);
 
+      // Screenshot button
+      const shotBtnY = py + MONITOR_PREVIEW_H + 44;
+      p.fill([60, 60, 90]);
+      p.stroke(100);
+      p.strokeWeight(1);
+      p.rect(mod.x + 10, shotBtnY, MODULE_WIDTH - 20, 20, 3);
+      p.noStroke();
+      p.fill(200);
+      p.textSize(9);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.text('Screenshot', mod.x + MODULE_WIDTH / 2, shotBtnY + 10);
+
       // Fullscreen button
-      const fsBtnY = py + MONITOR_PREVIEW_H + 44;
+      const fsBtnY = py + MONITOR_PREVIEW_H + 68;
       p.fill([60, 60, 90]);
       p.stroke(100);
       p.strokeWeight(1);
@@ -1858,7 +1890,7 @@ export class NodeGraphUI {
       p.text('Fullscreen', mod.x + MODULE_WIDTH / 2, fsBtnY + 10);
 
       // Load and Save buttons (side by side)
-      const lsBtnY = py + MONITOR_PREVIEW_H + 68;
+      const lsBtnY = py + MONITOR_PREVIEW_H + 92;
       const halfW = (MODULE_WIDTH - 24) / 2;
 
       // Load button (left)
@@ -1884,7 +1916,7 @@ export class NodeGraphUI {
       p.text('Save', mod.x + 14 + halfW + halfW / 2, lsBtnY + 10);
 
       // Link button (full width below Open/Save)
-      const linkBtnY = py + MONITOR_PREVIEW_H + 92;
+      const linkBtnY = py + MONITOR_PREVIEW_H + 116;
       p.fill([60, 60, 90]);
       p.stroke(100);
       p.strokeWeight(1);
@@ -2140,6 +2172,16 @@ export class NodeGraphUI {
             mod.startRecording(this.pipeline.glCanvas);
           });
         }
+      }
+      return;
+    }
+
+    // Check Monitor screenshot button
+    const shotHit = this.hitTestScreenshotBtn(world.x, world.y);
+    if (shotHit !== null) {
+      const mod = this.pipeline.graph.nodes.get(shotHit);
+      if (mod && mod.displayTexture) {
+        mod.saveScreenshot(this._fullSize(mod.displayTexture));
       }
       return;
     }
