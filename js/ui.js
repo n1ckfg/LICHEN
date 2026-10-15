@@ -321,8 +321,7 @@ export class NodeGraphUI {
   // null for none. fbo is null while a Monitor has no input.
   _previewRect(mod) {
     if (mod.collapsed) return null;
-    const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-    const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+    const portSection = this._portSection(mod);
     const paramSection = Object.keys(mod.params).length * PARAM_ROW_HEIGHT;
     const top = mod.y + HEADER_HEIGHT + portSection;
     if (mod.type === 'Monitor') {
@@ -566,12 +565,18 @@ export class NodeGraphUI {
     };
   }
 
+  // Inputs share one row under the header and outputs sit on the bottom
+  // edge, so a node's ports take one row however many it has. A node with
+  // only outputs keeps that row as space under its header.
+  _portSection(mod) {
+    return mod.inputs.length || mod.outputs.length ? PORT_SPACING + 8 : 0;
+  }
+
   getModuleHeight(mod) {
     if (mod.collapsed) {
       return HEADER_HEIGHT;
     }
-    const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-    const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+    const portSection = this._portSection(mod);
     const paramCount = Object.keys(mod.params).length;
     const paramSection = paramCount * PARAM_ROW_HEIGHT;
     const hasPreview = mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway' && mod.type !== 'Yellowtail';
@@ -630,8 +635,7 @@ export class NodeGraphUI {
         y: mod.y + (paramIndex + 1) * HEADER_HEIGHT / (paramCount + 1),
       };
     }
-    const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-    const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+    const portSection = this._portSection(mod);
     return {
       x: mod.x + 18,
       y: mod.y + HEADER_HEIGHT + portSection + paramIndex * PARAM_ROW_HEIGHT + 10,
@@ -639,8 +643,7 @@ export class NodeGraphUI {
   }
 
   getParamY(mod, paramIndex) {
-    const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-    const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+    const portSection = this._portSection(mod);
     return mod.y + HEADER_HEIGHT + portSection + paramIndex * PARAM_ROW_HEIGHT + 10;
   }
 
@@ -1094,8 +1097,7 @@ export class NodeGraphUI {
   hitTestMonitorDblClick(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const portSection = this._portSection(mod);
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
 
@@ -1126,8 +1128,7 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS' && mod.type !== 'Image' && mod.type !== 'LUT' &&
         mod.type !== 'QTVR' && mod.type !== 'VRML' && mod.type !== 'Latk') continue;
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const portSection = this._portSection(mod);
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
       const hasPreview = mod.outputFBO;
@@ -1145,8 +1146,7 @@ export class NodeGraphUI {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'Monitor') continue;
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const portSection = this._portSection(mod);
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
       const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12; // Match preview padding
@@ -1163,8 +1163,7 @@ export class NodeGraphUI {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'Monitor') continue;
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const portSection = this._portSection(mod);
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
       const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
@@ -1181,8 +1180,7 @@ export class NodeGraphUI {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'Monitor') continue;
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const portSection = this._portSection(mod);
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
       const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
@@ -1200,8 +1198,7 @@ export class NodeGraphUI {
     const halfW = (MODULE_WIDTH - 24) / 2;
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'Monitor') continue;
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const portSection = this._portSection(mod);
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
       const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
@@ -1219,8 +1216,7 @@ export class NodeGraphUI {
     const halfW = (MODULE_WIDTH - 24) / 2;
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'Monitor') continue;
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const portSection = this._portSection(mod);
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
       const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
@@ -1237,8 +1233,7 @@ export class NodeGraphUI {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'Monitor') continue;
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const portSection = this._portSection(mod);
       const paramCount = Object.keys(mod.params).length;
       const paramSection = paramCount * PARAM_ROW_HEIGHT;
       const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
@@ -1956,8 +1951,7 @@ export class NodeGraphUI {
     // File picker button (VideoPlayer, NAPLPS, Image, LUT, QTVR, VRML, Latk)
     if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
         mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk') {
-      const portRows = Math.max(mod.inputs.length, mod.outputs.length);
-      const portSection = portRows > 0 ? portRows * PORT_SPACING + 8 : 0;
+      const portSection = this._portSection(mod);
       const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
       const hasPreview = mod.outputFBO;
       const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
