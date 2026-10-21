@@ -27,6 +27,33 @@ canvas {
   overflow-y: auto;
   width: 160px;
   transition: opacity 0.15s ease;
+  scrollbar-width: thin;
+  scrollbar-color: #4a4a6a transparent;
+}
+
+#module-palette::-webkit-scrollbar,
+.info-popup::-webkit-scrollbar,
+.module-search-popup div::-webkit-scrollbar {
+  width: 5px;
+}
+
+#module-palette::-webkit-scrollbar-track,
+.info-popup::-webkit-scrollbar-track,
+.module-search-popup div::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#module-palette::-webkit-scrollbar-thumb,
+.info-popup::-webkit-scrollbar-thumb,
+.module-search-popup div::-webkit-scrollbar-thumb {
+  background: #4a4a6a;
+  border-radius: 3px;
+}
+
+#module-palette::-webkit-scrollbar-thumb:hover,
+.info-popup::-webkit-scrollbar-thumb:hover,
+.module-search-popup div::-webkit-scrollbar-thumb:hover {
+  background: #6a6a8a;
 }
 
 #module-palette .palette-banner-link {
@@ -115,19 +142,21 @@ canvas {
   padding: 4px 8px;
   margin-bottom: 2px;
   background: #2a2a4a;
-  color: #ccc;
-  border: 1px solid #444;
+  color: #eee;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 3px;
   font-family: 'Courier New', monospace;
   font-size: 11px;
   cursor: pointer;
   text-align: left;
+  transition: filter 0.1s ease, border-color 0.1s ease;
 }
 
 #module-palette button:hover {
   background: #3a3a5a;
   color: #fff;
-  border-color: #666;
+  border-color: rgba(255, 255, 255, 0.45);
+  filter: brightness(1.15);
 }
 
 #fullscreen-monitor {
@@ -163,6 +192,8 @@ canvas {
   font-size: 11px;
   line-height: 1.45;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  scrollbar-width: thin;
+  scrollbar-color: #4a4a6a transparent;
 }
 
 .info-popup .info-popup-title {

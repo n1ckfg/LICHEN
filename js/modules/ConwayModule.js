@@ -22,9 +22,9 @@ export class ConwayModule extends Module {
     this.outputs = [{ id: '8702', name: 'out', type: 'video' }];
     this.historicalInfo = "Conway";
     this.params = {
-      cellSize: { id: '7dcc', value: 4, min: 1, max: 16, step: 1 },
-      speed: { id: 'dda8', value: 1, min: 1, max: 16, step: 1 },
-      running: { id: '9846', value: 1, min: 0, max: 1, step: 1 }
+      cellSize: { id: '7dcc', value: 4, min: 1, max: 16, step: 1, label: 'Cell Size' },
+      speed: { id: 'dda8', value: 1, min: 1, max: 16, step: 1, label: 'Speed' },
+      running: { id: '9846', value: 1, min: 0, max: 1, step: 1, label: 'Running' }
     };
 
     this.simulationShader = glCanvas.createShader(this._getVertSrc(), conwaySimulationFrag);

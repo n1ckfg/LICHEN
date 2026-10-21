@@ -1037,7 +1037,7 @@ Three Control modules that work on control values alone (`js/modules/RandomModul
 - **Divide by zero** gives 0. A result that isn't finite would set a cabled knob's param to NaN.
 - **Values only:** a pin reads its source's value, not its loop. Latk's X through a Calculator is where the beam is this frame, not the drawing.
 
-**Node layout.** Output ports sit at a node's bottom edge, over the foot of its preview. These three have no preview, so `getModuleHeight()` gives a node with outputs and no preview one more row for them. Without it they land on the last param.
+**Node layout.** Output ports and their labels sit in a dedicated bottom section below a node's preview (or below its last parameter row on nodes with no preview such as Calculator, Constant, and Random) so previews and file-picker buttons never overlap outlet circles or labels.
 
 **Checked** in headless Chrome, on a virtual clock with frames stepped by hand and a seeded `Math.random`:
 - **Random's rate:** over 600 frames at 60 fps, Hz 1, 7.5, 10, 30 and 45 gave 10, 74, 99, 299 and 450 new values, Hz 120 gave 600 and Hz 0 none. Where a count is one short, the last update fell due on the last frame itself, and the stepped clock's rounding left it just short. Hz 60 gave 597, with three frames held for the same reason (see At the frame rate). At 30 fps, Hz 60 gave 300 in 300 frames. After a 5 s stall, which drew once, Hz 10 gave 100 in 600.
@@ -1151,7 +1151,7 @@ With isolation, ORT runs its default of min(4, ⌈cores / 2⌉) threads, which `
 ## Development Conventions
 
 - **State Management**: The `ConnectionGraph` is the source of truth for the patch state.
-- **Node Height**: a node's inputs share one row under its header, and its outputs sit on its bottom edge, so `NodeGraphUI._portSection()` gives its ports one row however many it has, and none when it has no ports. Every height and position below the ports is measured from it. It used to give a row for each port on the side with more, which left an empty band of 24 px a row on 16 module types, such as VideoMixer, Channel, Latk and NAPLPS. Checked against commit 2718dcb in headless Chrome: on every module type, every port, param, drop-down and preview is where it was, or higher by the rows the node lost. The 54 types that lost none draw the same on every pixel.
+- **Node Height**: a node's inputs share one row under its header (`NodeGraphUI._portSection()` reserves `28px` only when `mod.inputs.length > 0`, and `0` on input-less source/generative modules), parameter rows (`20px` each) follow immediately, any preview and file-picker button sit below the parameters, and `getModuleHeight()` reserves a dedicated bottom section (`35px` when `mod.outputs.length > 0`, `8px` otherwise) so output ports and their labels never overlap previews or buttons.
 - **Rendering**: Modules should always render to their `outputFBO` during `process()`. Calculator, Constant and Random have none, since they output only control values. The `Monitor` and `GRASS` modules provide previews by blitting their FBOs to the main P2D canvas in `js/ui.js`.
 - **Parameters**: Module parameters are normalized or use specific ranges defined in the `params` object. The UI handles scaling these values for display.
 - **Coordinate System**: p5.js uses a 2D coordinate system for the UI (top-left 0,0), while the WebGL `glCanvas` uses standard GL coordinates (centered 0,0 or screen-space depending on usage).
