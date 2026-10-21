@@ -15,7 +15,7 @@ export class VideoMixerModule extends Module {
     this.params = {
       mode: {
         // Patches save the index, so new modes go on the end
-        id: 'e155', value: 0, min: 0, max: 11, step: 1, label: 'Mode', widget: 'dropdown',
+        id: 'e155', value: 1, min: 0, max: 11, step: 1, label: 'Mode', widget: 'dropdown',
         valueLabels: ['Blend', 'Add', 'Subtract', 'Multiply', 'Divide', 'Lighten', 'Darken', 'Difference',
           'Color', 'Overlay', 'Saturation', 'Luminance'],
       },

@@ -31,7 +31,7 @@ void main() {
 
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
-  'Utility': ['Blur', 'Brcosa', 'Channel', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'VideoMixer'],
+  'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'VideoMixer'],
   'Control': ['Calculator', 'Constant', 'Random', 'Skeleton'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
@@ -66,6 +66,7 @@ const MODULE_COLORS = {
   Blur: color_utility,
   Brcosa: color_utility,
   Channel: color_utility,
+  ChromaKey: color_utility,
   Delay: color_utility,
   Dither: color_utility,
   Edges: color_utility,
@@ -1326,7 +1327,7 @@ export class NodeGraphUI {
           }
           // Render terminal/REPL overlays on top of the clean video
           mod.renderOverlays(p);
-        } else if (mod.type === 'Conway' || mod.type === 'Yellowtail') {
+        } else if (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey') {
           if (mod.outputFBO) {
             this._drawFBO(mod.outputFBO, dx, dy, dw, dh);
           }
@@ -1985,9 +1986,9 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      // Conway / InkDrops / QTVR / VRML / Latk: handle the click instead of exiting fullscreen
+      // Conway / InkDrops / QTVR / VRML / Latk / ChromaKey: handle the click instead of exiting fullscreen
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' ||
-                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk')) {
+                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'ChromaKey')) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
         return;
@@ -2625,8 +2626,9 @@ export class NodeGraphUI {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && mod.type === 'Latk') {
         mod.handleDoubleClick();
-        return;
       }
+      // The graph is hidden, so a double-click mustn't reach its nodes
+      return;
     }
 
     const world = this.screenToWorld(mx, my);
@@ -2800,6 +2802,8 @@ export class NodeGraphUI {
       mod.setParam(k, v.value);
     }
     mod.seed = src.seed;
+    const state = src.saveState();
+    if (state) mod.loadState(state);
     return graph.addNode(mod);
   }
 
@@ -2807,7 +2811,7 @@ export class NodeGraphUI {
     const mod = this.pipeline.graph.nodes.get(id);
     if (mod) {
       // Hide Conway UI if deleting a fullscreened Conway
-      if ((mod.type === 'Conway' || mod.type === 'Yellowtail') && mod.hideFullscreenUI) {
+      if ((mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey') && mod.hideFullscreenUI) {
         mod.hideFullscreenUI();
       }
       // Start fade-out animation

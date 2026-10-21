@@ -260,3 +260,64 @@ canvas {
   background: #3a5a8a;
   color: #fff;
 }
+
+/* ChromaKey's fullscreen eyedropper toolbar, styled like Conway's buttons */
+.chromakey-toolbar {
+  position: fixed;
+  top: 12px;
+  left: 170px;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+
+.chromakey-toolbar .chromakey-tool {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 30px;
+  background: #222;
+  color: #eee;
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.chromakey-toolbar .chromakey-tool:hover {
+  background: #333;
+}
+
+.chromakey-toolbar .chromakey-tool.active {
+  background: #3a5a8a;
+  border-color: rgb(100, 200, 255);
+  color: #fff;
+}
+
+.chromakey-toolbar .chromakey-swatch {
+  width: 30px;
+  height: 30px;
+  margin-left: 6px;
+  border: 1px solid #444;
+  border-radius: 4px;
+}
+
+.chromakey-toolbar .chromakey-count {
+  color: #aaa;
+  font: 13px monospace;
+}
+
+.chromakey-hint {
+  position: fixed;
+  bottom: 12px;
+  left: 170px;
+  z-index: 1000;
+  display: none;
+  color: #888;
+  font: 12px monospace;
+}
+
+body.chromakey-picking canvas {
+  cursor: crosshair;
+}

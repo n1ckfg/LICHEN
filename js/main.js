@@ -56,6 +56,7 @@ import './modules/YellowtailModule.js';
 import './modules/BlurModule.js';
 import './modules/BrcosaModule.js';
 import './modules/ChannelModule.js';
+import './modules/ChromaKeyModule.js';
 import './modules/DitherModule.js';
 import './modules/EdgesModule.js';
 import './modules/LevelsModule.js';
@@ -181,7 +182,7 @@ const sketch = (p) => {
   };
 
   p.keyPressed = () => {
-    // When a GRASS, Conway, InkDrops or Twoscilloscope module is fullscreened it owns all keyboard input
+    // When a GRASS, Conway, InkDrops, Twoscilloscope or ChromaKey module is fullscreened it owns all keyboard input
     if (ui.fullscreenMonitor !== null) {
       const fsmod = pipeline.graph.nodes.get(ui.fullscreenMonitor);
       if (fsmod && fsmod.type === 'GRASS') {
@@ -210,6 +211,14 @@ const sketch = (p) => {
           ui.fullscreenMonitor = null;
         } else {
           fsmod.handleKey(p.key, p.keyCode, p);
+        }
+        return false;
+      }
+      if (fsmod && fsmod.type === 'ChromaKey') {
+        // ESC exits fullscreen and hides the eyedropper toolbar
+        if (p.key === 'Escape') {
+          fsmod.hideFullscreenUI();
+          ui.fullscreenMonitor = null;
         }
         return false;
       }
