@@ -100,7 +100,7 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 ### Module Categories
 
 - **Sources**: Camera, Image, VideoPlayer
-- **Utility**: Blur, Brcosa, Channel, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, VideoMixer
+- **Utility**: Blur, Brcosa, Channel, ChromaKey, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, VideoMixer
 - **Control**: Calculator, Constant, Random, Skeleton
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
 - **Interactive**: Conway, InkDrops, Latk, Yellowtail
@@ -136,6 +136,8 @@ Firefox's user agent has no "safari", so it always drew these framebuffers this 
 A patch saves modules, params and ports by id, never by name or port number, so any of them can be renamed or reordered without breaking saved patches:
 - **Modules.** Each module class declares `static uid = '<8 hex digits>'`. A saved node has `uid`, which `createModuleByUid()` builds it from, and `type`, which is only there to make the file readable. Loading never reads `type`.
 - **Params and ports.** Each param and port declares `id: '<4 hex digits>'` next to its name. These only need to be unique within their module, since a node's uid already says which module they belong to. Params, inputs and outputs share that one namespace. A saved node's `params` are keyed by param id. A video cable's `fromPort` and `toPort` are port ids, and a knob cable has `fromPort`, a port id, and `param`, a param id.
+
+**Other data.** A module whose node holds data that isn't a param returns it from `saveState()` as plain JSON, and the patch saves it as the node's `state`. `fromJSON()` hands it back through `loadState()`, after the params, and duplicating a node copies it the same way. The base class saves nothing. ChromaKey's picked colours are the only such data so far (see ChromaKey Module).
 
 Only `ConnectionGraph.toJSON()` and `fromJSON()` see ids. At runtime everything still uses names and port numbers (`this.params.radius`, `getInput(graph, 0)`, `paramName` on a knob cable). `fromJSON()` maps the ids back using the declarations of the module it just built, so a renamed param, a renamed port, or a port moved to a new position all load with their saved values and cables. A saved value for a param that has since been removed is skipped, and a cable to a removed param or port is dropped with a console warning. A uid the registry doesn't know aborts the load.
 
@@ -629,12 +631,12 @@ The Edges module (`js/modules/EdgesModule.js`, `js/shaders/edges.js`) is a utili
 
 ## VideoMixer Module
 
-The VideoMixer module (`js/modules/VideoMixerModule.js`, `js/shaders/video-mixer.js`) composites input B over input A. The operation is chosen with the `mode` drop-down. `mix` acts as B's opacity: the output is `mix(A, op(A, B), mix)`, so Blend reproduces the old crossfade exactly, and `mix = 0` passes A through in every mode.
+The VideoMixer module (`js/modules/VideoMixerModule.js`, `js/shaders/video-mixer.js`) composites input B over input A. The operation is chosen with the `mode` drop-down, which defaults to Add. `mix` acts as B's opacity: the output is `mix(A, op(A, B), mix)`, so Blend reproduces the old crossfade exactly, and `mix = 0` passes A through in every mode.
 
 | mode | Label | op(A, B) |
 | --- | --- | --- |
-| 0 (default) | Blend | B |
-| 1 | Add | A + B |
+| 0 | Blend | B |
+| 1 (default) | Add | A + B |
 | 2 | Subtract | A − B |
 | 3 | Multiply | A × B |
 | 4 | Divide | A / max(B, 1/255), so a black B saturates any non-black A to white |
@@ -647,6 +649,37 @@ The VideoMixer module (`js/modules/VideoMixerModule.js`, `js/shaders/video-mixer
 | 11 | Luminance | SetLum(A, Lum(B)): A's hue and saturation, B's luminance |
 
 Modes 0–7 and Overlay work on each RGB channel separately. Color, Saturation and Luminance are the W3C Compositing and Blending spec's non-separable modes, with `Lum` weights (0.3, 0.59, 0.11). `SetLum` brings an out-of-range result back with `ClipColor`, which pulls it toward its own grey and so keeps its luminance, instead of clamping each channel separately. New modes are appended rather than inserted, because patches save the mode as its index. `op` is clamped to 0–1 before the mix. Alpha is always crossfaded by `mix`. When only one input is connected, it feeds both A and B.
+
+Mode used to default to Blend. A patch saved before the drop-down existed loads the default, so it now loads as Add. `burning_edges` was one, and its two VideoMixers now save Blend.
+
+## ChromaKey Module
+
+The ChromaKey module (`js/modules/ChromaKeyModule.js`, `js/shaders/chroma-key.js`) removes the colours near a key colour from input `fg` and shows input `bg` through the hole. R, G and B (0–1, default pure green) are the key colour. Tolerance (default 0.2) is how far from it a colour is removed entirely, and Softness (default 0.1) how far past that it fades back in.
+
+**Distance.** Colours are compared in BT.601 YCbCr, with luma at half weight (`LUMA_WEIGHT`). Shading across a backdrop is mostly a change of luma, so it costs less than a change of hue, while greys of different brightness stay apart, as they would not in Cb and Cr alone. A sampled green screen of (30, 180, 60) is 0.10 from a greenish shirt of (70, 170, 90) and 0.38 from skin of (205, 150, 125). That is why Tolerance defaults to 0.2: at 0.3, that skin came out 94% opaque.
+
+**Samples.** The key list is R, G and B followed by the colours added with Eyedropper +, up to 16 in all (`CHROMA_KEY_MAX`). The kept list is the colours picked with Eyedropper −, up to 16. A full list drops its oldest colour. Each pixel finds its nearest key and its nearest kept colour:
+- **Removed:** alpha rises along a smoothstep from 0, at Tolerance from the nearest key, to 1 at Tolerance + Softness. At Softness 0 it is a hard edge.
+- **Kept:** wherever a kept colour is nearer than every key, the pixel stays, faded over Softness across the midpoint between the two. So − carves a colour out of the keyed range without shrinking it anywhere else, and a backdrop nearer the key than the kept colour stays keyed.
+
+**Inputs.** The output is `mix(bg, fg, alpha)`. With no bg the hole is transparent black, premultiplied, which a preview shows as black. A lone bg passes through, and with neither input the output keeps its last frame, as VideoMixer's does. It is one pass: two texture reads a pixel, and a distance to each sample.
+
+**Fullscreen interaction.** Double-click the node preview to enter fullscreen, which shows the output. A toolbar holds three eyedroppers, a swatch of the key colour, and the counts of added and kept colours:
+- **Eyedropper:** a click sets R, G and B to the colour under it and clears both lists, which starts the key over.
+- **Eyedropper +:** adds the colour under it to the key list.
+- **Eyedropper −:** adds it to the kept list. Clicking where the key has eaten into the subject brings that colour back.
+
+Each click samples `fg`, not the output, as the mean of the 5 × 5 logical pixels round it (Photoshop's 5 by 5 Average). The click is queued, and the next `process()` draws the mean into a 1 × 1 framebuffer with `chromaKeyPickFrag` and reads that pixel back, waiting on the GPU once per click. Sampling through a shader reads any input, whatever its size, format or antialiasing. ESC exits. `js/ui.js` routes the click to `handleMouseDown()` as it does for Conway. The toolbar stops its own mouse events, as the drop-down menu does, so clicking it picks nothing. A cable on R, G or B overrides the Eyedropper.
+
+A double-click in fullscreen used to reach the hidden graph, where it could open a param editor or fullscreen another node under the pointer. Picking colours in quick succession made that easy to hit, so `mouseDoubleClicked()` now stops there for every fullscreen module. Latk still resets its camera.
+
+**Patches.** R, G, B, Tolerance and Softness save as params. The two lists save as the node's `state` (see Patch IDs), so a patch reloads the key it was saved with, and duplicating the node copies them.
+
+**Checked** in headless Chromium on a Raspberry Pi, through SwiftShader, at pixel density 1 and 2:
+- **Against a model:** fg was a sweep of 307,200 colours round green, and bg a solid red. A JS model of the formula, in double precision, matched the output to within one level on every value: at the defaults, with a hard edge (Tolerance 0.15, Softness 0), with two added and two kept colours, and with no bg. The exception was one value two levels off, on the hard edge at density 2. A lone bg passed through exactly.
+- **Eyedropper:** real mouse events picked each flat region's colour exactly, and the top and bottom of the picture the right way up. Across an edge they picked the mean of the 3 and 2 rows either side, to within one level. − on the greenish shirt brought it back and left the screen keyed, and + on the skin removed it. A click on the toolbar switched tools without picking.
+- **Patches:** a patch with both lists saves, loads and saves again as the same JSON, and a duplicate gets its own copies of them.
+- **Workflows:** all twelve load and run with no exceptions.
 
 ## VideoToasting Module
 
