@@ -90,13 +90,13 @@ export class Module {
     // Override in subclasses
   }
 
-  setParam(name, value) {
-    if (this.params[name]) {
-      this.params[name].value = Math.max(
-        this.params[name].min,
-        Math.min(this.params[name].max, value)
-      );
-    }
+  // Knobs, cables and module code keep a param within min..max. A number typed
+  // into its field may go past them, so the UI sets that, and a patch loads it,
+  // with clamp false.
+  setParam(name, value, clamp = true) {
+    const param = this.params[name];
+    if (!param) return;
+    param.value = clamp ? Math.max(param.min, Math.min(param.max, value)) : value;
   }
 
   getControlValue(portIndex) {

@@ -699,7 +699,9 @@ export class NodeGraphUI {
         if ((isDropdown(param) || isTrigger(param)) && !this._isControlled(id, paramNames[i])) continue;
         const pos = this.getParamKnobPos(mod, i);
         if (Math.hypot(wx - pos.x, wy - pos.y) < KNOB_RADIUS + 4) {
-          return { nodeId: id, paramName: paramNames[i], startY: wy, startValue: mod.params[paramNames[i]].value };
+          // A value typed past the range drags from the end it is past
+          const { value, min, max } = param;
+          return { nodeId: id, paramName: paramNames[i], startY: wy, startValue: Math.max(min, Math.min(max, value)) };
         }
       }
     }
@@ -840,9 +842,10 @@ export class NodeGraphUI {
     });
 
     const commit = () => {
+      // A typed number isn't held to the knob's range
       const val = parseFloat(input.value);
-      if (!isNaN(val)) {
-        mod.setParam(paramName, val);
+      if (Number.isFinite(val)) {
+        mod.setParam(paramName, val, false);
       }
       this._closeParamInput();
     };
@@ -1750,7 +1753,8 @@ export class NodeGraphUI {
       p.ellipse(kx, ky, KNOB_RADIUS * 2);
 
       // Knob arc (value indicator)
-      const norm = (param.value - param.min) / (param.max - param.min);
+      // A value typed past the range shows as the end it is past
+      const norm = Math.max(0, Math.min(1, (param.value - param.min) / (param.max - param.min)));
       const startAngle = -p.PI * 0.75;
       const endAngle = startAngle + norm * p.PI * 1.5;
       p.noFill();
@@ -2800,7 +2804,7 @@ export class NodeGraphUI {
     mod.x = src.x + 20;
     mod.y = src.y + 20;
     for (const [k, v] of Object.entries(src.params)) {
-      mod.setParam(k, v.value);
+      mod.setParam(k, v.value, false);
     }
     mod.seed = src.seed;
     const state = src.saveState();

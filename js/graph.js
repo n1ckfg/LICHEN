@@ -215,9 +215,10 @@ export class ConnectionGraph {
         for (const [k, v] of Object.entries(mod.declared ?? {})) {
           if (!(mod.params[k].id in nodeData.params)) mod.setParam(k, v);
         }
-        // A value whose param has since been removed is skipped
+        // A value whose param has since been removed is skipped. A value typed
+        // past the param's range loads as it was typed.
         for (const [k, param] of Object.entries(mod.params)) {
-          if (param.id in nodeData.params) mod.setParam(k, nodeData.params[param.id]);
+          if (param.id in nodeData.params) mod.setParam(k, nodeData.params[param.id], false);
         }
       }
       // The saved params replaced the ones the constructor seeded, so the

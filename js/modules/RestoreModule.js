@@ -96,11 +96,11 @@ export class RestoreModule extends Module {
   }
 
   // Give the output, and every buffer made so far, Width x Height real pixels,
-  // where 0 is the input's own size. p5 cuts a size the GPU can't make, so the
-  // size to work at is read back from the output.
+  // where 0, or a negative size typed in, is the input's own size. p5 cuts a
+  // size the GPU can't make, so the size to work at is read back from the output.
   _resize(input) {
-    const w = Math.round(this.params.width.value) || Math.round(input.width * input.density);
-    const h = Math.round(this.params.height.value) || Math.round(input.height * input.density);
+    const w = Math.max(0, Math.round(this.params.width.value)) || Math.round(input.width * input.density);
+    const h = Math.max(0, Math.round(this.params.height.value)) || Math.round(input.height * input.density);
     const asked = `${w} x ${h}`;
     if (asked === this._asked) return;
     this._asked = asked;

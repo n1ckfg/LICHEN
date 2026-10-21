@@ -64,9 +64,10 @@ export class VideoToastingModule extends Module {
     this.portsInUse = 0;
   }
 
-  // The Inputs knob adds and removes ports, but never one with a cable in it
-  setParam(name, value) {
-    super.setParam(name, value);
+  // The Inputs knob adds and removes ports, but never one with a cable in it.
+  // There are only so many ports, so a typed count is clamped too.
+  setParam(name, value, clamp = true) {
+    super.setParam(name, value, clamp || name === 'inputCount');
     if (name !== 'inputCount') return;
     const count = Math.max(Math.round(this.params.inputCount.value), this.portsInUse);
     this.params.inputCount.value = count;
