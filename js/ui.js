@@ -31,11 +31,11 @@ void main() {
 
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
-  'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'VideoMixer'],
-  'Control': ['Calculator', 'Constant', 'Random', 'Skeleton'],
+  'Utility': ['Blur', 'Brcosa', 'Channel', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'VideoMixer'],
+  'Control': ['Calculator', 'Constant', 'Random', 'Remap', 'Skeleton'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
-  'Interactive': ['Conway', 'InkDrops', 'Latk', 'Yellowtail'],
+  'Interactive': ['ChromaKey', 'Conway', 'InkDrops', 'Latk', 'Yellowtail'],
   'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
   'Emulation': ['DeeSeventySix', 'ESP32', 'RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
   'img2img': ['DepthAnything', 'InfrDrawings', 'Pix2Pix'],
@@ -66,7 +66,6 @@ const MODULE_COLORS = {
   Blur: color_utility,
   Brcosa: color_utility,
   Channel: color_utility,
-  ChromaKey: color_utility,
   Delay: color_utility,
   Dither: color_utility,
   Edges: color_utility,
@@ -80,6 +79,7 @@ const MODULE_COLORS = {
   Calculator: color_control,
   Constant: color_control,
   Random: color_control,
+  Remap: color_control,
   Skeleton: color_control,
   // - - - GENERATIVE - - -
   Cloudy: color_generative,
@@ -90,6 +90,7 @@ const MODULE_COLORS = {
   SpiralGalaxy: color_generative,
   Whitney: color_generative,
   // - - - INTERACTIVE - - -
+  ChromaKey: color_interactive,
   Conway: color_interactive,
   InkDrops: color_interactive,
   Latk: color_interactive,

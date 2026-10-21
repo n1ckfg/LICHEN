@@ -69,6 +69,7 @@ import './modules/VideoMixerModule.js';
 import './modules/CalculatorModule.js';
 import './modules/ConstantModule.js';
 import './modules/RandomModule.js';
+import './modules/RemapModule.js';
 import './modules/SkeletonModule.js';
 // - - - IMG2IMG - - -
 import './modules/DepthAnythingModule.js';

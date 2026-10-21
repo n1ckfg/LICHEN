@@ -39,7 +39,7 @@ A control value is one number a frame, and a parameter cable applies it after ev
 - **Control signals:** a control output can also publish a loop in `this.controlSignals['portName']`, as `{ samples, sampleRate, z, color }`. `samples` is a `Float32Array` in −1..1. `z` (blanking, XYscope's −1 off and 1 on) and `color` (0xRRGGBB a sample) are optional lanes the same length, or `null`. It should still set a numeric `controlValues` entry for the same port, because a knob cable sees only that.
 - **Control input pins:** an input declared `{ name, type: 'control' }` is drawn green, as is a cable into it, and takes a control output's cable. The cable is stored in `connections`, like a video cable, so the topological sort runs the source first, in the same frame. `this.getControlInput(graph, portIndex)` returns `{ value, signal }`: the source's control value and its control signal, or `null` for the signal if it has none. It returns `null` when nothing is cabled to the pin, or when a video output is.
 
-Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs, and Twoscilloscope's and ESP32's X and Y pins, are the only ones so far (see Latk Module, NAPLPS Module, RuttEtra Module, Skeleton Module, Yellowtail Module and ESP32 Module). Calculator's `a` and `b` are control input pins too, but read only the value (see Random, Constant and Calculator Modules).
+Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs, and Twoscilloscope's and ESP32's X and Y pins, are the only ones so far (see Latk Module, NAPLPS Module, RuttEtra Module, Skeleton Module, Yellowtail Module and ESP32 Module). Calculator's `a` and `b` and Remap's five pins are control input pins too, but read only the value (see Random, Constant, Calculator and Remap Modules).
 
 The UI renders each param in the `params` object: `{ paramName: { id, value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
@@ -100,10 +100,10 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 ### Module Categories
 
 - **Sources**: Camera, Image, VideoPlayer
-- **Utility**: Blur, Brcosa, Channel, ChromaKey, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, VideoMixer
-- **Control**: Calculator, Constant, Random, Skeleton
+- **Utility**: Blur, Brcosa, Channel, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, VideoMixer
+- **Control**: Calculator, Constant, Random, Remap, Skeleton
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
-- **Interactive**: Conway, InkDrops, Latk, Yellowtail
+- **Interactive**: ChromaKey, Conway, InkDrops, Latk, Yellowtail
 - **Emulation**: DeeSeventySix, ESP32, RuttEtra, SlowscanJam, Twoscilloscope
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, GRASS, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
@@ -1044,9 +1044,9 @@ Two more were tried and left out:
 
 **Cost.** When the output is drawn, it takes about 0.2 ms of GPU time at 1280×960, where it took 0.37–0.89 ms before the early return. These were measured by throughput, and vary about twofold from run to run with the GPU's power state. Uploading a changed buffer takes 22 µs.
 
-## Random, Constant and Calculator Modules
+## Random, Constant, Calculator and Remap Modules
 
-Three Control modules that work on control values alone (`js/modules/RandomModule.js`, `ConstantModule.js` and `CalculatorModule.js`). Each is plain JS, with no shader, no framebuffer and no video output, so `process()` only sets `controlValues.out`. That `out` is one number a frame, with no control signal. It drives a knob through a parameter cable, or a control input pin: Twoscilloscope and ESP32 draw it as they draw an Oscillator's (see Twoscilloscope's X and Y).
+Four Control modules that work on control values alone (`js/modules/RandomModule.js`, `ConstantModule.js`, `CalculatorModule.js` and `RemapModule.js`). Each is plain JS, with no shader, no framebuffer and no video output, so `process()` only sets `controlValues.out`. That `out` is one number a frame, with no control signal. It drives a knob through a parameter cable, or a control input pin: Twoscilloscope and ESP32 draw it as they draw an Oscillator's (see Twoscilloscope's X and Y).
 
 **Random** is a sample-and-hold random source.
 
@@ -1070,7 +1070,13 @@ Three Control modules that work on control values alone (`js/modules/RandomModul
 - **Divide by zero** gives 0. A result that isn't finite would set a cabled knob's param to NaN.
 - **Values only:** a pin reads its source's value, not its loop. Latk's X through a Calculator is where the beam is this frame, not the drawing.
 
-**Node layout.** Output ports and their labels sit in a dedicated bottom section below a node's preview (or below its last parameter row on nodes with no preview such as Calculator, Constant, and Random) so previews and file-picker buttons never overlap outlet circles or labels.
+**Remap** maps a value from one range to another: `Out Min + (value − In Min) / (In Max − In Min) × (Out Max − Out Min)`, as p5's `map()` does.
+- **Pins:** `value`, `inMin`, `inMax`, `outMin` and `outMax`, all control inputs. `value` has no knob, and is 0 with nothing cabled to it.
+- **Knobs:** In Min, In Max, Out Min and Out Max (−10–10, defaults 0, 1, 0 and 1). Each is used while nothing is cabled to its pin, and a cabled pin replaces it as Calculator's do: from the same frame, with the knob keeping its value for when the cable goes. A knob cable is scaled to −10..10 and arrives a frame later.
+- **Range:** the result isn't clamped, so a value outside In Min..In Max maps outside Out Min..Out Max. Either range may run backwards, which inverts the mapping.
+- **Empty input range:** with In Min equal to In Max, it outputs Out Min. A result that isn't finite gives 0, as Calculator's does.
+
+**Node layout.** Output ports and their labels sit in a dedicated bottom section below a node's preview (or below its last parameter row on nodes with no preview such as Calculator, Constant, Random and Remap) so previews and file-picker buttons never overlap outlet circles or labels.
 
 **Checked** in headless Chrome, on a virtual clock with frames stepped by hand and a seeded `Math.random`:
 - **Random's rate:** over 600 frames at 60 fps, Hz 1, 7.5, 10, 30 and 45 gave 10, 74, 99, 299 and 450 new values, Hz 120 gave 600 and Hz 0 none. Where a count is one short, the last update fell due on the last frame itself, and the stepped clock's rounding left it just short. Hz 60 gave 597, with three frames held for the same reason (see At the frame rate). At 30 fps, Hz 60 gave 300 in 300 frames. After a 5 s stall, which drew once, Hz 10 gave 100 in 600.
@@ -1185,7 +1191,7 @@ With isolation, ORT runs its default of min(4, ⌈cores / 2⌉) threads, which `
 
 - **State Management**: The `ConnectionGraph` is the source of truth for the patch state.
 - **Node Height**: a node's inputs share one row under its header (`NodeGraphUI._portSection()` reserves `28px` only when `mod.inputs.length > 0`, and `0` on input-less source/generative modules), parameter rows (`20px` each) follow immediately, any preview and file-picker button sit below the parameters, and `getModuleHeight()` reserves a dedicated bottom section (`35px` when `mod.outputs.length > 0`, `8px` otherwise) so output ports and their labels never overlap previews or buttons.
-- **Rendering**: Modules should always render to their `outputFBO` during `process()`. Calculator, Constant and Random have none, since they output only control values. The `Monitor` and `GRASS` modules provide previews by blitting their FBOs to the main P2D canvas in `js/ui.js`.
+- **Rendering**: Modules should always render to their `outputFBO` during `process()`. Calculator, Constant, Random and Remap have none, since they output only control values. The `Monitor` and `GRASS` modules provide previews by blitting their FBOs to the main P2D canvas in `js/ui.js`.
 - **Parameters**: Module parameters are normalized or use specific ranges defined in the `params` object. The UI handles scaling these values for display.
 - **Coordinate System**: p5.js uses a 2D coordinate system for the UI (top-left 0,0), while the WebGL `glCanvas` uses standard GL coordinates (centered 0,0 or screen-space depending on usage).
 - **Pixel Density**: framebuffers are allocated at the graphics' pixel density, so on a retina display `gl_FragCoord` runs over twice as many pixels as `glCanvas.width` / `glCanvas.height` report. A shader that works in `gl_FragCoord` space — or that derives a texel step from a resolution — must be given `Module.fragResolution()` rather than the logical size, and any pixel-valued uniform the shader compares against `gl_FragCoord` must be scaled by `Module.pixelDensity` (Conway's spawn position, radius and cell size; GridGuys' target). Getting this wrong confines the output to one quadrant, and in a feedback shader it also reads off the clamped edge. Shaders that address themselves through `vTexCoord` are unaffected, which is most of them — only `conway`, `dither`, `gridguys-simulation`, `inkdrops` and `spiralgalaxy` read `gl_FragCoord` (`cyberlace` uses it for a `mod(…, 2.0)` dither that is deliberately one physical pixel wide, and RuttEtra's grid pass to count the texels of a buffer of density 1).
