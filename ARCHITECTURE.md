@@ -100,7 +100,7 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 ### Module Categories
 
 - **Sources**: Camera, Image, VideoPlayer
-- **Utility**: Blur, Brcosa, Channel, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, VideoMixer
+- **Utility**: Blur, Brcosa, Channel, ChromaKey, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, VideoMixer
 - **Control**: Calculator, Constant, Random, Skeleton
 - **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
 - **Interactive**: Conway, InkDrops, Latk, Yellowtail
@@ -136,6 +136,8 @@ Firefox's user agent has no "safari", so it always drew these framebuffers this 
 A patch saves modules, params and ports by id, never by name or port number, so any of them can be renamed or reordered without breaking saved patches:
 - **Modules.** Each module class declares `static uid = '<8 hex digits>'`. A saved node has `uid`, which `createModuleByUid()` builds it from, and `type`, which is only there to make the file readable. Loading never reads `type`.
 - **Params and ports.** Each param and port declares `id: '<4 hex digits>'` next to its name. These only need to be unique within their module, since a node's uid already says which module they belong to. Params, inputs and outputs share that one namespace. A saved node's `params` are keyed by param id. A video cable's `fromPort` and `toPort` are port ids, and a knob cable has `fromPort`, a port id, and `param`, a param id.
+
+**Other data.** A module whose node holds data that isn't a param returns it from `saveState()` as plain JSON, and the patch saves it as the node's `state`. `fromJSON()` hands it back through `loadState()`, after the params, and duplicating a node copies it the same way. The base class saves nothing. ChromaKey's picked colours are the only such data so far (see ChromaKey Module).
 
 Only `ConnectionGraph.toJSON()` and `fromJSON()` see ids. At runtime everything still uses names and port numbers (`this.params.radius`, `getInput(graph, 0)`, `paramName` on a knob cable). `fromJSON()` maps the ids back using the declarations of the module it just built, so a renamed param, a renamed port, or a port moved to a new position all load with their saved values and cables. A saved value for a param that has since been removed is skipped, and a cable to a removed param or port is dropped with a console warning. A uid the registry doesn't know aborts the load.
 
@@ -629,12 +631,12 @@ The Edges module (`js/modules/EdgesModule.js`, `js/shaders/edges.js`) is a utili
 
 ## VideoMixer Module
 
-The VideoMixer module (`js/modules/VideoMixerModule.js`, `js/shaders/video-mixer.js`) composites input B over input A. The operation is chosen with the `mode` drop-down. `mix` acts as B's opacity: the output is `mix(A, op(A, B), mix)`, so Blend reproduces the old crossfade exactly, and `mix = 0` passes A through in every mode.
+The VideoMixer module (`js/modules/VideoMixerModule.js`, `js/shaders/video-mixer.js`) composites input B over input A. The operation is chosen with the `mode` drop-down, which defaults to Add. `mix` acts as B's opacity: the output is `mix(A, op(A, B), mix)`, so Blend reproduces the old crossfade exactly, and `mix = 0` passes A through in every mode.
 
 | mode | Label | op(A, B) |
 | --- | --- | --- |
-| 0 (default) | Blend | B |
-| 1 | Add | A + B |
+| 0 | Blend | B |
+| 1 (default) | Add | A + B |
 | 2 | Subtract | A − B |
 | 3 | Multiply | A × B |
 | 4 | Divide | A / max(B, 1/255), so a black B saturates any non-black A to white |
@@ -647,6 +649,37 @@ The VideoMixer module (`js/modules/VideoMixerModule.js`, `js/shaders/video-mixer
 | 11 | Luminance | SetLum(A, Lum(B)): A's hue and saturation, B's luminance |
 
 Modes 0–7 and Overlay work on each RGB channel separately. Color, Saturation and Luminance are the W3C Compositing and Blending spec's non-separable modes, with `Lum` weights (0.3, 0.59, 0.11). `SetLum` brings an out-of-range result back with `ClipColor`, which pulls it toward its own grey and so keeps its luminance, instead of clamping each channel separately. New modes are appended rather than inserted, because patches save the mode as its index. `op` is clamped to 0–1 before the mix. Alpha is always crossfaded by `mix`. When only one input is connected, it feeds both A and B.
+
+Mode used to default to Blend. A patch saved before the drop-down existed loads the default, so it now loads as Add. `burning_edges` was one, and its two VideoMixers now save Blend.
+
+## ChromaKey Module
+
+The ChromaKey module (`js/modules/ChromaKeyModule.js`, `js/shaders/chroma-key.js`) removes the colours near a key colour from input `fg` and shows input `bg` through the hole. R, G and B (0–1, default pure green) are the key colour. Tolerance (default 0.2) is how far from it a colour is removed entirely, and Softness (default 0.1) how far past that it fades back in.
+
+**Distance.** Colours are compared in BT.601 YCbCr, with luma at half weight (`LUMA_WEIGHT`). Shading across a backdrop is mostly a change of luma, so it costs less than a change of hue, while greys of different brightness stay apart, as they would not in Cb and Cr alone. A sampled green screen of (30, 180, 60) is 0.10 from a greenish shirt of (70, 170, 90) and 0.38 from skin of (205, 150, 125). That is why Tolerance defaults to 0.2: at 0.3, that skin came out 94% opaque.
+
+**Samples.** The key list is R, G and B followed by the colours added with Eyedropper +, up to 16 in all (`CHROMA_KEY_MAX`). The kept list is the colours picked with Eyedropper −, up to 16. A full list drops its oldest colour. Each pixel finds its nearest key and its nearest kept colour:
+- **Removed:** alpha rises along a smoothstep from 0, at Tolerance from the nearest key, to 1 at Tolerance + Softness. At Softness 0 it is a hard edge.
+- **Kept:** wherever a kept colour is nearer than every key, the pixel stays, faded over Softness across the midpoint between the two. So − carves a colour out of the keyed range without shrinking it anywhere else, and a backdrop nearer the key than the kept colour stays keyed.
+
+**Inputs.** The output is `mix(bg, fg, alpha)`. With no bg the hole is transparent black, premultiplied, which a preview shows as black. A lone bg passes through, and with neither input the output keeps its last frame, as VideoMixer's does. It is one pass: two texture reads a pixel, and a distance to each sample.
+
+**Fullscreen interaction.** Double-click the node preview to enter fullscreen, which shows the output. A toolbar holds three eyedroppers, a swatch of the key colour, and the counts of added and kept colours:
+- **Eyedropper:** a click sets R, G and B to the colour under it and clears both lists, which starts the key over.
+- **Eyedropper +:** adds the colour under it to the key list.
+- **Eyedropper −:** adds it to the kept list. Clicking where the key has eaten into the subject brings that colour back.
+
+Each click samples `fg`, not the output, as the mean of the 5 × 5 logical pixels round it (Photoshop's 5 by 5 Average). The click is queued, and the next `process()` draws the mean into a 1 × 1 framebuffer with `chromaKeyPickFrag` and reads that pixel back, waiting on the GPU once per click. Sampling through a shader reads any input, whatever its size, format or antialiasing. ESC exits. `js/ui.js` routes the click to `handleMouseDown()` as it does for Conway. The toolbar stops its own mouse events, as the drop-down menu does, so clicking it picks nothing. A cable on R, G or B overrides the Eyedropper.
+
+A double-click in fullscreen used to reach the hidden graph, where it could open a param editor or fullscreen another node under the pointer. Picking colours in quick succession made that easy to hit, so `mouseDoubleClicked()` now stops there for every fullscreen module. Latk still resets its camera.
+
+**Patches.** R, G, B, Tolerance and Softness save as params. The two lists save as the node's `state` (see Patch IDs), so a patch reloads the key it was saved with, and duplicating the node copies them.
+
+**Checked** in headless Chromium on a Raspberry Pi, through SwiftShader, at pixel density 1 and 2:
+- **Against a model:** fg was a sweep of 307,200 colours round green, and bg a solid red. A JS model of the formula, in double precision, matched the output to within one level on every value: at the defaults, with a hard edge (Tolerance 0.15, Softness 0), with two added and two kept colours, and with no bg. The exception was one value two levels off, on the hard edge at density 2. A lone bg passed through exactly.
+- **Eyedropper:** real mouse events picked each flat region's colour exactly, and the top and bottom of the picture the right way up. Across an edge they picked the mean of the 3 and 2 rows either side, to within one level. − on the greenish shirt brought it back and left the screen keyed, and + on the skin removed it. A click on the toolbar switched tools without picking.
+- **Patches:** a patch with both lists saves, loads and saves again as the same JSON, and a duplicate gets its own copies of them.
+- **Workflows:** all twelve load and run with no exceptions.
 
 ## VideoToasting Module
 
@@ -1037,7 +1070,7 @@ Three Control modules that work on control values alone (`js/modules/RandomModul
 - **Divide by zero** gives 0. A result that isn't finite would set a cabled knob's param to NaN.
 - **Values only:** a pin reads its source's value, not its loop. Latk's X through a Calculator is where the beam is this frame, not the drawing.
 
-**Node layout.** Output ports sit at a node's bottom edge, over the foot of its preview. These three have no preview, so `getModuleHeight()` gives a node with outputs and no preview one more row for them. Without it they land on the last param.
+**Node layout.** Output ports and their labels sit in a dedicated bottom section below a node's preview (or below its last parameter row on nodes with no preview such as Calculator, Constant, and Random) so previews and file-picker buttons never overlap outlet circles or labels.
 
 **Checked** in headless Chrome, on a virtual clock with frames stepped by hand and a seeded `Math.random`:
 - **Random's rate:** over 600 frames at 60 fps, Hz 1, 7.5, 10, 30 and 45 gave 10, 74, 99, 299 and 450 new values, Hz 120 gave 600 and Hz 0 none. Where a count is one short, the last update fell due on the last frame itself, and the stepped clock's rounding left it just short. Hz 60 gave 597, with three frames held for the same reason (see At the frame rate). At 30 fps, Hz 60 gave 300 in 300 frames. After a 5 s stall, which drew once, Hz 10 gave 100 in 600.
@@ -1151,7 +1184,7 @@ With isolation, ORT runs its default of min(4, ⌈cores / 2⌉) threads, which `
 ## Development Conventions
 
 - **State Management**: The `ConnectionGraph` is the source of truth for the patch state.
-- **Node Height**: a node's inputs share one row under its header, and its outputs sit on its bottom edge, so `NodeGraphUI._portSection()` gives its ports one row however many it has, and none when it has no ports. Every height and position below the ports is measured from it. It used to give a row for each port on the side with more, which left an empty band of 24 px a row on 16 module types, such as VideoMixer, Channel, Latk and NAPLPS. Checked against commit 2718dcb in headless Chrome: on every module type, every port, param, drop-down and preview is where it was, or higher by the rows the node lost. The 54 types that lost none draw the same on every pixel.
+- **Node Height**: a node's inputs share one row under its header (`NodeGraphUI._portSection()` reserves `28px` only when `mod.inputs.length > 0`, and `0` on input-less source/generative modules), parameter rows (`20px` each) follow immediately, any preview and file-picker button sit below the parameters, and `getModuleHeight()` reserves a dedicated bottom section (`35px` when `mod.outputs.length > 0`, `8px` otherwise) so output ports and their labels never overlap previews or buttons.
 - **Rendering**: Modules should always render to their `outputFBO` during `process()`. Calculator, Constant and Random have none, since they output only control values. The `Monitor` and `GRASS` modules provide previews by blitting their FBOs to the main P2D canvas in `js/ui.js`.
 - **Parameters**: Module parameters are normalized or use specific ranges defined in the `params` object. The UI handles scaling these values for display.
 - **Coordinate System**: p5.js uses a 2D coordinate system for the UI (top-left 0,0), while the WebGL `glCanvas` uses standard GL coordinates (centered 0,0 or screen-space depending on usage).

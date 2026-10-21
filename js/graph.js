@@ -172,6 +172,8 @@ export class ConnectionGraph {
         collapsed: mod.collapsed || false
       };
       if (mod.seed) node.seed = mod.seed;
+      const state = mod.saveState();
+      if (state) node.state = state;
       nodes.push(node);
     }
     const output = (c) => this.nodes.get(c.fromId).outputs[c.fromPort].id;
@@ -222,6 +224,7 @@ export class ConnectionGraph {
       // constructor's seed no longer describes them; a patch saved before
       // seeds existed has none to restore.
       mod.seed = nodeData.seed ?? null;
+      if (nodeData.state) mod.loadState(nodeData.state);
       this.nodes.set(nodeData.id, mod);
     }
 

@@ -157,6 +157,16 @@ export class Module {
     return '';
   }
 
+  // What a patch keeps of a node beyond its params, as plain JSON, or null for
+  // nothing; it comes back through loadState() on load and duplication
+  saveState() {
+    return null;
+  }
+
+  loadState(state) {
+    // Override in subclasses
+  }
+
   dispose() {
     this.outputFBO = null;
     this.shader = null;

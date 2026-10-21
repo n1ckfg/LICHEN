@@ -31,7 +31,7 @@ void main() {
 
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
-  'Utility': ['Blur', 'Brcosa', 'Channel', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'VideoMixer'],
+  'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'VideoMixer'],
   'Control': ['Calculator', 'Constant', 'Random', 'Skeleton'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
@@ -66,6 +66,7 @@ const MODULE_COLORS = {
   Blur: color_utility,
   Brcosa: color_utility,
   Channel: color_utility,
+  ChromaKey: color_utility,
   Delay: color_utility,
   Dither: color_utility,
   Edges: color_utility,
@@ -323,16 +324,15 @@ export class NodeGraphUI {
     if (mod.collapsed) return null;
     const portSection = this._portSection(mod);
     const paramSection = Object.keys(mod.params).length * PARAM_ROW_HEIGHT;
-    const top = mod.y + HEADER_HEIGHT + portSection;
+    const y = mod.y + HEADER_HEIGHT + portSection + paramSection + 6;
     if (mod.type === 'Monitor') {
-      // Extra padding below params
-      return { fbo: mod.displayTexture, x: mod.x + 4, y: top + paramSection + 12, w: MONITOR_PREVIEW_W, h: MONITOR_PREVIEW_H };
+      return { fbo: mod.displayTexture, x: mod.x + 4, y, w: MONITOR_PREVIEW_W, h: MONITOR_PREVIEW_H };
     }
     if (mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail') {
-      return { fbo: mod.outputFBO, x: mod.x + 4, y: top, w: MONITOR_PREVIEW_W, h: MONITOR_PREVIEW_H };
+      return { fbo: mod.outputFBO, x: mod.x + 4, y, w: MONITOR_PREVIEW_W, h: MONITOR_PREVIEW_H };
     }
     if (!mod.outputFBO) return null;
-    return { fbo: mod.outputFBO, x: mod.x + (MODULE_WIDTH - PREVIEW_W) / 2, y: top + paramSection + 4, w: PREVIEW_W, h: PREVIEW_H };
+    return { fbo: mod.outputFBO, x: mod.x + (MODULE_WIDTH - PREVIEW_W) / 2, y, w: PREVIEW_W, h: PREVIEW_H };
   }
 
   // Copying glCanvas onto the 2D canvas costs about a millisecond each time
@@ -455,10 +455,15 @@ export class NodeGraphUI {
     banner.alt = 'LICHEN';
     bannerLink.appendChild(banner);
 
-    // p5 binds its mouse handlers to window, so without this a click on the
-    // banner would also register as a click on the graph behind the palette.
-    for (const type of ['mousedown', 'mouseup', 'click', 'dblclick']) {
+    // p5 binds its mouse handlers to window, so without this a click, double-click,
+    // or scroll on the palette would also register on the graph behind it.
+    // While placing a module, let clicks pass through so clicking over the palette
+    // still finalizes or cancels placement.
+    for (const type of ['mousedown', 'mouseup', 'click', 'dblclick', 'wheel']) {
       bannerLink.addEventListener(type, e => e.stopPropagation());
+      palette.addEventListener(type, e => {
+        if (this._placingModule === null) e.stopPropagation();
+      });
     }
 
     palette.appendChild(bannerLink);
@@ -566,10 +571,9 @@ export class NodeGraphUI {
   }
 
   // Inputs share one row under the header and outputs sit on the bottom
-  // edge, so a node's ports take one row however many it has. A node with
-  // only outputs keeps that row as space under its header.
+  // edge, so only a node with inputs reserves space under its header.
   _portSection(mod) {
-    return mod.inputs.length || mod.outputs.length ? PORT_SPACING + 8 : 0;
+    return mod.inputs.length ? 28 : 0;
   }
 
   getModuleHeight(mod) {
@@ -579,20 +583,23 @@ export class NodeGraphUI {
     const portSection = this._portSection(mod);
     const paramCount = Object.keys(mod.params).length;
     const paramSection = paramCount * PARAM_ROW_HEIGHT;
-    const hasPreview = mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway' && mod.type !== 'Yellowtail';
-    const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
-    let monitorSection = (mod.type === 'Monitor' || mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail') ? MONITOR_PREVIEW_H + 8 : 0;
     if (mod.type === 'Monitor') {
-      monitorSection += 148; // Extra space for param padding + FPS counter + record/screenshot/fullscreen/load+save+link buttons
+      // 6px above preview + preview + 136px for FPS counter & buttons + 8px bottom margin
+      return HEADER_HEIGHT + portSection + paramSection + 6 + MONITOR_PREVIEW_H + 144;
     }
+    const isLargePreview = mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail';
+    const hasPreview = Boolean(mod.outputFBO) && !isLargePreview;
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
       mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk';
-    const fileBtnSection = hasFileBtn ? 24 : 0;
-    // Output ports sit at a node's bottom edge, over the foot of its preview.
-    // A node with none (Calculator, Constant, Random) gives them a row of
-    // their own, or they would land on its last param
-    const outputSection = !hasPreview && !monitorSection && mod.outputs.length > 0 ? PORT_SPACING : 0;
-    return HEADER_HEIGHT + portSection + paramSection + previewSection + monitorSection + fileBtnSection + outputSection + 12;
+    let contentH = 1;
+    if (isLargePreview) {
+      contentH = 6 + MONITOR_PREVIEW_H;
+    } else if (hasPreview) {
+      contentH = 6 + PREVIEW_H + (hasFileBtn ? 26 : 0);
+    }
+    // Output ports and their labels sit below the preview/button (or last param)
+    const outputSection = mod.outputs.length > 0 ? 35 : 8;
+    return HEADER_HEIGHT + portSection + paramSection + contentH + outputSection;
   }
 
   getInputPortPos(mod, index) {
@@ -606,7 +613,7 @@ export class NodeGraphUI {
     }
     return {
       x: mod.x + (index + 1) * MODULE_WIDTH / (count + 1),
-      y: mod.y + HEADER_HEIGHT + 14,
+      y: mod.y + HEADER_HEIGHT + 13,
     };
   }
 
@@ -622,7 +629,7 @@ export class NodeGraphUI {
     const h = this.getModuleHeight(mod);
     return {
       x: mod.x + (index + 1) * MODULE_WIDTH / (count + 1),
-      y: mod.y + h - 14,
+      y: mod.y + h - 13,
     };
   }
 
@@ -635,10 +642,9 @@ export class NodeGraphUI {
         y: mod.y + (paramIndex + 1) * HEADER_HEIGHT / (paramCount + 1),
       };
     }
-    const portSection = this._portSection(mod);
     return {
-      x: mod.x + 18,
-      y: mod.y + HEADER_HEIGHT + portSection + paramIndex * PARAM_ROW_HEIGHT + 10,
+      x: mod.x + 16,
+      y: this.getParamY(mod, paramIndex) + 4,
     };
   }
 
@@ -684,15 +690,14 @@ export class NodeGraphUI {
   hitTestKnob(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
+      if (mod.collapsed) continue;
       const paramNames = Object.keys(mod.params);
       for (let i = 0; i < paramNames.length; i++) {
         // A dropdown's or trigger's inlet dot is not a knob to drag; it only matters once a cable is plugged in
         const param = mod.params[paramNames[i]];
         if ((isDropdown(param) || isTrigger(param)) && !this._isControlled(id, paramNames[i])) continue;
-        const py = this.getParamY(mod, i);
-        const kx = mod.x + 16;
-        const ky = py + 4;
-        if (Math.hypot(wx - kx, wy - ky) < KNOB_RADIUS + 4) {
+        const pos = this.getParamKnobPos(mod, i);
+        if (Math.hypot(wx - pos.x, wy - pos.y) < KNOB_RADIUS + 4) {
           return { nodeId: id, paramName: paramNames[i], startY: wy, startValue: mod.params[paramNames[i]].value };
         }
       }
@@ -705,10 +710,8 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       const paramNames = Object.keys(mod.params);
       for (let i = 0; i < paramNames.length; i++) {
-        const py = this.getParamY(mod, i);
-        const kx = mod.x + 16;
-        const ky = py + 4;
-        if (Math.hypot(wx - kx, wy - ky) < KNOB_RADIUS + 4) {
+        const pos = this.getParamKnobPos(mod, i);
+        if (Math.hypot(wx - pos.x, wy - pos.y) < KNOB_RADIUS + 4) {
           return { nodeId: id, paramName: paramNames[i] };
         }
       }
@@ -719,6 +722,7 @@ export class NodeGraphUI {
   hitTestParamValue(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
+      if (mod.collapsed) continue;
       const paramNames = Object.keys(mod.params);
       for (let i = 0; i < paramNames.length; i++) {
         const param = mod.params[paramNames[i]];
@@ -735,13 +739,24 @@ export class NodeGraphUI {
     return null;
   }
 
-  // Dropdown box, right-aligned where a knob's value text would be
+  // Dropdown box, right-aligned where a knob's value text would be, narrowed if
+  // needed so it never overlaps a longer parameter label (e.g. Projection, Posterize).
   _dropdownRect(mod, paramIndex) {
     const ky = this.getParamY(mod, paramIndex) + 4;
+    const right = mod.x + MODULE_WIDTH - 8;
+    let w = DROPDOWN_W;
+    const name = Object.keys(mod.params)[paramIndex];
+    const param = name ? mod.params[name] : null;
+    if (param && this.p) {
+      this.p.textSize(9);
+      const labelW = Math.ceil(this.p.textWidth(param.label || name));
+      const minX = mod.x + 16 + KNOB_RADIUS + 6 + labelW + 5;
+      w = Math.max(48, Math.min(DROPDOWN_W, right - minX));
+    }
     return {
-      x: mod.x + MODULE_WIDTH - 8 - DROPDOWN_W,
+      x: right - w,
       y: ky - DROPDOWN_H / 2,
-      w: DROPDOWN_W,
+      w,
       h: DROPDOWN_H,
     };
   }
@@ -988,7 +1003,13 @@ export class NodeGraphUI {
       marginTop: '4px',
       maxHeight: '200px',
       overflowY: 'auto',
+      scrollbarWidth: 'thin',
+      scrollbarColor: '#4a4a6a transparent',
     });
+
+    for (const type of ['mousedown', 'mouseup', 'click', 'dblclick', 'wheel']) {
+      container.addEventListener(type, e => e.stopPropagation());
+    }
 
     container.appendChild(input);
     container.appendChild(resultsList);
@@ -1045,11 +1066,13 @@ export class NodeGraphUI {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         selectedIndex = Math.min(selectedIndex + 1, filteredModules.length - 1);
-        renderResults();
+        updateSelection();
+        resultsList.children[selectedIndex]?.scrollIntoView({ block: 'nearest' });
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         selectedIndex = Math.max(selectedIndex - 1, 0);
-        renderResults();
+        updateSelection();
+        resultsList.children[selectedIndex]?.scrollIntoView({ block: 'nearest' });
       } else if (e.key === 'Enter') {
         e.preventDefault();
         if (filteredModules.length > 0) {
@@ -1073,6 +1096,11 @@ export class NodeGraphUI {
     setTimeout(() => document.addEventListener('mousedown', closeOnClickOutside), 0);
 
     renderResults();
+    const rect = container.getBoundingClientRect();
+    const clampedX = Math.max(8, Math.min(screenX, window.innerWidth - rect.width - 8));
+    const clampedY = Math.max(8, Math.min(screenY, window.innerHeight - rect.height - 8));
+    container.style.left = clampedX + 'px';
+    container.style.top = clampedY + 'px';
     input.focus();
     this._searchPopup = { el: container, closeHandler: closeOnClickOutside };
   }
@@ -1097,27 +1125,11 @@ export class NodeGraphUI {
   hitTestMonitorDblClick(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      const portSection = this._portSection(mod);
-      const paramCount = Object.keys(mod.params).length;
-      const paramSection = paramCount * PARAM_ROW_HEIGHT;
-
-      if (mod.type === 'Monitor' || mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail') {
-        // Large preview area (Monitor has params above preview, GRASS/Conway do not)
-        const py = mod.y + HEADER_HEIGHT + portSection + (mod.type === 'Monitor' ? paramSection + 12 : 0);
-        if (wx >= mod.x + 4 && wx <= mod.x + 4 + MONITOR_PREVIEW_W &&
-            wy >= py && wy <= py + MONITOR_PREVIEW_H) {
-          return id;
-        }
-      } else if (mod.outputFBO) {
-        // Small preview thumbnail
-        const paramCount = Object.keys(mod.params).length;
-        const paramSection = paramCount * PARAM_ROW_HEIGHT;
-        const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 4;
-        const px = mod.x + (MODULE_WIDTH - PREVIEW_W) / 2;
-        if (wx >= px && wx <= px + PREVIEW_W &&
-            wy >= py && wy <= py + PREVIEW_H) {
-          return id;
-        }
+      const r = this._previewRect(mod);
+      if (!r) continue;
+      if (wx >= r.x && wx <= r.x + r.w &&
+          wy >= r.y && wy <= r.y + r.h) {
+        return id;
       }
     }
     return null;
@@ -1126,14 +1138,13 @@ export class NodeGraphUI {
   hitTestVideoPlayerBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
+      if (mod.collapsed) continue;
       if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS' && mod.type !== 'Image' && mod.type !== 'LUT' &&
         mod.type !== 'QTVR' && mod.type !== 'VRML' && mod.type !== 'Latk') continue;
-      const portSection = this._portSection(mod);
-      const paramCount = Object.keys(mod.params).length;
-      const paramSection = paramCount * PARAM_ROW_HEIGHT;
-      const hasPreview = mod.outputFBO;
-      const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
-      const btnY = mod.y + HEADER_HEIGHT + portSection + paramSection + previewSection;
+      const preview = this._previewRect(mod);
+      const btnY = preview
+        ? preview.y + PREVIEW_H + 6
+        : mod.y + HEADER_HEIGHT + this._portSection(mod) + Object.keys(mod.params).length * PARAM_ROW_HEIGHT + 6;
       if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
         return id;
@@ -1145,11 +1156,8 @@ export class NodeGraphUI {
   hitTestRecordBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'Monitor') continue;
-      const portSection = this._portSection(mod);
-      const paramCount = Object.keys(mod.params).length;
-      const paramSection = paramCount * PARAM_ROW_HEIGHT;
-      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12; // Match preview padding
+      if (mod.type !== 'Monitor' || mod.collapsed) continue;
+      const py = this._previewRect(mod).y;
       const btnY = py + MONITOR_PREVIEW_H + 20; // Below FPS counter
       if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
@@ -1162,11 +1170,8 @@ export class NodeGraphUI {
   hitTestScreenshotBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'Monitor') continue;
-      const portSection = this._portSection(mod);
-      const paramCount = Object.keys(mod.params).length;
-      const paramSection = paramCount * PARAM_ROW_HEIGHT;
-      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
+      if (mod.type !== 'Monitor' || mod.collapsed) continue;
+      const py = this._previewRect(mod).y;
       const btnY = py + MONITOR_PREVIEW_H + 44; // Below record button
       if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
@@ -1179,11 +1184,8 @@ export class NodeGraphUI {
   hitTestFullscreenBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'Monitor') continue;
-      const portSection = this._portSection(mod);
-      const paramCount = Object.keys(mod.params).length;
-      const paramSection = paramCount * PARAM_ROW_HEIGHT;
-      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
+      if (mod.type !== 'Monitor' || mod.collapsed) continue;
+      const py = this._previewRect(mod).y;
       const btnY = py + MONITOR_PREVIEW_H + 68; // Below screenshot button
       if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
@@ -1197,11 +1199,8 @@ export class NodeGraphUI {
     const graph = this.pipeline.graph;
     const halfW = (MODULE_WIDTH - 24) / 2;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'Monitor') continue;
-      const portSection = this._portSection(mod);
-      const paramCount = Object.keys(mod.params).length;
-      const paramSection = paramCount * PARAM_ROW_HEIGHT;
-      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
+      if (mod.type !== 'Monitor' || mod.collapsed) continue;
+      const py = this._previewRect(mod).y;
       const btnY = py + MONITOR_PREVIEW_H + 92; // Below fullscreen button
       if (wx >= mod.x + 10 && wx <= mod.x + 10 + halfW &&
           wy >= btnY && wy <= btnY + 20) {
@@ -1215,11 +1214,8 @@ export class NodeGraphUI {
     const graph = this.pipeline.graph;
     const halfW = (MODULE_WIDTH - 24) / 2;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'Monitor') continue;
-      const portSection = this._portSection(mod);
-      const paramCount = Object.keys(mod.params).length;
-      const paramSection = paramCount * PARAM_ROW_HEIGHT;
-      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
+      if (mod.type !== 'Monitor' || mod.collapsed) continue;
+      const py = this._previewRect(mod).y;
       const btnY = py + MONITOR_PREVIEW_H + 92; // Same row as load button
       if (wx >= mod.x + 14 + halfW && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
@@ -1232,11 +1228,8 @@ export class NodeGraphUI {
   hitTestLinkBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
-      if (mod.type !== 'Monitor') continue;
-      const portSection = this._portSection(mod);
-      const paramCount = Object.keys(mod.params).length;
-      const paramSection = paramCount * PARAM_ROW_HEIGHT;
-      const py = mod.y + HEADER_HEIGHT + portSection + paramSection + 12;
+      if (mod.type !== 'Monitor' || mod.collapsed) continue;
+      const py = this._previewRect(mod).y;
       const btnY = py + MONITOR_PREVIEW_H + 116; // Below load/save row
       if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
@@ -1334,7 +1327,7 @@ export class NodeGraphUI {
           }
           // Render terminal/REPL overlays on top of the clean video
           mod.renderOverlays(p);
-        } else if (mod.type === 'Conway' || mod.type === 'Yellowtail') {
+        } else if (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey') {
           if (mod.outputFBO) {
             this._drawFBO(mod.outputFBO, dx, dy, dw, dh);
           }
@@ -1394,13 +1387,7 @@ export class NodeGraphUI {
       const paramNames = Object.keys(toMod.params);
       const paramIdx = paramNames.indexOf(cc.paramName);
       if (paramIdx < 0) continue;
-      let to;
-      if (toMod.collapsed) {
-        to = this.getParamKnobPos(toMod, paramIdx);
-      } else {
-        const py = this.getParamY(toMod, paramIdx);
-        to = { x: toMod.x + 16, y: py + 4 };
-      }
+      const to = this.getParamKnobPos(toMod, paramIdx);
       this._drawCable(p, from.x, from.y, to.x, to.y, [100, 255, 130]);
     }
 
@@ -1584,9 +1571,8 @@ export class NodeGraphUI {
     p.rect(mod.x + 3, mod.y + 3, MODULE_WIDTH, h, 6);
 
     // Body
+    p.noStroke();
     p.fill(30, 30, 50);
-    p.stroke(isSelected ? 255 : 60);
-    p.strokeWeight(isSelected ? 2 : 1);
     p.rect(mod.x, mod.y, MODULE_WIDTH, h, 6);
 
     // When collapsed, draw ports first (underneath header)
@@ -1638,14 +1624,27 @@ export class NodeGraphUI {
       p.rect(mod.x, mod.y, MODULE_WIDTH, HEADER_HEIGHT, 6);
     } else {
       p.rect(mod.x, mod.y, MODULE_WIDTH, HEADER_HEIGHT, 6, 6, 0, 0);
+      p.stroke(0, 0, 0, 70);
+      p.strokeWeight(1);
+      p.line(mod.x + 1, mod.y + HEADER_HEIGHT, mod.x + MODULE_WIDTH - 1, mod.y + HEADER_HEIGHT);
     }
 
-    // Title (centered)
+    // Node outer border (drawn after header fill so header corners don't clip the stroke)
+    p.noFill();
+    p.stroke(isSelected ? 255 : 68);
+    p.strokeWeight(isSelected ? 2 : 1);
+    p.rect(mod.x, mod.y, MODULE_WIDTH, h, 6);
+
+    // Title (centered, nudged left only if a long name would collide with header buttons)
+    const hasInfo = Boolean(this._infoName(mod));
     p.fill(255);
     p.noStroke();
     p.textSize(11);
     p.textAlign(p.CENTER, p.CENTER);
-    p.text(mod.type, mod.x + MODULE_WIDTH / 2, mod.y + HEADER_HEIGHT / 2);
+    const titleRightLimit = hasInfo ? MODULE_WIDTH - 36 : MODULE_WIDTH - 20;
+    const titleHalfW = p.textWidth(mod.type) / 2;
+    const titleX = mod.x + Math.min(MODULE_WIDTH / 2, titleRightLimit - titleHalfW);
+    p.text(mod.type, titleX, mod.y + HEADER_HEIGHT / 2);
 
     // Collapse toggle (light gray circle with "-" when expanded, "+" when collapsed)
     const btnX = mod.x + MODULE_WIDTH - 12;
@@ -1662,7 +1661,7 @@ export class NodeGraphUI {
     p.noStroke();
 
     // Historical-info toggle (only when the module has an entry, see _infoName)
-    if (this._infoName(mod)) {
+    if (hasInfo) {
       const infoX = mod.x + MODULE_WIDTH - 28;
       p.fill(180);
       p.noStroke();
@@ -1678,43 +1677,6 @@ export class NodeGraphUI {
       // Restore opacity
       p.drawingContext.globalAlpha = prevAlpha;
       return;
-    }
-
-    // Input ports (normal mode)
-    for (let i = 0; i < mod.inputs.length; i++) {
-      const pos = this.getInputPortPos(mod, i);
-      const isHovered = this._hoveredPort &&
-        this._hoveredPort.nodeId === id &&
-        this._hoveredPort.portType === 'input' &&
-        this._hoveredPort.portIndex === i;
-      p.fill(mod.inputs[i].type === 'control' ? [100, 255, 130] : [68, 136, 255]);
-      p.stroke(isHovered ? [255, 255, 0] : 255);
-      p.strokeWeight(isHovered ? 2.5 : 1.5);
-      p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
-      p.noStroke();
-      p.fill(180);
-      p.textSize(8);
-      p.textAlign(p.CENTER, p.TOP);
-      p.text(mod.inputs[i].name, pos.x, pos.y + PORT_RADIUS + 2);
-    }
-
-    // Output ports (normal mode)
-    for (let i = 0; i < mod.outputs.length; i++) {
-      const pos = this.getOutputPortPos(mod, i);
-      const isControlPort = mod.outputs[i].type === 'control';
-      const isHovered = this._hoveredPort &&
-        this._hoveredPort.nodeId === id &&
-        this._hoveredPort.portType === 'output' &&
-        this._hoveredPort.portIndex === i;
-      p.fill(isControlPort ? [100, 255, 130] : [255, 136, 68]);
-      p.stroke(isHovered ? [255, 255, 0] : 255);
-      p.strokeWeight(isHovered ? 2.5 : 1.5);
-      p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
-      p.noStroke();
-      p.fill(180);
-      p.textSize(8);
-      p.textAlign(p.CENTER, p.BOTTOM);
-      p.text(mod.outputs[i].name, pos.x, pos.y - PORT_RADIUS - 2);
     }
 
     // Params
@@ -1795,25 +1757,22 @@ export class NodeGraphUI {
       p.strokeWeight(2);
       p.arc(kx, ky, KNOB_RADIUS * 2 - 2, KNOB_RADIUS * 2 - 2, startAngle, endAngle);
 
-      // Label
+      // Value — a param may name its discrete settings via valueLabels
+      const optLabel = param.valueLabels && param.valueLabels[Math.round(param.value)];
+      const displayVal = optLabel ? optLabel : (param.step >= 1 ? param.value.toFixed(0) : param.value.toFixed(2));
       p.noStroke();
+      p.fill(130);
+      p.textSize(optLabel ? 8 : 9);
+      const valW = p.textWidth(displayVal);
+      p.textAlign(p.RIGHT, p.CENTER);
+      p.text(displayVal, mod.x + MODULE_WIDTH - 8, ky);
+
+      // Label
       p.fill(170);
       p.textSize(9);
       p.textAlign(p.LEFT, p.CENTER);
-      p.text(param.label || name, kx + KNOB_RADIUS + 6, ky);
-
-      // Value — a param may name its discrete settings via valueLabels
-      p.fill(130);
-      p.textAlign(p.RIGHT, p.CENTER);
-      const optLabel = param.valueLabels && param.valueLabels[Math.round(param.value)];
-      if (optLabel) {
-        p.textSize(8);
-        p.text(optLabel, mod.x + MODULE_WIDTH - 8, ky);
-        p.textSize(9);
-      } else {
-        const displayVal = param.step >= 1 ? param.value.toFixed(0) : param.value.toFixed(2);
-        p.text(displayVal, mod.x + MODULE_WIDTH - 8, ky);
-      }
+      const maxLabelW = (MODULE_WIDTH - 8 - valW - 4) - (16 + KNOB_RADIUS + 6);
+      p.text(fitText(p, param.label || name, maxLabelW), kx + KNOB_RADIUS + 6, ky);
     }
 
     const preview = this._previewRect(mod);
@@ -1822,9 +1781,8 @@ export class NodeGraphUI {
     if (mod.type === 'Monitor') {
       const py = preview.y;
       p.fill(0);
-      p.stroke(60);
-      p.strokeWeight(1);
-      p.rect(mod.x + 4, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
+      p.noStroke();
+      p.rect(preview.x, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
       if (mod.displayTexture) {
         this._drawPreview(mod, preview);
         // The second-screen window and the recording copy the picture whole, so they need it at full size
@@ -1840,6 +1798,11 @@ export class NodeGraphUI {
           mod._blitToRecordingCanvas(full);
         }
       }
+      p.noFill();
+      p.stroke(60);
+      p.strokeWeight(1);
+      p.rect(preview.x - 0.5, py - 0.5, MONITOR_PREVIEW_W + 1, MONITOR_PREVIEW_H + 1, 2);
+
       // FPS display
       p.noStroke();
       p.fill(150);
@@ -1923,20 +1886,23 @@ export class NodeGraphUI {
       p.text('Link', mod.x + MODULE_WIDTH / 2, linkBtnY + 10);
     }
 
-    // GRASS and Conway preview (clean video output, same size as Monitor preview)
+    // GRASS, Conway and Yellowtail preview (clean video output, same size as Monitor preview)
     if (mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail') {
       p.fill(0);
-      p.stroke(60);
-      p.strokeWeight(1);
+      p.noStroke();
       p.rect(preview.x, preview.y, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
       if (mod.outputFBO) {
         try {
           this._drawPreview(mod, preview);
         } catch (e) { /* FBO may not be ready yet */ }
       }
+      p.noFill();
+      p.stroke(60);
+      p.strokeWeight(1);
+      p.rect(preview.x - 0.5, preview.y - 0.5, MONITOR_PREVIEW_W + 1, MONITOR_PREVIEW_H + 1, 2);
     }
 
-    // Module preview thumbnail (for non-Monitor, non-GRASS, non-Conway modules with FBO)
+    // Module preview thumbnail (for non-Monitor, non-GRASS, non-Conway, non-Yellowtail modules with FBO)
     if (mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway' && mod.type !== 'Yellowtail') {
       p.fill(0);
       p.noStroke();
@@ -1946,16 +1912,18 @@ export class NodeGraphUI {
       } catch (e) {
         // FBO may not be ready yet
       }
+      p.noFill();
+      p.stroke(60);
+      p.strokeWeight(1);
+      p.rect(preview.x - 0.5, preview.y - 0.5, PREVIEW_W + 1, PREVIEW_H + 1, 2);
     }
 
     // File picker button (VideoPlayer, NAPLPS, Image, LUT, QTVR, VRML, Latk)
     if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
         mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk') {
-      const portSection = this._portSection(mod);
-      const paramSection = paramNames.length * PARAM_ROW_HEIGHT;
-      const hasPreview = mod.outputFBO;
-      const previewSection = hasPreview ? PREVIEW_H + 8 : 0;
-      const btnY = mod.y + HEADER_HEIGHT + portSection + paramSection + previewSection;
+      const btnY = preview
+        ? preview.y + PREVIEW_H + 6
+        : mod.y + HEADER_HEIGHT + this._portSection(mod) + paramNames.length * PARAM_ROW_HEIGHT + 6;
       p.fill(60, 60, 90);
       p.stroke(100);
       p.strokeWeight(1);
@@ -1974,6 +1942,43 @@ export class NodeGraphUI {
       p.text(btnLabel, mod.x + MODULE_WIDTH / 2, btnY + 10);
     }
 
+    // Input ports (normal mode)
+    for (let i = 0; i < mod.inputs.length; i++) {
+      const pos = this.getInputPortPos(mod, i);
+      const isHovered = this._hoveredPort &&
+        this._hoveredPort.nodeId === id &&
+        this._hoveredPort.portType === 'input' &&
+        this._hoveredPort.portIndex === i;
+      p.fill(mod.inputs[i].type === 'control' ? [100, 255, 130] : [68, 136, 255]);
+      p.stroke(isHovered ? [255, 255, 0] : 255);
+      p.strokeWeight(isHovered ? 2.5 : 1.5);
+      p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
+      p.noStroke();
+      p.fill(180);
+      p.textSize(8);
+      p.textAlign(p.CENTER, p.TOP);
+      p.text(mod.inputs[i].name, pos.x, pos.y + PORT_RADIUS + 2);
+    }
+
+    // Output ports (normal mode)
+    for (let i = 0; i < mod.outputs.length; i++) {
+      const pos = this.getOutputPortPos(mod, i);
+      const isControlPort = mod.outputs[i].type === 'control';
+      const isHovered = this._hoveredPort &&
+        this._hoveredPort.nodeId === id &&
+        this._hoveredPort.portType === 'output' &&
+        this._hoveredPort.portIndex === i;
+      p.fill(isControlPort ? [100, 255, 130] : [255, 136, 68]);
+      p.stroke(isHovered ? [255, 255, 0] : 255);
+      p.strokeWeight(isHovered ? 2.5 : 1.5);
+      p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
+      p.noStroke();
+      p.fill(180);
+      p.textSize(8);
+      p.textAlign(p.CENTER, p.BOTTOM);
+      p.text(mod.outputs[i].name, pos.x, pos.y - PORT_RADIUS - 2);
+    }
+
     // Restore opacity
     p.drawingContext.globalAlpha = prevAlpha;
   }
@@ -1981,9 +1986,9 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      // Conway / InkDrops / QTVR / VRML / Latk: handle the click instead of exiting fullscreen
+      // Conway / InkDrops / QTVR / VRML / Latk / ChromaKey: handle the click instead of exiting fullscreen
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' ||
-                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk')) {
+                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'ChromaKey')) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
         return;
@@ -2621,8 +2626,9 @@ export class NodeGraphUI {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && mod.type === 'Latk') {
         mod.handleDoubleClick();
-        return;
       }
+      // The graph is hidden, so a double-click mustn't reach its nodes
+      return;
     }
 
     const world = this.screenToWorld(mx, my);
@@ -2712,13 +2718,7 @@ export class NodeGraphUI {
       const paramNames = Object.keys(toMod.params);
       const paramIdx = paramNames.indexOf(cc.paramName);
       if (paramIdx < 0) continue;
-      let to;
-      if (toMod.collapsed) {
-        to = this.getParamKnobPos(toMod, paramIdx);
-      } else {
-        const py = this.getParamY(toMod, paramIdx);
-        to = { x: toMod.x + 16, y: py + 4 };
-      }
+      const to = this.getParamKnobPos(toMod, paramIdx);
       if (this._distToCable(world.x, world.y, from.x, from.y, to.x, to.y) < 10) {
         graph.controlConnections.splice(i, 1);
         return;
@@ -2802,6 +2802,8 @@ export class NodeGraphUI {
       mod.setParam(k, v.value);
     }
     mod.seed = src.seed;
+    const state = src.saveState();
+    if (state) mod.loadState(state);
     return graph.addNode(mod);
   }
 
@@ -2809,7 +2811,7 @@ export class NodeGraphUI {
     const mod = this.pipeline.graph.nodes.get(id);
     if (mod) {
       // Hide Conway UI if deleting a fullscreened Conway
-      if ((mod.type === 'Conway' || mod.type === 'Yellowtail') && mod.hideFullscreenUI) {
+      if ((mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey') && mod.hideFullscreenUI) {
         mod.hideFullscreenUI();
       }
       // Start fade-out animation
