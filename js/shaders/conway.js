@@ -4,8 +4,10 @@ uniform sampler2D u_state;
 uniform vec2 u_resolution;
 uniform float u_spawn;
 uniform vec2 u_spawnPos;
+uniform vec2 u_spawnEnd;   // the far end of a segment; equal to u_spawnPos for a dot
 uniform float u_spawnRadius;
 uniform float u_spawnValue;
+uniform float u_evolve;    // 0 keeps every cell as it is, so a pass only draws
 uniform float u_clear;
 uniform float u_randomize;
 uniform float u_time;
@@ -48,9 +50,15 @@ void main() {
   } else {
     if (neighbors == 3) next = 1.0;
   }
+  if (u_evolve < 0.5) next = current;
 
   if (u_spawn > 0.5) {
-    float dist = length(gl_FragCoord.xy - u_spawnPos);
+    // Distance to the segment. For a dot, ba is zero and this is just length(pa)
+    vec2 pa = gl_FragCoord.xy - u_spawnPos;
+    vec2 ba = u_spawnEnd - u_spawnPos;
+    float len2 = dot(ba, ba);
+    float h = len2 > 0.0 ? clamp(dot(pa, ba) / len2, 0.0, 1.0) : 0.0;
+    float dist = length(pa - ba * h);
     if (dist < u_spawnRadius) {
       next = u_spawnValue;
     }

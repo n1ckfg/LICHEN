@@ -39,7 +39,7 @@ A control value is one number a frame, and a parameter cable applies it after ev
 - **Control signals:** a control output can also publish a loop in `this.controlSignals['portName']`, as `{ samples, sampleRate, z, color }`. `samples` is a `Float32Array` in −1..1. `z` (blanking, XYscope's −1 off and 1 on) and `color` (0xRRGGBB a sample) are optional lanes the same length, or `null`. It should still set a numeric `controlValues` entry for the same port, because a knob cable sees only that.
 - **Control input pins:** an input declared `{ name, type: 'control' }` is drawn green, as is a cable into it, and takes a control output's cable. The cable is stored in `connections`, like a video cable, so the topological sort runs the source first, in the same frame. `this.getControlInput(graph, portIndex)` returns `{ value, signal }`: the source's control value and its control signal, or `null` for the signal if it has none. It returns `null` when nothing is cabled to the pin, or when a video output is.
 
-Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs, and Twoscilloscope's and ESP32's X and Y pins, are the only ones so far (see Latk Module, NAPLPS Module, RuttEtra Module, Skeleton Module, Yellowtail Module and ESP32 Module). Calculator's `a` and `b` and Remap's five pins are control input pins too, but read only the value (see Random, Constant, Calculator and Remap Modules).
+Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs, and Twoscilloscope's and ESP32's X and Y pins, are the only ones so far (see Latk Module, NAPLPS Module, RuttEtra Module, Skeleton Module, Yellowtail Module and ESP32 Module). Calculator's `a` and `b`, Remap's five pins and Conway's X and Y are control input pins too, but read only the value (see Random, Constant, Calculator and Remap Modules, and Conway Module).
 
 The UI renders each param in the `params` object: `{ paramName: { id, value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
@@ -255,6 +255,15 @@ The Conway module (`js/modules/ConwayModule.js`) implements Conway's Game of Lif
 - Scroll wheel adjusts cell size
 - Keyboard: SPACE pause/play, R randomize, C clear, P cycle patterns, +/- adjust speed
 - ESC exits fullscreen
+
+**X and Y.** Two control input pins drive a pen that draws as the mouse does, live cells with the mouse's radius of one Cell Size. They take 0..1 values, with Y up, as Latk's X and Y outputs give them, so a beam's place on the canvas is the pen's: `x × width` across and `(1 − y) × height` down.
+- **Pen down:** while either pin is cabled, the pen draws every frame, a line from where it was last frame to where it is now, as a drag does. The frame it goes down it draws a dot. A pin with nothing cabled in stays at 0.5, the centre.
+- **Pen up:** with both unplugged, or a value that isn't finite, the pen lifts, and the next line starts afresh.
+- **Values only:** like Calculator's pins, they read a source's value, not its loop. Latk's X and Y draw where the beam is each frame, which jumps around the drawing.
+- **One pass:** the simulation shader's spawn is a segment (`u_spawnPos` to `u_spawnEnd`), so each frame's line is one pass. The mouse still spawns dots, with the two ends the same, which reduces to the old circle exactly.
+- **Doesn't step the board:** every mouse spawn's pass also steps the board a generation, even while paused. The pen's pass sets `u_evolve` to 0, which keeps every cell but those it draws, so the board steps only as Running and Speed say.
+
+Checked in headless Chrome on a virtual clock: a drag and a right-click pattern on a running board give the same output as HEAD's module on every pixel. Constants of 0.25 and 0.75 put a dot centred at (160, 120) on 640 × 480. On a paused random board, ten frames of the pen changed only cells under it. Two Oscillators, 1 Hz on X and 2 Hz on Y, drew a figure of eight in one unbroken line.
 
 ## Protozoa Module
 
@@ -1186,6 +1195,8 @@ The Yellowtail module (`js/modules/YellowtailModule.js`) implements Golan Levin'
 - **Hook:** about one stroke in three curls over its last 10–25%.
 
 Its speed follows a minimum-jerk bell over the stroke and slows in tight turns by the two-thirds power law (speed ∝ curvature^−1/3), as a hand's does. `addPoint()` reads speed as pressure, so the slow start and the turns draw thick. Strokes run from 0.15 to 1.25 of the canvas's short side along their path, and each lands at random where it fits whole. Each stroke takes the next of the 36 gestures, oldest first, as a drag does (`_takeGesture()`), so one fired by a cable mid-drag doesn't land in the gesture being drawn. Strokes aren't saved in patches, as drawn ones aren't.
+
+**Drawing speed.** A stroke is drawn on screen over time, as a drag is, not all at once. Its seed also sets a tempo, log-uniform from 0.4× to 2.5×: the number of its pen frames `_drawStrokes()` feeds in each 60th of a second, counted on the clock (`dt`), so it takes as long at any frame rate. A stroke of 16 to 400 pen frames is therefore drawn in anything from about 0.1 to 17 s. The tempo changes only how fast the stroke appears, not its shape or thickness, which come from the pen frames. Like the gesture under a held mouse, a stroke doesn't crawl until it is fully drawn. Several can be drawn at once, and Clear stops them all.
 
 Thickness changes only the video. Checked in Node with the browser stubbed: six seeded gestures crawled for 400 frames, wrapping round the edges throughout. Every lit sample, 176,053 of them over 20 of those frames, lies inside or within 0.75 px of a quad as `process()` draws it, copies included.
 

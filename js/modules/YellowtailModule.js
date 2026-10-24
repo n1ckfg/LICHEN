@@ -29,12 +29,15 @@ function mulberry32(a) {
 // slows in tight turns, as a hand does (the two-thirds power law: speed goes
 // as curvature^(-1/3)). Gesture.addPoint() reads speed as pressure, so slow
 // parts draw thick and fast ones thin. The stroke lands at random on the w × h
-// canvas, wherever it fits whole.
+// canvas, wherever it fits whole. Its tempo is how many of its frames are
+// drawn per 60th of a second, so some strokes are drawn slowly and some
+// dashed off, without changing their shape.
 function randomStroke(seed, w, h) {
   const rand = mulberry32(parseInt(seed, 16));
   const rnd = (a, b) => a + rand() * (b - a);
   const gauss = () => Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand());
   const scale = Math.min(w, h) / 480;
+  const tempo = Math.exp(rnd(Math.log(0.4), Math.log(2.5)));   // log-uniform, 0.4x to 2.5x
 
   const length = Math.min(w, h) * (0.15 + 1.1 * Math.pow(rand(), 1.5));  // px along the path
   const peak = rnd(6, 16) * scale;                                         // px a frame
@@ -79,7 +82,7 @@ function randomStroke(seed, w, h) {
     return (room > 0 ? rand() * room : room / 2) - lo;
   };
   const ox = place(x0, x1, w), oy = place(y0, y1, h);
-  return pts.map(pt => ({ x: pt.x + ox, y: pt.y + oy }));
+  return { tempo, pts: pts.map(pt => ({ x: pt.x + ox, y: pt.y + oy })) };
 }
 
 class Vec3f {
@@ -411,6 +414,8 @@ export class YellowtailModule extends Module {
     this.minMove = 3;
     this.currentGestureID = -1;   // the one being dragged
     this.nextGestureID = 0;       // the one the next stroke replaces, oldest first
+    // Random strokes still being drawn: { id, pts, tempo, next, t } (see _drawStrokes())
+    this.pens = [];
     this.gestureArray = [];
     for (let i = 0; i < this.nGestures; i++) {
       this.gestureArray[i] = new Gesture(this.w, this.h);
@@ -485,6 +490,7 @@ export class YellowtailModule extends Module {
   }
 
   clearGestures() {
+    this.pens = [];
     for (let i = 0; i < this.nGestures; i++) {
       this.gestureArray[i].clear();
     }
@@ -522,22 +528,38 @@ export class YellowtailModule extends Module {
     this.nextGestureID = (id + 1) % this.nGestures;
     this.gestureArray[id].clear();
     this.gestureArray[id].clearPolys();
+    this.pens = this.pens.filter(pen => pen.id !== id);
     return id;
   }
 
-  // One random stroke, fed to a gesture a frame at a time as a drag is
+  // One random stroke. _drawStrokes() draws it over the next frames.
   addRandomStroke() {
     this.strokeSeed = StringSeed.generateSeed(4);
-    const G = this.gestureArray[this._takeGesture()];
-    const pts = randomStroke(this.strokeSeed, this.w, this.h);
-    G.addPoint(pts[0].x, pts[0].y);
-    for (const pt of pts) {
-      if (G.distToLast(pt.x, pt.y) > this.minMove) {
-        G.addPoint(pt.x, pt.y);
-        G.smooth();
-        G.compile();
+    const { pts, tempo } = randomStroke(this.strokeSeed, this.w, this.h);
+    const id = this._takeGesture();
+    this.gestureArray[id].addPoint(pts[0].x, pts[0].y);
+    this.pens.push({ id, pts, tempo, next: 1, t: 1 });
+  }
+
+  // Feeds each random stroke's points to its gesture as a drag would, at the
+  // stroke's tempo in stroke frames per 60th of a second, so a stroke takes as
+  // long to draw at any frame rate. A gesture doesn't crawl until it's drawn.
+  _drawStrokes(dt) {
+    for (const pen of this.pens) {
+      const G = this.gestureArray[pen.id];
+      pen.t += dt * 60 * pen.tempo;
+      let added = false;
+      for (; pen.next <= pen.t && pen.next < pen.pts.length; pen.next++) {
+        const pt = pen.pts[pen.next];
+        if (G.distToLast(pt.x, pt.y) > this.minMove) {
+          G.addPoint(pt.x, pt.y);
+          G.smooth();
+          added = true;
+        }
       }
+      if (added) G.compile();
     }
+    this.pens = this.pens.filter(pen => pen.next < pen.pts.length);
   }
 
   onTrigger(name) {
@@ -597,7 +619,7 @@ export class YellowtailModule extends Module {
       // Sync thickness with parameter
       J.thickness = this.params.thickness.value;
       
-      if (J.exists) {
+      if (J.exists && !this.pens.some(pen => pen.id === g)) {
         if (g !== this.currentGestureID) {
           this.advanceGesture(J);
         } else if (!this.mouseIsDown) {
@@ -654,7 +676,8 @@ export class YellowtailModule extends Module {
     const now = performance.now() / 1000;
     const dt = Math.min(Math.max(now - this.lastTime, 0), MAX_DT);
     this.lastTime = now;
-    
+
+    this._drawStrokes(dt);
     this.updateGeometry();
 
     pg.background(0);

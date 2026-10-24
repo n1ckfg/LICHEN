@@ -18,7 +18,9 @@ export class ConwayModule extends Module {
 
   constructor(glCanvas, id) {
     super('Conway', glCanvas, id);
-    this.inputs = [];
+    // A pen that draws as the mouse does, at X and Y (0..1, Y up), while
+    // either is cabled; an unplugged one stays at the centre
+    this.inputs = [{ id: 'a1d0', name: 'x', type: 'control' }, { id: '8a8b', name: 'y', type: 'control' }];
     this.outputs = [{ id: '8702', name: 'out', type: 'video' }];
     this.historicalInfo = "Conway";
     this.params = {
@@ -44,6 +46,8 @@ export class ConwayModule extends Module {
     this.drawValue = 1;
     this.lastDrawX = -1;
     this.lastDrawY = -1;
+    // Where the X and Y pen was last frame, in pixels; null while it's up
+    this.lastPen = null;
 
     this.pendingSpawns = [];
     this.pendingClear = false;
@@ -184,8 +188,27 @@ export class ConwayModule extends Module {
     this.pendingClear = true;
   }
 
-  spawnAt(px, py, value, radius = 2) {
-    this.pendingSpawns.push({ x: px, y: py, value, radius });
+  // A dot at (px, py), or a line from there to (px2, py2). Each spawn's pass
+  // also steps the board a generation, unless evolve is false.
+  spawnAt(px, py, value, radius = 2, px2 = px, py2 = py, evolve = true) {
+    this.pendingSpawns.push({ x: px, y: py, x2: px2, y2: py2, value, radius, evolve });
+  }
+
+  // The X and Y pen: each frame a line from where it was last frame, in one
+  // pass, or a dot on the frame it goes down. It lifts when both are unplugged.
+  // Its pass only draws, so the board still steps only as Running and Speed say.
+  _penFromInputs(graph) {
+    const xIn = this.getControlInput(graph, 0);
+    const yIn = this.getControlInput(graph, 1);
+    const px = (xIn ? xIn.value : 0.5) * this.glCanvas.width;
+    const py = (1 - (yIn ? yIn.value : 0.5)) * this.glCanvas.height;
+    if ((!xIn && !yIn) || !Number.isFinite(px) || !Number.isFinite(py)) {
+      this.lastPen = null;
+      return;
+    }
+    const from = this.lastPen ?? { x: px, y: py };
+    this.spawnAt(from.x, from.y, 1, this.params.cellSize.value, px, py, false);
+    this.lastPen = { x: px, y: py };
   }
 
   spawnPattern(px, py, patternName) {
@@ -287,7 +310,7 @@ export class ConwayModule extends Module {
     // (which the shader compares against it) and the cell size scale with density
     const density = this.pixelDensity;
 
-    const doSimStep = (spawn, spawnPos, spawnRadius, spawnValue, clear, randomize) => {
+    const doSimStep = (spawn, spawnPos, spawnRadius, spawnValue, clear, randomize, spawnEnd = spawnPos, evolve = true) => {
       const readFBO = this.currentBuffer === 0 ? this.fboA : this.fboB;
       const writeFBO = this.currentBuffer === 0 ? this.fboB : this.fboA;
 
@@ -298,8 +321,10 @@ export class ConwayModule extends Module {
       this.simulationShader.setUniform('u_resolution', this.fragResolution());
       this.simulationShader.setUniform('u_spawn', spawn ? 1.0 : 0.0);
       this.simulationShader.setUniform('u_spawnPos', [spawnPos[0] * density, spawnPos[1] * density]);
+      this.simulationShader.setUniform('u_spawnEnd', [spawnEnd[0] * density, spawnEnd[1] * density]);
       this.simulationShader.setUniform('u_spawnRadius', spawnRadius * density);
       this.simulationShader.setUniform('u_spawnValue', spawnValue);
+      this.simulationShader.setUniform('u_evolve', evolve ? 1.0 : 0.0);
       this.simulationShader.setUniform('u_clear', clear ? 1.0 : 0.0);
       this.simulationShader.setUniform('u_randomize', randomize ? 1.0 : 0.0);
       this.simulationShader.setUniform('u_time', time);
@@ -319,9 +344,10 @@ export class ConwayModule extends Module {
       this.pendingRandomize = false;
     }
 
+    this._penFromInputs(graph);
     while (this.pendingSpawns.length > 0) {
       const spawn = this.pendingSpawns.shift();
-      doSimStep(true, [spawn.x, spawn.y], spawn.radius, spawn.value, false, false);
+      doSimStep(true, [spawn.x, spawn.y], spawn.radius, spawn.value, false, false, [spawn.x2, spawn.y2], spawn.evolve);
     }
 
     if (running) {
