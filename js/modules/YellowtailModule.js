@@ -2,10 +2,85 @@ import { Module } from './Module.js';
 import { passthroughFrag } from '../shaders/passthrough.js';
 import { registerModule } from '../moduleRegistry.js';
 import { polylinePieces, XYOutputs } from './latk/strokes.js';
+import { StringSeed } from '../stringseed.js';
 
 const SAMPLE_RATE = 44100;   // of the X and Y outputs, as Latk's
 const MAX_DT = 0.1;          // clamp long stalls so a tab switch doesn't jump the beam
 const INK = [255, 255, 245]; // the gestures' colour, in the video and on X and Y
+
+// A 32-bit PRNG (mulberry32), so a stroke's seed always gives the same stroke
+function mulberry32(a) {
+  return () => {
+    a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// The pointer positions of one hand-drawn stroke, a frame apart, from a hex
+// seed, to feed a Gesture as a drag would. The pen keeps a heading, which turns
+// at a rate (per stroke length) made of four parts:
+// - Bend: a steady turn, for arcs.
+// - Sway: a slow sine, for S-curves.
+// - Drift: a mean-reverting random walk (Ornstein-Uhlenbeck), so the line wanders.
+// - Hook: about one stroke in three curls over its last stretch, as a flick.
+// The pen's speed rises and falls over the stroke (a minimum-jerk bell) and
+// slows in tight turns, as a hand does (the two-thirds power law: speed goes
+// as curvature^(-1/3)). Gesture.addPoint() reads speed as pressure, so slow
+// parts draw thick and fast ones thin. The stroke lands at random on the w × h
+// canvas, wherever it fits whole.
+function randomStroke(seed, w, h) {
+  const rand = mulberry32(parseInt(seed, 16));
+  const rnd = (a, b) => a + rand() * (b - a);
+  const gauss = () => Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand());
+  const scale = Math.min(w, h) / 480;
+
+  const length = Math.min(w, h) * (0.15 + 1.1 * Math.pow(rand(), 1.5));  // px along the path
+  const peak = rnd(6, 16) * scale;                                         // px a frame
+  const k0 = 1 / (40 * scale);   // curvature (rad/px) where the power law has slowed the pen ~20%
+
+  const bend = gauss() * 0.9;    // turn rates here are radians per stroke length
+  const swayAmp = rnd(0, 1.2), swayFreq = rnd(0.25, 1.75), swayPhase = rnd(0, 2 * Math.PI);
+  const driftRev = 6, driftVol = rnd(1, 4);
+  const hookLen = rnd(0.1, 0.25);
+  const hookTurn = rand() < 0.35 ? (rand() < 0.5 ? -1 : 1) * rnd(1.2, 3) : 0;
+
+  let x = 0, y = 0, heading = rnd(0, 2 * Math.PI), drift = 0, u = 0;
+  const pts = [{ x, y }];
+  while (u < 1 && pts.length < 400) {
+    const sway = swayAmp * 2 * Math.PI * swayFreq * Math.cos(2 * Math.PI * swayFreq * u + swayPhase);
+    const into = (u - (1 - hookLen)) / hookLen;
+    const hook = into > 0 ? hookTurn * 3 / hookLen * into * into : 0;   // integrates to hookTurn
+    const curvature = (bend + sway + drift + hook) / length;
+
+    const bell = 16 * u * u * (1 - u) * (1 - u);
+    const powerLaw = Math.cbrt(k0 / (k0 + Math.abs(curvature)));
+    const speed = Math.max(0.2, peak * (0.25 + 0.75 * bell) * powerLaw * (1 + 0.08 * gauss()));
+
+    heading += curvature * speed;
+    x += speed * Math.cos(heading);
+    y += speed * Math.sin(heading);
+    pts.push({ x, y });
+
+    const du = speed / length;
+    drift += -driftRev * drift * du + driftVol * Math.sqrt(du) * gauss();
+    u += du;
+  }
+
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const pt of pts) {
+    x0 = Math.min(x0, pt.x); x1 = Math.max(x1, pt.x);
+    y0 = Math.min(y0, pt.y); y1 = Math.max(y1, pt.y);
+  }
+  // Where a stroke is wider than the canvas, centre it on that axis
+  const place = (lo, hi, extent) => {
+    const room = extent - (hi - lo);
+    return (room > 0 ? rand() * room : room / 2) - lo;
+  };
+  const ox = place(x0, x1, w), oy = place(y0, y1, h);
+  return pts.map(pt => ({ x: pt.x + ox, y: pt.y + oy }));
+}
 
 class Vec3f {
 
@@ -316,7 +391,11 @@ export class YellowtailModule extends Module {
       thickness: { id: '4d82', value: 14, min: 2, max: 96, step: 1, label: 'Thickness' },
       // Loops a second on X and Y. A lower rate gives the gestures more samples
       loopHz: { id: '3005', value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
+      // Draws one random stroke (see randomStroke()) from a fresh seed
+      stroke: { id: '98f2', value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
+    // Hex seed of the last random stroke, shown on the Seed button
+    this.strokeSeed = null;
     this.xy = new XYOutputs(SAMPLE_RATE);
     this.lastTime = performance.now() / 1000;
 
@@ -330,7 +409,8 @@ export class YellowtailModule extends Module {
 
     this.nGestures = 36;
     this.minMove = 3;
-    this.currentGestureID = -1;
+    this.currentGestureID = -1;   // the one being dragged
+    this.nextGestureID = 0;       // the one the next stroke replaces, oldest first
     this.gestureArray = [];
     for (let i = 0; i < this.nGestures; i++) {
       this.gestureArray[i] = new Gesture(this.w, this.h);
@@ -430,11 +510,42 @@ export class YellowtailModule extends Module {
   handleMouseDown(mx, my, canvasW, canvasH, button) {
     const [px, py] = this.getPixelPos(mx, my, canvasW, canvasH);
     this.mouseIsDown = true;
-    this.currentGestureID = (this.currentGestureID + 1) % this.nGestures;
+    this.currentGestureID = this._takeGesture();
     const G = this.gestureArray[this.currentGestureID];
-    G.clear();
-    G.clearPolys();
     G.addPoint(px, py);
+  }
+
+  // The next gesture, cleared. A random stroke takes its own, so one made
+  // mid-drag doesn't land in the gesture being drawn.
+  _takeGesture() {
+    const id = this.nextGestureID;
+    this.nextGestureID = (id + 1) % this.nGestures;
+    this.gestureArray[id].clear();
+    this.gestureArray[id].clearPolys();
+    return id;
+  }
+
+  // One random stroke, fed to a gesture a frame at a time as a drag is
+  addRandomStroke() {
+    this.strokeSeed = StringSeed.generateSeed(4);
+    const G = this.gestureArray[this._takeGesture()];
+    const pts = randomStroke(this.strokeSeed, this.w, this.h);
+    G.addPoint(pts[0].x, pts[0].y);
+    for (const pt of pts) {
+      if (G.distToLast(pt.x, pt.y) > this.minMove) {
+        G.addPoint(pt.x, pt.y);
+        G.smooth();
+        G.compile();
+      }
+    }
+  }
+
+  onTrigger(name) {
+    if (name === 'stroke') this.addRandomStroke();
+  }
+
+  triggerText(name) {
+    return name === 'stroke' ? (this.strokeSeed ?? '') : '';
   }
 
   handleMouseDrag(mx, my, canvasW, canvasH) {

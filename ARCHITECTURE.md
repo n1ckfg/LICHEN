@@ -1179,6 +1179,14 @@ The Yellowtail module (`js/modules/YellowtailModule.js`) implements Golan Levin'
 - **Cut:** lines are cut at the canvas edge, as Latk's strokes are (`polylinePieces()`).
 - **Empty:** with no gestures, the loop is all blank, so the beam rests unlit in the middle.
 
+**Seed.** The Seed trigger, last in the params, draws one random stroke each time it fires, from a fresh 8-digit hex seed that the button then shows. It sets no params: unlike the Seed of Crystalline and the others (see Seeded Randomization), it calls `addRandomStroke()`, not `randomize()`. `randomStroke()` turns the seed (through a mulberry32 PRNG, so a seed always gives the same stroke) into a pointer position a frame, and these go through `addPoint()`, `smooth()` and `compile()` exactly as a drag's do, so a random stroke takes its pressure, taper and crawl the same way. The pen keeps a heading and turns at a rate that sums four parts:
+- **Bend:** a steady turn, for arcs.
+- **Sway:** a slow sine, for S-curves.
+- **Drift:** a mean-reverting random walk, so the line wanders.
+- **Hook:** about one stroke in three curls over its last 10–25%.
+
+Its speed follows a minimum-jerk bell over the stroke and slows in tight turns by the two-thirds power law (speed ∝ curvature^−1/3), as a hand's does. `addPoint()` reads speed as pressure, so the slow start and the turns draw thick. Strokes run from 0.15 to 1.25 of the canvas's short side along their path, and each lands at random where it fits whole. Each stroke takes the next of the 36 gestures, oldest first, as a drag does (`_takeGesture()`), so one fired by a cable mid-drag doesn't land in the gesture being drawn. Strokes aren't saved in patches, as drawn ones aren't.
+
 Thickness changes only the video. Checked in Node with the browser stubbed: six seeded gestures crawled for 400 frames, wrapping round the edges throughout. Every lit sample, 176,053 of them over 20 of those frames, lies inside or within 0.75 px of a quad as `process()` draws it, copies included.
 
 **Fullscreen interaction:**
