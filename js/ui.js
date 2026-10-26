@@ -1162,7 +1162,7 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'Monitor' || mod.collapsed) continue;
       const py = this._previewRect(mod).y;
-      const btnY = py + MONITOR_PREVIEW_H + 20; // Below FPS counter
+      const btnY = py + MONITOR_PREVIEW_H + 44; // Below fullscreen button
       if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
         return id;
@@ -1176,7 +1176,7 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'Monitor' || mod.collapsed) continue;
       const py = this._previewRect(mod).y;
-      const btnY = py + MONITOR_PREVIEW_H + 44; // Below record button
+      const btnY = py + MONITOR_PREVIEW_H + 68; // Below record button
       if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
         return id;
@@ -1190,7 +1190,7 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'Monitor' || mod.collapsed) continue;
       const py = this._previewRect(mod).y;
-      const btnY = py + MONITOR_PREVIEW_H + 68; // Below screenshot button
+      const btnY = py + MONITOR_PREVIEW_H + 20; // Below FPS counter
       if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10 &&
           wy >= btnY && wy <= btnY + 20) {
         return id;
@@ -1205,7 +1205,7 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       if (mod.type !== 'Monitor' || mod.collapsed) continue;
       const py = this._previewRect(mod).y;
-      const btnY = py + MONITOR_PREVIEW_H + 92; // Below fullscreen button
+      const btnY = py + MONITOR_PREVIEW_H + 92; // Below screenshot button
       if (wx >= mod.x + 10 && wx <= mod.x + 10 + halfW &&
           wy >= btnY && wy <= btnY + 20) {
         return id;
@@ -1815,8 +1815,20 @@ export class NodeGraphUI {
       p.textAlign(p.LEFT, p.TOP);
       p.text(`FPS: ${mod.fps || 0}`, mod.x + 8, py + MONITOR_PREVIEW_H + 4);
 
+      // Fullscreen button
+      const fsBtnY = py + MONITOR_PREVIEW_H + 20;
+      p.fill([60, 60, 90]);
+      p.stroke(100);
+      p.strokeWeight(1);
+      p.rect(mod.x + 10, fsBtnY, MODULE_WIDTH - 20, 20, 3);
+      p.noStroke();
+      p.fill(200);
+      p.textSize(9);
+      p.textAlign(p.CENTER, p.CENTER);
+      p.text('Fullscreen', mod.x + MODULE_WIDTH / 2, fsBtnY + 10);
+
       // Record button
-      const btnY = py + MONITOR_PREVIEW_H + 20;
+      const btnY = py + MONITOR_PREVIEW_H + 44;
       const isRec = mod.isRecording && mod.isRecording();
       p.fill(isRec ? [180, 40, 40] : [60, 60, 90]);
       p.stroke(isRec ? [220, 80, 80] : 100);
@@ -1829,7 +1841,7 @@ export class NodeGraphUI {
       p.text(isRec ? 'Stop Recording' : 'Record', mod.x + MODULE_WIDTH / 2, btnY + 10);
 
       // Screenshot button
-      const shotBtnY = py + MONITOR_PREVIEW_H + 44;
+      const shotBtnY = py + MONITOR_PREVIEW_H + 68;
       p.fill([60, 60, 90]);
       p.stroke(100);
       p.strokeWeight(1);
@@ -1839,18 +1851,6 @@ export class NodeGraphUI {
       p.textSize(9);
       p.textAlign(p.CENTER, p.CENTER);
       p.text('Screenshot', mod.x + MODULE_WIDTH / 2, shotBtnY + 10);
-
-      // Fullscreen button
-      const fsBtnY = py + MONITOR_PREVIEW_H + 68;
-      p.fill([60, 60, 90]);
-      p.stroke(100);
-      p.strokeWeight(1);
-      p.rect(mod.x + 10, fsBtnY, MODULE_WIDTH - 20, 20, 3);
-      p.noStroke();
-      p.fill(200);
-      p.textSize(9);
-      p.textAlign(p.CENTER, p.CENTER);
-      p.text('Fullscreen', mod.x + MODULE_WIDTH / 2, fsBtnY + 10);
 
       // Load and Save buttons (side by side)
       const lsBtnY = py + MONITOR_PREVIEW_H + 92;
@@ -1865,7 +1865,7 @@ export class NodeGraphUI {
       p.fill(200);
       p.textSize(9);
       p.textAlign(p.CENTER, p.CENTER);
-      p.text('Open', mod.x + 10 + halfW / 2, lsBtnY + 10);
+      p.text('Load', mod.x + 10 + halfW / 2, lsBtnY + 10);
 
       // Save button (right)
       p.fill([60, 60, 90]);
@@ -1878,7 +1878,7 @@ export class NodeGraphUI {
       p.textAlign(p.CENTER, p.CENTER);
       p.text('Save', mod.x + 14 + halfW + halfW / 2, lsBtnY + 10);
 
-      // Link button (full width below Open/Save)
+      // Link button (full width below Load/Save)
       const linkBtnY = py + MONITOR_PREVIEW_H + 116;
       p.fill([60, 60, 90]);
       p.stroke(100);
