@@ -22,6 +22,7 @@ js/main.js (p5.js loop)
 - `coi-serviceworker.js` — a service worker that cross-origin isolates the page, so ONNX Runtime's WASM backend can run threads (see Cross-Origin Isolation)
 - `workflows/` — contains JSON patches (connection graph state, module types, and parameter values) that can be loaded via Ctrl+O
 - `tools/convert-workflows.mjs` — converts patches saved before ids to the id format, using the frozen table in `tools/legacy-ids.json` (see Patch IDs)
+- `tools/patch-to-gles3.mjs` — turns a patch into a standalone node-gles3 script that plays it fullscreen with no UI (see Exporting to node-gles3)
 - `tools/pix2pix-onnx.py` — converts a pix2pix generator, exported to fp32 ONNX or as a PyTorch checkpoint, into the int8/fp16 file Pix2Pix loads (see Pix2Pix Module)
 
 ### Module System (`js/modules/`)
@@ -165,6 +166,43 @@ Patches don't save names (see Patch IDs), so a rename never breaks one:
 2. Leave its `static uid` alone, and the ids of its params and ports.
 
 Renaming a param or a port works the same way: change its name and every use of it, and keep its `id`.
+
+## Exporting to node-gles3
+
+`node tools/patch-to-gles3.mjs <patch.json> [out.js] [--gles3 <dir>] [--monitor <node id>]` writes a script for [node-gles3](https://github.com/worldmaking/node-gles3) that plays the patch with no node graph or UI. It runs fullscreen (Escape quits) and shows one Monitor's input in a final buffer of that Monitor's Width x Height, letterboxed to the screen. `--monitor` picks the Monitor; the default is the first one with a cable into it. The script finds node-gles3 in `$NODE_GLES3`, then beside itself, then at the folder `--gles3` named, which defaults to a `node-gles3` folder beside this repo or one of its parents.
+
+The tool knows nothing about any module. It finds each node's source by its uid among the modules `js/main.js` imports, and bundles that file as it is now, with everything it imports, plus `graph.js`, `pipeline.js` and `moduleRegistry.js`, which load and run the patch as the app does. So the export always has the current behaviour of every module, and a module needs nothing extra to be exportable. Underneath is `lichenP5`, a subset of p5.js 1.9.4 written on node-gles3: WEBGL shaders, framebuffers (including float, half-float and antialiased ones), the framebuffer camera and matrix stack, `rect()`, `model()` and `p5.Geometry`, the shapes `beginShape()` makes, blend modes, `p5.Image` textures, P2D `createGraphics()` fills, shapes and images, and `createCapture(VIDEO)` through ffmpeg. It copies p5's behaviour down to what each draw leaves blending and samplers set to (see Set samplers again before every draw). It translates GLSL ES 1.00 shaders to GLSL 3.30, renaming any function or variable a shader declares with a name 3.30 reserves (Protozoa's `noise2`, for one).
+
+The script is self-contained: module code, shaders, libraries and workers are all in it. A file a module fetches at runtime (a LUT preset, Latk's jellyfish, a font) is still read from this repo at the path the page would fetch it from, so linked assets stay where they are. The bundler handles:
+- relative static imports, including minified ones
+- `import()` of a literal path, or of a template such as `` `./dir/${name}.js` ``, which brings in every file the template could name
+- `new Worker(new URL('rel', import.meta.url))`, which gets its own bundle and runs on a worker thread
+
+A file with no import or export statement is a classic script and runs in the global scope, as a `<script>` would, with no `process` in sight, since Emscripten builds take that to mean Node.
+
+The patch renders at pixel density Monitor size / 640x480, the larger of the two ratios (2.25 for 1440x1080), so the final buffer's pixels are rendered ones. The app instead uses the display's `ceil(devicePixelRatio)`, so set `--density` to match it.
+
+The script's flags:
+- `--windowed`: a 960x720 window instead of fullscreen
+- `--hidden`: no window at all
+- `--frames <n>`: quit after `n` frames
+- `--capture <png>`: save the last frame first
+- `--dump <dir>`: save every framebuffer each node holds
+- `--fixed <fps>`: the clock modules read moves exactly 1/fps a frame
+- `--seed <n>`: `Math.random()` and `crypto.getRandomValues()` repeat
+- `--density <d>`: render at density `d`
+
+`--fixed` with `--seed` makes a render repeatable, which is how an export is checked against the app. Step the app the same way in headless Chrome, at a `device_scale_factor` equal to `--density`: stop p5's loop, replace `Math.random()` and `crypto.getRandomValues()` with the same seeded mulberry32 sequence, make `performance.now()` return a clock that starts at 0 when the patch loads, then add 1000/fps to it before each `pipeline.processFrame()`. Then diff the dumps. The six workflows with no Camera or worker matched within 8/255 on all but under 1% of pixels after 300 frames, and most modules match on every pixel. Expect differences only:
+- in half-float buffers, which Chrome won't read back into a `Float32Array`
+- in noise from a `sin()` hash, which differs between GPUs and grows through feedback
+- in modules whose work arrives asynchronously (workers, fetched files), which a loop stepped in one task never lets in
+
+What the runtime can't do, a module can't either. It logs why and stops, and the rest of the patch carries on:
+- the ONNX modules (DepthAnything, Pix2Pix, InfrDrawings), whose runtime loads with a `<script>` tag
+- a Camera with no ffmpeg (`$LICHEN_CAMERA` replaces ffmpeg's input arguments, and Windows needs it)
+- sound, text, strokes, lights, and `createGraphics(WEBGL)`
+
+A patch doesn't keep files picked in a module's panel, so Image, VideoPlayer, QTVR, VRML and NAPLPS show what they would in a freshly opened app before a file is picked.
 
 ## GRASS Module
 
