@@ -6,6 +6,7 @@ import './modules/CloudyModule.js';
 import './modules/CoilsModule.js';
 import './modules/CrystallineModule.js';
 import './modules/InkDropsModule.js';
+import './modules/LetterFormsModule.js';
 import './modules/GridGuysModule.js';
 import './modules/ImageModule.js';
 import './modules/OscillatorModule.js';

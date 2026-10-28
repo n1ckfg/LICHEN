@@ -90,6 +90,12 @@
 		"body": "Based on the <a href='https://github.com/jbum/Whitney-Music-Box-Examples'>implementation</a> by <a href='https://blog.krazydad.com/2006/04/23/visual-harmony/'>Jim Bumgardner</a>."
 	},
 	{
+		"name": "LetterForms",
+		"year": 1961,
+		"title": "<a href='https://en.wikipedia.org/wiki/Vera_Moln%C3%A1r'>M As in Malevich</a>",
+		"body": "Inspired by Vera Molnár's letterform series, based on an implementation by <a href='https://github.com/bitcraftlab/Vera-Molnar'>bitcraftlab</a>."
+	},
+	{
 		"name": "SlowscanJam",
 		"year": 2020,
 		"title": "<a href='https://en.wikipedia.org/wiki/Slow-scan_television'>Slowscan Video Emulator</a>",

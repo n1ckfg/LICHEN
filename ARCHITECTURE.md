@@ -111,7 +111,7 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 - **Sources**: Camera, Image, VideoPlayer
 - **Utility**: Blur, Brcosa, Channel, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, VideoMixer
 - **Control**: Calculator, Constant, Random, Remap, Skeleton
-- **Generative**: Cloudy, Coils, Crystalline, GridGuys, Protozoa, SpiralGalaxy, Whitney
+- **Generative**: Cloudy, Coils, Crystalline, GridGuys, LetterForms, Protozoa, SpiralGalaxy, Whitney
 - **Interactive**: ChromaKey, Conway, InkDrops, Latk, Yellowtail
 - **Emulation**: DeeSeventySix, ESP32, RuttEtra, SlowscanJam, Twoscilloscope
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, GRASS, Oscillator, SyncGenerator, ValueScrambler
@@ -459,6 +459,30 @@ Patches save the sketch as its index, so a new one is appended to `SKETCHES`, ne
 - **float32 rounding:** on the GPU, up to 0.6% of dots land 1 px from the transcription, because they fall within rounding of a boundary. No dot is further off.
 
 At 1280×960 on an M2 Max, a drawn frame costs about 0.34 ms, the same for every sketch. Cloudy costs 1.7 ms.
+
+## LetterForms Module
+
+The LetterForms module (`js/modules/LetterFormsModule.js`, `js/shaders/letterforms.js`, `js/modules/letterforms/alphabet.js`) is a source ported from bitcraftlab's Processing sketch `ParametrizeM.pde`, a tribute to Vera Molnár's series with letter forms. It tiles a grid with one stroked capital, each tile turned a further quarter turn along the diagonals (`rotate(PI/2 × ((x + y) % 4))`), and runs an odometer through the sketch's parameter space. The sketch draws only an M; the module draws any letter from A to Z.
+
+**Params.** Letter starts on the sketch's M. Stroke, Columns and Invert default to the sketch's declared values, and their ranges are its parameter space:
+
+| Param | Label | Default | Range | Sets |
+| --- | --- | --- | --- | --- |
+| `letter` | Letter | 12 (M) | 0–25 | The capital, A to Z. A knob whose `valueLabels` name the letter. A cable or a typed value is rounded to the nearest letter, and held to A and Z |
+| `stroke` | Stroke | 5 | 1–20 | The stroke's width, in the canvas's pixels |
+| `columns` | Columns | 10 | 1–20 | Tiles across. Rows are as many as fit |
+| `invert` | Invert | 0 | 0–1 | 0 draws black on white, 1 white on black. Between them, as from a cable, both go grey, as the sketch's `255 × invert` would |
+| `rate` | Rate | 60 | 0–60 | The odometer's steps per second. 0 holds still |
+
+**The alphabet.** `alphabet.js` holds each letter as a list of strokes, each a polyline, in the tile's own space: its centre at 0 and its edges at ±1, y down. M is the sketch's own five vertices. The other 25 are drawn to match it. Every letter spans the whole box. Corners a letter would round (B, C, D, G, J, O, P, Q, R, S, U) are cut at 45° on the half-unit grid instead, so the alphabet is as angular as the M. `letterSegments()` flattens a letter into segments, and the shader reads them from a `vec4` table of `MAX_SEGMENTS` (9, Q's count) with a count, so a new letter form needs no shader change unless it has more segments. In the turning grid some letters tile alike: W is M turned half a turn, and Z is N turned a quarter, so each pair gives the same grid, shifted by a tile.
+
+**The odometer.** The sketch's `Params.animate()` takes one step a frame, at Processing's 60 fps. Each step adds 1 to Stroke. A wheel that runs past its max goes back to its min and carries one step into the next: Stroke, then Columns, then Invert. Letter isn't one of its wheels, so the odometer never changes the letter. The module moves the knobs themselves, so they show where it is and a patch saves the step it was on. Its phase is accumulated (`phase += dt × rate`), so turning Rate doesn't skip steps, and a small tolerance keeps Rate 60 at 60 fps to exactly one step a frame. A cable on one of the three knobs is applied after the module runs, so it wins, and the odometer steps on from the cable's value.
+
+**Drawing.** The sketch's 500×500 canvas is fitted inside the output and centred, as Whitney fits its sketches, and the background colour fills the rest. The shader works in the canvas's pixels, y down, so the sketch's grid maths carries over as written: tile `d = 480 / columns`, `floor(480 / d)` rows, origin `(10, (500 − d × rows) / 2)`. Processing strokes the M with round joins and caps, so a pixel is lit where its distance to the letter's segments is under half the stroke. That is the union of one capsule a segment, exactly the shape Processing draws. Each pixel checks its own tile and the tiles around it, as far as half a stroke can reach (at most 4 each way). The edge is antialiased over one physical pixel, and the pass reads `vTexCoord`, so it is independent of pixel density. Two departures:
+- **Fractional Columns:** the sketch already treats Columns as a float (`d = (w − maxStroke) / columns`, `ceil(columns)` columns drawn), so a cable zooms the grid smoothly and a column appears once it fits. Below 1 the sketch would draw no rows; this draws one.
+- **Overlaps:** Processing composites each stroke's antialiased edge over the last, so the legs that neighbouring tiles share come out slightly darker at the edge. The distance field is a single union, so they don't.
+
+**Checked against the sketch.** The comparison ran in headless Chrome against a Canvas2D transcription of the sketch's `draw()`, with the same transforms, round joins and caps, supersampled 8× (4× at pixel density 2) and box-filtered. Six settings of the M, from one M at Stroke 1 to 20 columns at Stroke 20, inverted and not, gave a lit-pixel IoU of 0.995–1.0 at pixel density 1 and 2. 94–99.6% of pixels match within 2 levels; the rest are edge pixels, where a one-pixel distance ramp differs from true area coverage. Each of the 26 letters, stroked from `alphabet.js` in the same transcription at Stroke 3–20 and 3–10 columns, gave an IoU of 0.990–1.0, with 93–99.9% of pixels within 2 levels. The M drew the same before and after the alphabet was added, and a patch saved before it loads with M. Over 900 steps at Rate 60 and 60 fps, the odometer went through the sketch's sequence one step a frame. A patch exported with `tools/patch-to-gles3.mjs` draws the same grid.
 
 ## Blur Module
 
