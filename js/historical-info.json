@@ -63,7 +63,7 @@
 		"name": "Yellowtail",
 		"year": 1998,
 		"title": "<a href='https://www.flong.com/archive/projects/yellowtail/index.html'>Yellowtail</a>",
-		"body": "Gestural animation system by <a href='https://www.flong.com'>Golan Levin</a>."		
+		"body": "Gestural animation system by <a href='https://www.flong.com'>Golan Levin</a>, port by <a href='https://fox-gieg.com'>Nick Fox-Gieg</a>."		
 	},
 	{
 		"name": "UnrealBloom",
@@ -87,13 +87,13 @@
 		"name": "Whitney",
 		"year": 1980,
 		"title": "<a href='https://en.wikipedia.org/wiki/John_Whitney_(animator)'>Whitney Music Boxes</a>",
-		"body": "Based on the <a href='https://github.com/jbum/Whitney-Music-Box-Examples'>implementation</a> by <a href='https://blog.krazydad.com/2006/04/23/visual-harmony/'>Jim Bumgardner</a>."
+		"body": "Based on the <a href='https://github.com/jbum/Whitney-Music-Box-Examples'>Whitney-Music-Box</a> implementation by <a href='https://blog.krazydad.com/2006/04/23/visual-harmony/'>Jim Bumgardner</a>."
 	},
 	{
 		"name": "LetterForms",
 		"year": 1961,
-		"title": "<a href='https://en.wikipedia.org/wiki/Vera_Moln%C3%A1r'>M As in Malevich</a>",
-		"body": "Inspired by Vera Molnár's letterform series, based on an implementation by <a href='https://github.com/bitcraftlab/Vera-Molnar'>bitcraftlab</a>."
+		"title": "<a href='https://www.moma.org/collection/works/409640'>M as in Malevich</a>",
+		"body": "Inspired by <a href='https://en.wikipedia.org/wiki/Vera_Moln%C3%A1r'>Vera Molnár</a> letterform series, implementation by <a href='https://github.com/bitcraftlab/Vera-Molnar'>bitcraftlab</a>."
 	},
 	{
 		"name": "SlowscanJam",
