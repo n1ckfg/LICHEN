@@ -58,13 +58,16 @@ import './modules/BlurModule.js';
 import './modules/BrcosaModule.js';
 import './modules/ChannelModule.js';
 import './modules/ChromaKeyModule.js';
+import './modules/CropModule.js';
 import './modules/DitherModule.js';
 import './modules/EdgesModule.js';
 import './modules/LevelsModule.js';
 import './modules/LUTModule.js';
 import './modules/MosaicModule.js';
+import './modules/ResizeModule.js';
 import './modules/RestoreModule.js';
 import './modules/SharpenModule.js';
+import './modules/TransformModule.js';
 import './modules/VideoMixerModule.js';
 // - - - CONTROL - - -
 import './modules/CalculatorModule.js';
@@ -158,7 +161,7 @@ const sketch = (p) => {
   };
 
   p.mouseDragged = (e) => {
-    ui.mouseDragged(p.mouseX, p.mouseY);
+    ui.mouseDragged(p.mouseX, p.mouseY, e);
   };
 
   p.mouseReleased = (e) => {

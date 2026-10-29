@@ -31,7 +31,7 @@ void main() {
 
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
-  'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'VideoMixer'],
+  'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Crop', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Resize', 'Restore', 'Sharpen', 'Transform', 'VideoMixer'],
   'Control': ['Calculator', 'Constant', 'Random', 'Remap', 'Skeleton'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
@@ -65,14 +65,17 @@ const MODULE_COLORS = {
   Brcosa: color_utility,
   Channel: color_utility,
   ChromaKey: color_utility,
+  Crop: color_utility,
   Delay: color_utility,
   Dither: color_utility,
   Edges: color_utility,
   Levels: color_utility,
   LUT: color_utility,
   Mosaic: color_utility,
+  Resize: color_utility,
   Restore: color_utility,
   Sharpen: color_utility,
+  Transform: color_utility,
   VideoMixer: color_utility,
   // - - - CONTROL - - -
   Calculator: color_control,
@@ -1333,6 +1336,9 @@ export class NodeGraphUI {
             this._drawFBO(mod.outputFBO, dx, dy, dw, dh);
           }
           mod.showFullscreenUI();
+        } else if (mod.type === 'Crop') {
+          this._drawFBO(mod.fullscreenFBO(), dx, dy, dw, dh);
+          mod.drawFullscreenOverlay(p, dx, dy, dw, dh);
         } else if (mod.type === 'Monitor') {
           if (mod.displayTexture) {
             const full = this._drawFBO(mod.displayTexture, dx, dy, dw, dh);
@@ -1988,9 +1994,10 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      // Conway / InkDrops / QTVR / VRML / Latk / ChromaKey: handle the click instead of exiting fullscreen
+      // Conway / InkDrops / QTVR / VRML / Latk / ChromaKey / Transform / Crop: handle the click instead of exiting fullscreen
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' ||
-                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'ChromaKey')) {
+                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'ChromaKey' ||
+                  mod.type === 'Transform' || mod.type === 'Crop')) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
         return;
@@ -2377,13 +2384,13 @@ export class NodeGraphUI {
     };
   }
 
-  mouseDragged(mx, my) {
-    // Conway: handle mouse drawing in fullscreen (QTVR / VRML / Latk: turn the view)
+  mouseDragged(mx, my, event) {
+    // Conway: handle mouse drawing in fullscreen (QTVR / VRML / Latk: turn the view; Transform: move, or turn with Alt; Crop: draw the box)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk')) {
-        mod.handleMouseDrag(mx, my, this.p.width, this.p.height);
+                  mod.type === 'Latk' || mod.type === 'Transform' || mod.type === 'Crop')) {
+        mod.handleMouseDrag(mx, my, this.p.width, this.p.height, Boolean(event && event.altKey));
         return;
       }
     }
@@ -2440,7 +2447,7 @@ export class NodeGraphUI {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk')) {
+                  mod.type === 'Latk' || mod.type === 'Transform' || mod.type === 'Crop')) {
         mod.handleMouseUp();
         return;
       }
@@ -2598,11 +2605,11 @@ export class NodeGraphUI {
   }
 
   mouseWheel(delta) {
-    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML / Latk: zoom)
+    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML / Latk: zoom; Transform: scale)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk')) {
+                  mod.type === 'Latk' || mod.type === 'Transform')) {
         mod.handleWheel(delta);
         return;
       }

@@ -48,7 +48,7 @@ The UI renders each param in the `params` object: `{ paramName: { id, value, min
 - **The knob:** a value past the range draws its arc at the end it is past, and a drag starts from that end, so the first move brings it back into range.
 - **Patches:** the typed value saves as it is. `fromJSON()` and duplicating a node set it with `clamp` false too, so it reloads and copies as typed. No workflow saved a value outside its param's range before this, so they all load as they did.
 - **Exceptions:** drop-downs and triggers have no field. VideoToasting's Inputs clamps a typed count too, since it has only six ports.
-- **Sizes:** a typed size is used as asked. p5 cuts a framebuffer the GPU can't make, so Restore's Width at 100000 works at 8192 in SwiftShader. A negative Width or Height on Restore is Input, as 0 is.
+- **Sizes:** a typed size is used as asked. p5 cuts a framebuffer the GPU can't make, so Restore's Width at 100000 works at 8192 in SwiftShader. A negative Width or Height on Restore or Resize is Input, as 0 is.
 
 Checked in headless Chromium on a Raspberry Pi. Every knob param of every module, set one range past each end, ran three frames with no exception and no control output that wasn't finite. A typed value saved and loaded as typed.
 
@@ -87,7 +87,7 @@ A node shows its output (a Monitor its input) in a preview on the 2D canvas. The
 
 **Full-size copies.** Fullscreen, the second-screen window, the recording and the screenshot copy a picture whole, from the canvas `_fullSize()` gives them:
 - **A picture that fits glCanvas:** `_blitFBO()` fills glCanvas with the framebuffer, which leaves no page in it, and glCanvas is the copy, as it always was.
-- **A bigger one:** an upscaling Restore's output has more pixels than glCanvas (see Restore Module). It is drawn into glCanvas a tile at a time with `previewFrag`, one pixel to one, and each tile is copied to its place on a 2D canvas of the picture's size. That canvas is the copy.
+- **A bigger one:** an upscaling Restore's or Resize's output has more pixels than glCanvas (see Restore Module). It is drawn into glCanvas a tile at a time with `previewFrag`, one pixel to one, and each tile is copied to its place on a 2D canvas of the picture's size. That canvas is the copy.
 
 `_drawFBO()` draws the copy on screen. A preview tile that won't fit on glCanvas is drawn that way too, which can't happen at the UI's zoom limits. Fullscreen and the second-screen window still letterbox every picture to 4:3, and the recording still stretches it to the Monitor's Width and Height. Monitor's Screenshot button, under Record, stretches it the same way and saves it as a PNG (`MonitorModule.saveScreenshot()`). It copies when clicked, outside `draw()`: glCanvas keeps no picture between frames, but a copy made in the same task as the drawing reads it.
 
@@ -109,7 +109,7 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 ### Module Categories
 
 - **Sources**: Camera, Image, VideoPlayer
-- **Utility**: Blur, Brcosa, Channel, ChromaKey, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, VideoMixer
+- **Utility**: Blur, Brcosa, Channel, ChromaKey, Crop, Delay, Dither, Edges, Levels, LUT, Mosaic, Resize, Restore, Sharpen, Transform, VideoMixer
 - **Control**: Calculator, Constant, Random, Remap, Skeleton
 - **Generative**: Cloudy, Coils, Conway, Crystalline, GridGuys, InkDrops, LetterForms, Protozoa, SpiralGalaxy, Whitney, Yellowtail
 - **Emulation**: DeeSeventySix, ESP32, RuttEtra, SlowscanJam, Twoscilloscope
@@ -515,6 +515,34 @@ The Channel module (`js/modules/ChannelModule.js`, `js/shaders/channel.js`) buil
 **Inputs.** Each pin feeds only its own channel, and an unplugged channel is black. A lone input on `r` shows only its red channel, two inputs show two channels, and the same picture cabled to all three pins passes through unchanged at gains of 1. With none, the output keeps its last frame, as VideoMixer's does.
 
 **Checked.** In headless Chrome, on random-noise inputs, a lone input on each pin comes out as that one channel exactly, with the other two at 0, and two inputs give their two channels with the third at 0. Three different inputs, and the same input on all three pins, take each channel from its pin exactly. With gains of 0.5, 1.7 and 0, every pixel is `round(input × gain)`, clamped. The two- and three-input cases are unchanged from when a lone input fed all three channels.
+
+## Transform and Crop Modules
+
+Transform (`js/modules/TransformModule.js`) moves, turns and scales its input, and Crop (`js/modules/CropModule.js`) keeps only a box of it. Both work in pixels of the 640×480 frame, with y down, and fill anything outside the picture with opaque black, as Displacer's Black edges do. Their shaders address the frame through `vTexCoord`, so pixel density doesn't matter.
+
+- **Transform:** X and Y move the picture's centre from the frame's. Rotation turns it clockwise about that centre, in degrees. Scale X and Scale Y are factors, 1.00 for 100%, and a negative one flips that axis. The picture is scaled, then turned, then moved.
+- **Crop:** X and Y are the box's top-left corner, and Width and Height its size. A typed negative Width or Height runs the box the other way from the corner.
+
+**Fullscreen interaction.** Double-click the node preview to enter fullscreen. ESC exits. `js/ui.js` routes press, drag, release and (for Transform) the wheel to the module's `handleMouse*`/`handleWheel` methods. A cable on a param overrides what the mouse sets.
+- **Transform:** a drag moves the picture with the pointer. An Alt-drag turns it by the angle the pointer sweeps around the picture's centre, so circling clockwise turns it clockwise. `js/main.js` passes the drag's event to `NodeGraphUI.mouseDragged()`, which hands its `altKey` to `handleMouseDrag()`. The wheel multiplies both scales by the same factor, 1.001 per unit of wheel delta, which keeps their ratio. Scrolling up enlarges.
+- **Crop:** dragging draws a white box. While it is drawn, fullscreen shows the whole input instead of the output (`fullscreenFBO()`). On release the box, normalised whichever way it was drawn and held to the picture, sets the four params, and flashes three times over 450 ms over the cropped output (`drawFullscreenOverlay()`). A box under a pixel wide or high is a click and changes nothing.
+
+Checked in headless Chrome at pixel density 1 and 2: with both at their defaults the output matches the input, and a move, a 90° turn, a scale of 0.5, a flip and a crop each sample the input where they should. Driven through `NodeGraphUI`'s mouse methods, a drag, an Alt-drag, the wheel and a box drawn bottom-right to top-left set the params they should.
+
+## Resize Module
+
+The Resize module (`js/modules/ResizeModule.js`, `js/shaders/resize.js`) scales its input to Width × Height. It has one video input and one output. Its Width and Height are Restore's, and behave the same way (see Width and Height in Restore Module):
+- **Real pixels:** both are in real pixels, and the output framebuffer has density 1.
+- **Input:** both default to 0, which the knob shows as Input, and that axis takes the input's own size. A negative size typed in is Input too.
+- **Sizes:** a dragged or cabled knob is rounded to whole pixels, and a typed size is used as it is. Every new size reallocates the output, so a cable on either knob reallocates it on every frame it moves.
+- **Shape and downstream:** the input is stretched to fill, and other modules read the result by uv and write the frame's size. Only a Monitor cabled straight to Resize sees the extra pixels.
+
+**Scaling.** One pass copies the input through the input texture's own bilinear filter, under `blendMode(REPLACE)` so the alpha is copied rather than blended. As with Restore, a size below half the input's aliases, since nothing averages.
+
+Checked in headless Chrome at pixel density 1 and 2:
+- **At Input:** the output is the input's size and matches it on every value, alpha included, with the input at alpha 0.5 too.
+- **Other sizes:** 1440×1080 gives a 1440×1080 buffer whose pixels sample the input by uv. One knob alone leaves the other axis at the input's size, and 1365.6 × 767.7 gives 1366×768. Typed in, 5000 × −4 gives 5000 by the input's height. Back at Input, the output is the first one again on every value.
+- **Downstream:** a Sharpen after a 1440×1080 Resize still writes the frame's size.
 
 ## Restore Module
 
@@ -1283,7 +1311,7 @@ With isolation, ORT runs its default of min(4, ⌈cores / 2⌉) threads, which `
 - **Parameters**: Module parameters are normalized or use specific ranges defined in the `params` object. The UI handles scaling these values for display.
 - **Coordinate System**: p5.js uses a 2D coordinate system for the UI (top-left 0,0), while the WebGL `glCanvas` uses standard GL coordinates (centered 0,0 or screen-space depending on usage).
 - **Pixel Density**: framebuffers are allocated at the graphics' pixel density, so on a retina display `gl_FragCoord` runs over twice as many pixels as `glCanvas.width` / `glCanvas.height` report. A shader that works in `gl_FragCoord` space — or that derives a texel step from a resolution — must be given `Module.fragResolution()` rather than the logical size, and any pixel-valued uniform the shader compares against `gl_FragCoord` must be scaled by `Module.pixelDensity` (Conway's spawn position, radius and cell size; GridGuys' target). Getting this wrong confines the output to one quadrant, and in a feedback shader it also reads off the clamped edge. Shaders that address themselves through `vTexCoord` are unaffected, which is most of them — only `conway`, `dither`, `gridguys-simulation`, `inkdrops` and `spiralgalaxy` read `gl_FragCoord` (`cyberlace` uses it for a `mod(…, 2.0)` dither that is deliberately one physical pixel wide, and RuttEtra's grid pass to count the texels of a buffer of density 1).
-- **Output Sizes**: every module's output is the frame's size, except Restore's, which is its Width × Height (see Restore Module). An input read by uv works at any size. A module that needs its input's size in pixels reads `fbo.width * fbo.density` from the framebuffer, as DepthAnything does, instead of assuming `fragResolution()`.
+- **Output Sizes**: every module's output is the frame's size, except Restore's and Resize's, which are their Width × Height (see Restore Module and Resize Module). An input read by uv works at any size. A module that needs its input's size in pixels reads `fbo.width * fbo.density` from the framebuffer, as DepthAnything does, instead of assuming `fragResolution()`.
 - **Framebuffer Orientation**: `NodeGraphUI` blits an FBO to the P2D canvas through a shader that flips `v`, so within a framebuffer `gl_FragCoord.y = 0` is the *top* of the displayed image. A pass that reads a buffer it also writes (feedback, ping-pong) must address it with the unflipped `gl_FragCoord.xy / resolution`: `v = y / H` is by definition the row being written, and reading through a flipped uv mirrors the buffer on every iteration. `InkDrops` and `SpiralGalaxy` both carry notes on this.
 - **No `glCanvas.image()` in `process()`**: p5 draws `image()` through the bound shader whenever that shader has a sampler, not through its own texture shader. Between frames the bound shader is one of `NodeGraphUI`'s preview shaders, because `framebuffer.end()` pops each module's own `shader()` call back off. An `image()` copy therefore draws whatever the UI blitted last, instead of the image. This is what turned Dither's error diffusion solid black. To read an upstream frame, bind it as a sampler uniform. To copy one, draw it through a shader you bind yourself.
 - **Give a hand-built `p5.Geometry` its own `gid`**: `model()` caches a geometry's GPU buffers under `geometry.gid`, and `new p5.Geometry()` leaves it undefined. Two such geometries then share the cache key `undefined`, and the second draws the first's buffers. Whitney sets `geometry.gid = 'Whitney|<n>'` and frees it with `freeGeometry()` in `dispose()`. `SegmentRenderer` does the same, named for the module it draws for (`'Latk|<n>'`, `'Twoscilloscope|<n>'`), and so do SlowscanJam and RuttEtra. RuttEtra rebuilds its geometry, so it also frees the one each replaces. A geometry with many faces should also get one edge of its own, as RuttEtra's does, unless it is drawn with strokes: otherwise the first `model()` builds stroke geometry for every edge.
