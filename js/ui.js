@@ -31,15 +31,14 @@ void main() {
 
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'VideoPlayer'],
-  'Utility': ['Blur', 'Brcosa', 'Channel', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'VideoMixer'],
+  'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Restore', 'Sharpen', 'VideoMixer'],
   'Control': ['Calculator', 'Constant', 'Random', 'Remap', 'Skeleton'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
-  'Interactive': ['ChromaKey', 'Conway', 'InkDrops', 'Latk', 'Yellowtail'],
-  'Generative': ['Cloudy', 'Coils', 'Crystalline', 'GridGuys', 'LetterForms', 'Protozoa', 'SpiralGalaxy', 'Whitney'],
+  'Generative': ['Cloudy', 'Coils', 'Conway', 'Crystalline', 'GridGuys', 'InkDrops', 'LetterForms', 'Protozoa', 'SpiralGalaxy', 'Whitney', 'Yellowtail'],
   'Emulation': ['DeeSeventySix', 'ESP32', 'RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
   'img2img': ['DepthAnything', 'InfrDrawings', 'Pix2Pix'],
-  'Archival': ['NAPLPS', 'QTVR', 'VRML'],
+  'Formats': ['Latk', 'NAPLPS', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
 };
 
@@ -47,13 +46,12 @@ const color_source = [34, 85, 170];
 const color_grass = [34, 120, 68];
 const color_generative = [170, 85, 136];
 const color_sandin = [102, 102, 68];
-const color_archival = [68, 102, 136];
+const color_formats = [68, 102, 136];
 const color_effect = [108, 102, 186];
 const color_effect2 = [125, 85, 129];
 const color_utility = [85, 120, 100];
 const color_control = [96, 140, 56];
 const color_output = [170, 85, 34];
-const color_interactive = [160, 120, 40];
 const color_emulation = [30, 125, 135];
 const color_img2img = [150, 50, 80];
 
@@ -66,6 +64,7 @@ const MODULE_COLORS = {
   Blur: color_utility,
   Brcosa: color_utility,
   Channel: color_utility,
+  ChromaKey: color_utility,
   Delay: color_utility,
   Dither: color_utility,
   Edges: color_utility,
@@ -84,18 +83,15 @@ const MODULE_COLORS = {
   // - - - GENERATIVE - - -
   Cloudy: color_generative,
   Coils: color_generative,
+  Conway: color_generative,
   Crystalline: color_generative,
   GridGuys: color_generative,
+  InkDrops: color_generative,
   LetterForms: color_generative,
   Protozoa: color_generative,
   SpiralGalaxy: color_generative,
   Whitney: color_generative,
-  // - - - INTERACTIVE - - -
-  ChromaKey: color_interactive,
-  Conway: color_interactive,
-  InkDrops: color_interactive,
-  Latk: color_interactive,
-  Yellowtail: color_interactive,
+  Yellowtail: color_generative,
   // - - - EMULATION - - -
   DeeSeventySix: color_emulation,
   ESP32: color_emulation,
@@ -136,10 +132,11 @@ const MODULE_COLORS = {
   DepthAnything: color_img2img,
   InfrDrawings: color_img2img,
   Pix2Pix: color_img2img,
-  // - - - ARCHIVAL - - -
-  NAPLPS: color_archival,
-  QTVR: color_archival,
-  VRML: color_archival,
+  // - - - FORMATS - - -
+  Latk: color_formats,
+  NAPLPS: color_formats,
+  QTVR: color_formats,
+  VRML: color_formats,
   // - - - OUTPUT - - -
   Monitor: color_output 
 };
@@ -433,12 +430,11 @@ export class NodeGraphUI {
       'Utility': true,
       'Control': true,
       'Generative': true,
-      'Interactive': true,
       'Emulation': true,
       'Sandin': true,
       'Effects': true,
       'img2img': true,
-      'Archival': true,
+      'Formats': true,
       'Output': true,
     };
 

@@ -76,7 +76,7 @@ import './modules/SkeletonModule.js';
 import './modules/DepthAnythingModule.js';
 import './modules/InfrDrawingsModule.js';
 import './modules/Pix2PixModule.js';
-// - - - ARCHIVAL - - -
+// - - - FORMATS - - -
 import './modules/NAPLPSModule.js';
 import './modules/QTVRModule.js';
 import './modules/VRMLModule.js';

@@ -109,15 +109,14 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 ### Module Categories
 
 - **Sources**: Camera, Image, VideoPlayer
-- **Utility**: Blur, Brcosa, Channel, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, VideoMixer
+- **Utility**: Blur, Brcosa, Channel, ChromaKey, Delay, Dither, Edges, Levels, LUT, Mosaic, Restore, Sharpen, VideoMixer
 - **Control**: Calculator, Constant, Random, Remap, Skeleton
-- **Generative**: Cloudy, Coils, Crystalline, GridGuys, LetterForms, Protozoa, SpiralGalaxy, Whitney
-- **Interactive**: ChromaKey, Conway, InkDrops, Latk, Yellowtail
+- **Generative**: Cloudy, Coils, Conway, Crystalline, GridGuys, InkDrops, LetterForms, Protozoa, SpiralGalaxy, Whitney, Yellowtail
 - **Emulation**: DeeSeventySix, ESP32, RuttEtra, SlowscanJam, Twoscilloscope
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, GRASS, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
 - **img2img**: DepthAnything, InfrDrawings, Pix2Pix
-- **Archival**: NAPLPS, QTVR, VRML
+- **Formats**: Latk, NAPLPS, QTVR, VRML
 - **Output**: Monitor
 
 ### Shaders (`js/shaders/`)
@@ -242,7 +241,7 @@ Outlines are cut at the canvas edge, as Latk's strokes are. `images/test.nap` is
 
 ## QTVR and VRML Modules
 
-Two Archival sources ported from the p5.js viewers in the vrml-qtvr-viewer project (`p5js/js/qtvr-viewer-p5.js` and `vrml-viewer-p5.js`). Each loads a file with the same hidden `<input type="file">` pattern as Image and NAPLPS, and the node's button shows the loaded file's name. As with Image, the file itself is not saved in patches.
+Two Formats sources ported from the p5.js viewers in the vrml-qtvr-viewer project (`p5js/js/qtvr-viewer-p5.js` and `vrml-viewer-p5.js`). Each loads a file with the same hidden `<input type="file">` pattern as Image and NAPLPS, and the node's button shows the loaded file's name. As with Image, the file itself is not saved in patches.
 
 **QTVR** (`js/modules/QTVRModule.js`) views a panorama image from its center. It loads extracted panorama images, not QuickTime `.mov` files. The `projection` drop-down picks how the image is mapped, as the viewer's `mode` did:
 
@@ -332,7 +331,7 @@ Outside the chain, `protozoaBandingFrag` adds a slowly drifting vein-like networ
 
 ## InkDrops Module
 
-The InkDrops module (`js/modules/InkDropsModule.js`, `js/shaders/inkdrops.js`) is an interactive module: a sheet of cold-press paper worked in watercolour. Splashes bloom and shatter, fat drops fall in from off-screen and soak out huge, and a wet rag is dragged across the sheet, lifting pigment back off. Ported from the WebGL2 sketch `splottissimo.html`.
+The InkDrops module (`js/modules/InkDropsModule.js`, `js/shaders/inkdrops.js`) is a generative module: a sheet of cold-press paper worked in watercolour. Splashes bloom and shatter, fat drops fall in from off-screen and soak out huge, and a wet rag is dragged across the sheet, lifting pigment back off. Ported from the WebGL2 sketch `splottissimo.html`.
 
 **Three passes over a persistent sheet.** Unlike the stateless first version, the module keeps an accumulation buffer (the "sheet") that two framebuffers ping-pong, because every pass reads the whole sheet to write the next one:
 
@@ -926,7 +925,7 @@ With MSAA at the other settings, up to 2.6% of pixels differ by more than 2 leve
 
 ## Latk Module
 
-The Latk module (`js/modules/LatkModule.js`, `js/modules/latk/`, `js/shaders/latk.js`) is an interactive source. It plays back a Latk drawing (from the Lightning Artist Toolkit) and draws each frame as lines in its strokes' colours, seen through an orbiting camera. Its X and Y control outputs carry the frame as a loop of XY audio, which drives Twoscilloscope. Together the two are Twoscilloscope's `example-latk`, with the drawing split from the scope. The node starts with `jellyfish.latk`, bundled in `files/latk/` from `example-latk`. "Load .latk…" picks another drawing, either a `.latk` file or the JSON inside one, and the button then shows its name. As with VRML, the file itself is not saved in patches.
+The Latk module (`js/modules/LatkModule.js`, `js/modules/latk/`, `js/shaders/latk.js`) is a Formats source. It plays back a Latk drawing (from the Lightning Artist Toolkit) and draws each frame as lines in its strokes' colours, seen through an orbiting camera. Its X and Y control outputs carry the frame as a loop of XY audio, which drives Twoscilloscope. Together the two are Twoscilloscope's `example-latk`, with the drawing split from the scope. The node starts with `jellyfish.latk`, bundled in `files/latk/` from `example-latk`. "Load .latk…" picks another drawing, either a `.latk` file or the JSON inside one, and the button then shows its name. As with VRML, the file itself is not saved in patches.
 
 **Files:**
 - `latk/readLatk.js` reads the drawing, in place of latk.js. latk.js bundles JSZip, and reads a global called `latk` while it parses. This reader finds the JSON through the zip's central directory and inflates it with `DecompressionStream('deflate-raw')`, as VRML does without pako.
