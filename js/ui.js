@@ -30,9 +30,9 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'Image', 'VideoPlayer'],
+  'Sources': ['Camera', 'Image', 'Mesh', 'VideoPlayer'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
-  'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Crop', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Resize', 'Restore', 'Sharpen', 'Transform', 'VideoMixer'],
+  'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Crop', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Mosaic', 'Resample', 'Restore', 'Sharpen', 'Transform', 'VideoMixer'],
   'Control': ['Calculator', 'Constant', 'Random', 'Remap', 'Skeleton'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
   'Generative': ['Cloudy', 'Coils', 'Conway', 'Crystalline', 'GridGuys', 'InkDrops', 'LetterForms', 'Protozoa', 'SpiralGalaxy', 'Whitney', 'Yellowtail'],
@@ -59,6 +59,7 @@ const MODULE_COLORS = {
   // - - - SOURCES - - -
   Camera: color_source,
   Image: color_source,
+  Mesh: color_source,
   VideoPlayer: color_source,
   // - - - UTILITY - - -
   Blur: color_utility,
@@ -72,7 +73,7 @@ const MODULE_COLORS = {
   Levels: color_utility,
   LUT: color_utility,
   Mosaic: color_utility,
-  Resize: color_utility,
+  Resample: color_utility,
   Restore: color_utility,
   Sharpen: color_utility,
   Transform: color_utility,
@@ -591,7 +592,7 @@ export class NodeGraphUI {
     const isLargePreview = mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail';
     const hasPreview = Boolean(mod.outputFBO) && !isLargePreview;
     const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
-      mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk';
+      mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh';
     let contentH = 1;
     if (isLargePreview) {
       contentH = 6 + MONITOR_PREVIEW_H;
@@ -1144,7 +1145,7 @@ export class NodeGraphUI {
     for (const [id, mod] of graph.nodes) {
       if (mod.collapsed) continue;
       if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS' && mod.type !== 'Image' && mod.type !== 'LUT' &&
-        mod.type !== 'QTVR' && mod.type !== 'VRML' && mod.type !== 'Latk') continue;
+        mod.type !== 'QTVR' && mod.type !== 'VRML' && mod.type !== 'Latk' && mod.type !== 'Mesh') continue;
       const preview = this._previewRect(mod);
       const btnY = preview
         ? preview.y + PREVIEW_H + 6
@@ -1926,9 +1927,9 @@ export class NodeGraphUI {
       p.rect(preview.x - 0.5, preview.y - 0.5, PREVIEW_W + 1, PREVIEW_H + 1, 2);
     }
 
-    // File picker button (VideoPlayer, NAPLPS, Image, LUT, QTVR, VRML, Latk)
+    // File picker button (VideoPlayer, NAPLPS, Image, LUT, QTVR, VRML, Latk, Mesh)
     if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
-        mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk') {
+        mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh') {
       const btnY = preview
         ? preview.y + PREVIEW_H + 6
         : mod.y + HEADER_HEIGHT + this._portSection(mod) + paramNames.length * PARAM_ROW_HEIGHT + 6;
@@ -1946,6 +1947,7 @@ export class NodeGraphUI {
         : mod.type === 'QTVR' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load Panorama...')
         : mod.type === 'VRML' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .wrl...')
         : mod.type === 'Latk' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .latk...')
+        : mod.type === 'Mesh' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .glb...')
         : 'Load Video...';
       p.text(btnLabel, mod.x + MODULE_WIDTH / 2, btnY + 10);
     }
@@ -1994,9 +1996,9 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      // Conway / InkDrops / QTVR / VRML / Latk / ChromaKey / Transform / Crop: handle the click instead of exiting fullscreen
+      // Conway / InkDrops / QTVR / VRML / Latk / Mesh / ChromaKey / Transform / Crop: handle the click instead of exiting fullscreen
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' ||
-                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'ChromaKey' ||
+                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'ChromaKey' ||
                   mod.type === 'Transform' || mod.type === 'Crop')) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
@@ -2385,11 +2387,11 @@ export class NodeGraphUI {
   }
 
   mouseDragged(mx, my, event) {
-    // Conway: handle mouse drawing in fullscreen (QTVR / VRML / Latk: turn the view; Transform: move, or turn with Alt; Crop: draw the box)
+    // Conway: handle mouse drawing in fullscreen (QTVR / VRML / Latk / Mesh: turn the view; Transform: move, or turn with Alt; Crop: draw the box)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Transform' || mod.type === 'Crop')) {
+                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'Transform' || mod.type === 'Crop')) {
         mod.handleMouseDrag(mx, my, this.p.width, this.p.height, Boolean(event && event.altKey));
         return;
       }
@@ -2447,7 +2449,7 @@ export class NodeGraphUI {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Transform' || mod.type === 'Crop')) {
+                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'Transform' || mod.type === 'Crop')) {
         mod.handleMouseUp();
         return;
       }
@@ -2605,11 +2607,11 @@ export class NodeGraphUI {
   }
 
   mouseWheel(delta) {
-    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML / Latk: zoom; Transform: scale)
+    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML / Latk / Mesh: zoom; Transform: scale)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Transform')) {
+                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'Transform')) {
         mod.handleWheel(delta);
         return;
       }
@@ -2630,10 +2632,10 @@ export class NodeGraphUI {
     // (i.e. the first click exited it), don't immediately re-enter.
     if (performance.now() - this._fullscreenExitTime < 400) return;
 
-    // Latk: a double-click in fullscreen resets the camera
+    // Latk / Mesh: a double-click in fullscreen resets the camera
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && mod.type === 'Latk') {
+      if (mod && (mod.type === 'Latk' || mod.type === 'Mesh')) {
         mod.handleDoubleClick();
       }
       // The graph is hidden, so a double-click mustn't reach its nodes

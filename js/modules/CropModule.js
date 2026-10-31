@@ -5,6 +5,11 @@ import { registerModule } from '../moduleRegistry.js';
 const FLASH_MS = 450;    // how long the box flashes once it is drawn
 const BLINK_MS = 75;     // each on or off of the flash
 
+// What the box's picture fills, in drop-down order. Patches save the mode as
+// its index, so append, never insert.
+const FLOATING = 0;      // left where it is, black round it
+const FIT = 1;           // stretched to the whole frame
+
 export class CropModule extends Module {
   static uid = '51e89489';
 
@@ -17,6 +22,10 @@ export class CropModule extends Module {
       y: { id: '658f', value: 0, min: 0, max: 480, step: 1, label: 'Y' },
       width: { id: 'bff1', value: 640, min: 0, max: 640, step: 1, label: 'Width' },
       height: { id: '60a8', value: 480, min: 0, max: 480, step: 1, label: 'Height' },
+      mode: {
+        id: '2894', value: FLOATING, min: 0, max: 1, step: 1, label: 'Mode', widget: 'dropdown',
+        valueLabels: ['Floating', 'Fit'],
+      },
     };
     this.inputFBO = null;
     // The box being drawn in fullscreen, in frame pixels: { x0, y0, x1, y1 }
@@ -38,13 +47,20 @@ export class CropModule extends Module {
     this.shader.setUniform('uResolution', [glCanvas.width, glCanvas.height]);
     this.shader.setUniform('uCorner', [this.params.x.value, this.params.y.value]);
     this.shader.setUniform('uSize', [this.params.width.value, this.params.height.value]);
+    this.shader.setUniform('uFit', this._fit() ? 1 : 0);
     this.renderQuad();
     this.outputFBO.end();
   }
 
-  // While a box is being drawn, fullscreen shows the whole input to draw it on
+  _fit() {
+    return Math.round(this.params.mode.value) === FIT;
+  }
+
+  // While a box is being drawn, fullscreen shows the whole input to draw it on.
+  // Fit's output fills the frame with the box, so the box flashes over the input
+  // too, where it was drawn.
   fullscreenFBO() {
-    return this.box && !this.flashStart ? this.inputFBO : this.outputFBO;
+    return this.box && (!this.flashStart || this._fit()) ? this.inputFBO : this.outputFBO;
   }
 
   // The fullscreen picture, letterboxed to 4:3 as ui.js draws it
