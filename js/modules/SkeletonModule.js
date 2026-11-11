@@ -76,9 +76,23 @@ export class SkeletonModule extends Module {
     this.dirty = true;       // the preview needs drawing
     this.connected = false;
 
+    this._startWorker();
+    this.lastTime = performance.now() / 1000;
+  }
+
+  // A worker that fails to load stops tracing for good. One whose tracer
+  // fails is replaced, and the newest mask goes to the new one; the trace
+  // that failed is lost, so X and Y keep the one before it until then
+  _startWorker() {
     this.worker = new Worker(new URL('./skeleton/worker.js', import.meta.url), { type: 'module' });
     this.worker.onmessage = (e) => {
-      this._takeTrace(e.data);
+      if (e.data.error) {
+        console.warn('Skeleton worker, starting a new one:', e.data.error);
+        this.worker.terminate();
+        this._startWorker();
+      } else {
+        this._takeTrace(e.data);
+      }
       this.tracing = null;
       if (this.pending) {
         const mask = this.pending;
@@ -92,7 +106,6 @@ export class SkeletonModule extends Module {
       this.tracing = null;
       this.pending = null;
     };
-    this.lastTime = performance.now() / 1000;
   }
 
   // Resolution snaps to its steps, so a cable resizes the grid only when it crosses one
