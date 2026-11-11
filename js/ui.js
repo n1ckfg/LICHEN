@@ -309,7 +309,9 @@ export class NodeGraphUI {
     return canvas;
   }
 
-  // Fill glCanvas with a Framebuffer, for a copy at full size
+  // Fill glCanvas with a Framebuffer, for a copy at full size. It replaces
+  // what was there, alpha included: glCanvas still holds the preview tiles,
+  // which would show through a picture with alpha below 1, as Delay's is
   _blitFBO(fbo) {
     const g = this.pipeline.glCanvas;
     if (!this._blitShader) {
@@ -318,7 +320,9 @@ export class NodeGraphUI {
     g.shader(this._blitShader);
     this._blitShader.setUniform('tex0', fbo);
     g.noStroke();
+    g.blendMode(g.REPLACE);
     g.rect(-g.width / 2, -g.height / 2, g.width, g.height);
+    g.blendMode(g.BLEND);
     this._previewPage = -1;
   }
 
