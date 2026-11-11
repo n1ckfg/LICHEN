@@ -36,12 +36,18 @@ export function tokenize(source) {
   const tokens = [];
   let i = 0;
   const len = source.length;
+  // Each token records whether whitespace came before it: Zgrass reads
+  // "SKIP -4" as a command with an argument and "SKIP-4" as a subtraction
+  let spaced = false;
+  const push = tokens.push.bind(tokens);
+  tokens.push = (t) => { t.spaceBefore = spaced; spaced = false; return push(t); };
 
   while (i < len) {
     const ch = source[i];
 
     // Skip spaces and tabs (but not newlines)
     if (ch === ' ' || ch === '\t') {
+      spaced = true;
       i++;
       continue;
     }
@@ -173,7 +179,9 @@ export function tokenize(source) {
       i += 2;
       continue;
     }
-    // Single = is also equality in GRASS (assignment uses :)
+    // Single = is assignment, as in Zgrass, and == is equality. The parser
+    // reads = as equality only where its left side can't be assigned to.
+    // : also assigns
     if (ch === '=') {
       tokens.push({ type: TokenType.EQ, value: '=' });
       i++;
@@ -232,6 +240,7 @@ function isIdentStart(ch) {
   return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || ch === '_';
 }
 
+// A name may hold a $ after its first character (QUANTIZED$SECOND$DEGREE)
 function isIdentChar(ch) {
-  return isIdentStart(ch) || (ch >= '0' && ch <= '9');
+  return isIdentStart(ch) || (ch >= '0' && ch <= '9') || ch === '$';
 }

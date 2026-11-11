@@ -51,7 +51,7 @@ Draw a circle or ellipse centered at (`xcenter`, `ycenter`) with horizontal radi
 Clear the TV screen. Using the `.crt` switch (i.e., `clear.crt`) clears the terminal instead.<br>
 
 **COMPILE `macro, newname`**<br>
-Currently a stub; intended to compile a macro for speed, but currently macros run interpreted.<br>
+Zgrass compiled a macro for speed. Macros here always run interpreted, so this copies `macro` to `newname`, which then runs the same.<br>
 
 **COS `angle`**<br>
 Calculate the cosine of `angle`.<br>
@@ -113,8 +113,8 @@ Calculate `base` raised to the power of `exponent`.<br>
 **PRINT `expr1, [expr2, ...]`**<br>
 Print evaluated expressions or values to the terminal.<br>
 
-**PROMPT `"text"`**<br>
-Print prompt text to the terminal (suppressed when the macro has arguments to consume).<br>
+**PROMPT `"text", [expr...]`**<br>
+Print its arguments to the terminal like PRINT, but with no NEXTLINE (suppressed when the macro has arguments to consume).<br>
 
 **RETURN `[value]`**<br>
 Return from the current macro, optionally with a return value.<br>
@@ -144,7 +144,7 @@ Convert a number to a string.<br>
 Calculate the tangent of `angle`.<br>
 
 **TIMEOUT `n`**<br>
-Set the foreground macro timing interval in frames.<br>
+Run the `.F` macro it is in once every `n` frames (1/60 second each).<br>
 
 **USEMAP**<br>
 List all user-defined names (variables and macros) in the environment.<br>

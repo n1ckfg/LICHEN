@@ -42,6 +42,15 @@ export class CommandRegistry {
       return matches[0];
     }
 
+    // Several match: the one with the shortest abbreviation wins, as P and PR
+    // are PRINT although PROMPT also starts with them
+    if (matches.length > 1) {
+      const len = (m) => this.minLengths.get(m.name) || 1;
+      const shortest = Math.min(...matches.map(len));
+      const best = matches.filter(m => len(m) === shortest);
+      if (best.length === 1) return best[0];
+    }
+
     // Ambiguous or no match
     return null;
   }

@@ -2,11 +2,11 @@
 // GRASS grammar:
 //   line = [label] statement { ";" statement }
 //   statement = assignment | if_stmt | command_call
-//   assignment = IDENT ":" expr
+//   assignment = IDENT ("=" | ":") expr
 //   if_stmt = "IF" expr "," rest_of_line
 //   command_call = IDENT [switches] [arglist]
-//   arglist = expr { "," expr }
-//   expr = comparison
+//   arglist = expr { "," expr } | "(" expr { "," expr } ")"
+//   expr = lvalue ("=" | ":") expr | or
 //   comparison = addition { ("==" | "<" | ">" | "<=" | ">=" | "!=") addition }
 //   addition = multiplication { ("+" | "-") multiplication }
 //   multiplication = unary { ("*" | "/" | "\" | "%" | "&") unary }
@@ -133,9 +133,9 @@ export class Parser {
       }
     }
 
-    const isColon = this.peek().type === TokenType.COLON;
+    const isAssign = isAssignOp(this.peek());
     this.pos = save;
-    return isColon;
+    return isAssign;
   }
 
   parseAssignment() {
@@ -153,7 +153,11 @@ export class Parser {
       this.expect(TokenType.RPAREN);
     }
 
-    this.expect(TokenType.COLON);
+    if (!isAssignOp(this.peek())) {
+      const t = this.peek();
+      throw new Error(`Expected = but got ${t.type} (${t.value})`);
+    }
+    this.advance();
     const expr = this.parseExpr();
 
     if (indices) {
@@ -224,8 +228,9 @@ export class Parser {
       return AST.Command(name, [], []);
     }
 
-    // If followed by an operator, this is part of an expression
-    if (isOperator(next.type)) {
+    // If followed by an operator, this is part of an expression, except for a
+    // spaced minus that starts an argument: SKIP -4, LINE -X,-Y,1
+    if (isOperator(next.type) && !this.startsSpacedArg(this.pos)) {
       this.pos = save;
       return this.parseExpr();
     }
@@ -254,6 +259,24 @@ export class Parser {
       return args;
     }
 
+    // Arguments in parentheses: PRINT(10,20,30). A single parenthesized
+    // argument parses the same either way, and (5*2)+3 is an expression
+    if (this.peek().type === TokenType.LPAREN) {
+      const save = this.pos;
+      try {
+        this.advance();
+        const list = [this.parseExpr()];
+        while (this.match(TokenType.COMMA)) list.push(this.parseExpr());
+        this.expect(TokenType.RPAREN);
+        const t = this.peek().type;
+        if (list.length > 1 && (t === TokenType.SEMI || t === TokenType.NEWLINE ||
+            t === TokenType.EOF || t === TokenType.RPAREN || t === TokenType.COMMA)) {
+          return list;
+        }
+      } catch (e) { /* not a parenthesized list */ }
+      this.pos = save;
+    }
+
     args.push(this.parseExpr());
     while (this.match(TokenType.COMMA)) {
       args.push(this.parseExpr());
@@ -262,8 +285,42 @@ export class Parser {
   }
 
   // Expression parsing (precedence climbing)
+  // Assignment is an expression, lowest in precedence and right to left, so
+  // PRINT A=10%100, BOX X=X+20,0,18,18,3 and IF (N=N+1)<10 all assign. A =
+  // after something that can't be assigned to is taken as equality
   parseExpr() {
-    return this.parseOr();
+    const left = this.parseOr();
+    if (!isAssignOp(this.peek())) return left;
+    if (left.type === 'VarRef') {
+      this.advance();
+      return AST.Assign(left.name, this.parseExpr());
+    }
+    if (left.type === 'ArrayRef') {
+      this.advance();
+      return AST.ArrayAssign(left.name, left.indices, this.parseExpr());
+    }
+    if (this.peek().type === TokenType.EQ) {
+      this.advance();
+      return AST.BinOp('==', left, this.parseExpr());
+    }
+    return left;
+  }
+
+  // A minus with a space before it and none after starts an argument
+  startsSpacedArg(pos) {
+    const t = this.tokens[pos];
+    const n = this.tokens[pos + 1];
+    return Boolean(t && n && t.type === TokenType.MINUS && t.spaceBefore && !n.spaceBefore);
+  }
+
+  // Can the token at pos begin a command's first argument? A command name
+  // followed by a space and an argument calls it: P P 10 is PRINT(PRINT(10))
+  startsArg(pos) {
+    const t = this.tokens[pos];
+    if (!t || !t.spaceBefore) return false;
+    return t.type === TokenType.NUMBER || t.type === TokenType.STRING ||
+      t.type === TokenType.IDENT || t.type === TokenType.DEVICE ||
+      t.type === TokenType.NOT || this.startsSpacedArg(pos);
   }
 
   parseOr() {
@@ -290,7 +347,8 @@ export class Parser {
     let left = this.parseAddition();
     while (true) {
       const t = this.peek();
-      if (t.type === TokenType.EQ || t.type === TokenType.LT || t.type === TokenType.GT ||
+      // A single = is left to parseExpr, which assigns
+      if ((t.type === TokenType.EQ && t.value === '==') || t.type === TokenType.LT || t.type === TokenType.GT ||
           t.type === TokenType.LE || t.type === TokenType.GE || t.type === TokenType.NE) {
         const op = this.advance().value;
         const right = this.parseAddition();
@@ -459,6 +517,11 @@ export class Parser {
         return AST.ArrayRef(t.value, args);
       }
 
+      // A name, a space, then an argument: a call nested in an expression
+      if (this.startsArg(this.pos)) {
+        return AST.Command(t.value, this.parseArgList(), []);
+      }
+
       return AST.VarRef(t.value);
     }
 
@@ -480,6 +543,11 @@ function isOperator(type) {
          type === TokenType.LE || type === TokenType.GE ||
          type === TokenType.NE || type === TokenType.AND ||
          type === TokenType.OR || type === TokenType.COLON;
+}
+
+// = or : between a name and its value
+function isAssignOp(t) {
+  return t.type === TokenType.COLON || (t.type === TokenType.EQ && t.value === '=');
 }
 
 // Convenience function

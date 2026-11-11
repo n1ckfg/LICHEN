@@ -596,7 +596,8 @@ export class NodeGraphUI {
       mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh';
     let contentH = 1;
     if (isLargePreview) {
-      contentH = 6 + MONITOR_PREVIEW_H;
+      // GRASS has a row of Load and Save buttons under its preview
+      contentH = 6 + MONITOR_PREVIEW_H + (mod.type === 'GRASS' ? 26 : 0);
     } else if (hasPreview) {
       contentH = 6 + PREVIEW_H + (hasFileBtn ? 26 : 0);
     }
@@ -1155,6 +1156,20 @@ export class NodeGraphUI {
           wy >= btnY && wy <= btnY + 20) {
         return id;
       }
+    }
+    return null;
+  }
+
+  // GRASS's Load and Save script buttons: { id, action: 'load' | 'save' } or null
+  hitTestGrassScriptBtn(wx, wy) {
+    const graph = this.pipeline.graph;
+    const halfW = (MODULE_WIDTH - 24) / 2;
+    for (const [id, mod] of graph.nodes) {
+      if (mod.type !== 'GRASS' || mod.collapsed) continue;
+      const btnY = this._previewRect(mod).y + MONITOR_PREVIEW_H + 6;
+      if (wy < btnY || wy > btnY + 20) continue;
+      if (wx >= mod.x + 10 && wx <= mod.x + 10 + halfW) return { id, action: 'load' };
+      if (wx >= mod.x + 14 + halfW && wx <= mod.x + MODULE_WIDTH - 10) return { id, action: 'save' };
     }
     return null;
   }
@@ -1912,6 +1927,23 @@ export class NodeGraphUI {
       p.rect(preview.x - 0.5, preview.y - 0.5, MONITOR_PREVIEW_W + 1, MONITOR_PREVIEW_H + 1, 2);
     }
 
+    // GRASS Load and Save script buttons (side by side, under the preview)
+    if (mod.type === 'GRASS') {
+      const btnY = preview.y + MONITOR_PREVIEW_H + 6;
+      const halfW = (MODULE_WIDTH - 24) / 2;
+      for (const [bx, label] of [[mod.x + 10, 'Load .grass'], [mod.x + 14 + halfW, 'Save .grass']]) {
+        p.fill(60, 60, 90);
+        p.stroke(100);
+        p.strokeWeight(1);
+        p.rect(bx, btnY, halfW, 20, 3);
+        p.noStroke();
+        p.fill(200);
+        p.textSize(9);
+        p.textAlign(p.CENTER, p.CENTER);
+        p.text(label, bx + halfW / 2, btnY + 10);
+      }
+    }
+
     // Module preview thumbnail (for non-Monitor, non-GRASS, non-Conway, non-Yellowtail modules with FBO)
     if (mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway' && mod.type !== 'Yellowtail') {
       p.fill(0);
@@ -2164,6 +2196,14 @@ export class NodeGraphUI {
     if (vpHit !== null) {
       const mod = this.pipeline.graph.nodes.get(vpHit);
       if (mod && mod.pickFile) mod.pickFile();
+      return;
+    }
+
+    // Check GRASS Load / Save script buttons
+    const grassHit = this.hitTestGrassScriptBtn(world.x, world.y);
+    if (grassHit !== null) {
+      const mod = this.pipeline.graph.nodes.get(grassHit.id);
+      if (mod) grassHit.action === 'load' ? mod.pickScript() : mod.saveScript();
       return;
     }
 

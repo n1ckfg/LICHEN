@@ -46,7 +46,7 @@ export function registerGraphicsCommands(interp) {
     const colormode = Math.floor(args[2]) & 15;
     ctx.fb.point(x, y, colormode);
     return 1;
-  }, 1);
+  }, 3); // POI, so that P is PRINT
 
   // CIRCLE xcenter, ycenter, xradius, yradius, colormode
   reg.register('CIRCLE', (args, switches, ctx) => {

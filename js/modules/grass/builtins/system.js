@@ -18,9 +18,9 @@ export function registerSystemCommands(interp) {
     }
     if (line.length > 0) ctx.terminal.println(line);
     ctx.terminal.println('');
-    ctx.terminal.println('Assignment: VAR:expr  |  Operators: + - * / \\ % &');
+    ctx.terminal.println('Assignment: VAR=expr  |  Operators: + - * / \\ % &');
     ctx.terminal.println('Comparison: == != < > <= >=  |  Logic: AND OR NOT');
-    ctx.terminal.println('Strings: [text] {text} "text"  |  Macro: NAME:[code]');
+    ctx.terminal.println('Strings: [text] {text} "text"  |  Macro: NAME=[code]');
     ctx.terminal.println('.B=background .F=foreground  |  ESC=break');
     return 1;
   }, 1);
@@ -55,9 +55,13 @@ export function registerSystemCommands(interp) {
     return 1;
   }, 2);
 
-  // COMPILE macro, newname — compile for speed (stub/no-op)
+  // COMPILE macro, newname — Zgrass compiled for speed. Macros here always run
+  // interpreted, so this copies the macro to newname, which then runs the same
   reg.register('COMPILE', (args, switches, ctx) => {
-    ctx.terminal.println('COMPILE: not implemented (macros run interpreted)');
+    if (args.length < 2) throw new Error('COMPILE requires macro, newname');
+    const src = String(args[0]);
+    if (!ctx.env.isMacro(src)) throw new Error(`${src} is not a macro`);
+    ctx.env.set(String(args[1]), ctx.env.get(src));
     return 1;
   }, 3);
 

@@ -21,8 +21,9 @@ export function registerIOCommands(interp) {
     if (mib && mib.args.length > 0 && mib.argIndex < mib.args.length) {
       return 1;
     }
+    // Like PRINT, a space after each thing, but no NEXTLINE
     if (args.length > 0) {
-      ctx.terminal.print(String(args[0]));
+      ctx.terminal.print(args.map(a => String(a) + ' ').join(''));
     }
     return 1;
   }, 2);
@@ -33,12 +34,17 @@ export function registerIOCommands(interp) {
     const mib = ctx.env.currentMIB();
 
     for (const node of astNodes) {
-      // Extract variable name from AST node
+      // Extract variable name from AST node; an array element such as
+      // CHECKERBOARD(X,Y) is set through its array
       let varName;
-      if (node.type === 'VarRef') {
+      let store;
+      if (node.type === 'VarRef' || node.type === 'Command') {
         varName = node.name;
-      } else if (node.type === 'Command') {
+        store = (v) => ctx.env.set(varName, v);
+      } else if (node.type === 'ArrayRef' && ctx.env.arrays.has(node.name.toUpperCase())) {
         varName = node.name;
+        const indices = node.indices.map(i => ctx.eval(i));
+        store = (v) => ctx.env.setArray(varName, indices, v);
       } else {
         ctx.eval(node);
         continue;
@@ -47,7 +53,7 @@ export function registerIOCommands(interp) {
       // Check if macro has remaining arguments to consume
       if (mib && mib.args.length > mib.argIndex) {
         const val = mib.args[mib.argIndex++];
-        ctx.env.set(varName, val);
+        store(val);
       } else if (ctx.currentTask) {
         // For scheduled tasks, pause the task and request input via REPL
         const task = ctx.currentTask;
@@ -57,7 +63,7 @@ export function registerIOCommands(interp) {
 
         ctx.repl.requestInput(`${varName}? `, (value) => {
           const num = parseFloat(value);
-          ctx.env.set(varName, isNaN(num) ? value : num);
+          store(isNaN(num) ? value : num);
           task._waitingForInput = false;
           task.pc++; // Skip past the INPUT line now
         });
@@ -66,7 +72,7 @@ export function registerIOCommands(interp) {
         // Immediate mode — request input via REPL
         // This can't truly block, so we set variable to 0 for now
         // Interactive input in immediate mode would need async/await
-        ctx.env.set(varName, 0);
+        store(0);
         ctx.terminal.println(`(INPUT ${varName}: interactive input in immediate mode not yet supported)`);
       }
     }

@@ -13,7 +13,7 @@ export class Scheduler {
 
     // Config
     this.mgLinesPerFrame = 50;  // How many MG lines to run per frame
-    this.fgTimeout = 1000 / 60; // Target FG timing (ms)
+    // A .F task's TIMEOUT n sets its own task.timeout, in frames
 
     // Flags
     this.breakRequested = false;
@@ -43,7 +43,7 @@ export class Scheduler {
     const labels = new Map();
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      const match = line.match(/^(\d+\w*)\s/);
+      const match = line.match(/^(\d+\w*)(\s|$)/);
       if (match) {
         labels.set(match[1].toUpperCase(), i);
       }
@@ -55,11 +55,13 @@ export class Scheduler {
   tick(interpreter) {
     this.breakRequested = false;
 
-    // Run all foreground tasks fully
+    // Run all foreground tasks fully, or once every TIMEOUT frames
     for (let i = this.foreground.length - 1; i >= 0; i--) {
       if (this.breakRequested) break;
       const task = this.foreground[i];
+      if (task.cooldown > 0) { task.cooldown--; continue; }
       this.runTaskFully(task, interpreter);
+      if (task.timeout) task.cooldown = task.timeout - 1;
       if (task.done) this.foreground.splice(i, 1);
     }
 
@@ -133,7 +135,7 @@ export class Scheduler {
     if (line === '' || line.startsWith('.')) return;
 
     // Strip label prefix for execution
-    const execLine = line.replace(/^\d+\w*\s+/, '');
+    const execLine = line.replace(/^\d+\w*(\s+|$)/, '');
     if (execLine.trim() === '') return;
 
     try {

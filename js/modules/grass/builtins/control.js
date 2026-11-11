@@ -69,10 +69,10 @@ export function registerControlCommands(interp) {
     return 1;
   }, 2);
 
-  // TIMEOUT n — set foreground macro timing interval (in frames)
+  // TIMEOUT n — run the .F macro this is in once every n frames (1/60 s each)
   reg.register('TIMEOUT', (args, switches, ctx) => {
-    const frames = Math.floor(args[0] || 1);
-    ctx.scheduler.fgTimeout = frames * (1000 / 60);
+    const frames = Math.max(1, Math.floor(args[0] || 1));
+    if (ctx.currentTask) ctx.currentTask.timeout = frames;
     return 1;
   }, 2);
 

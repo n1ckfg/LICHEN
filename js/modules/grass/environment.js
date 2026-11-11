@@ -187,6 +187,20 @@ export class Environment {
     return typeof val === 'string';
   }
 
+  // The one user name (global or array) that starts with prefix, or null
+  // when none does or several do
+  resolvePrefix(prefix) {
+    const upper = prefix.toUpperCase();
+    let found = null;
+    for (const name of [...this.globals.keys(), ...this.arrays.keys()]) {
+      if (name.startsWith(upper)) {
+        if (found !== null && found !== name) return null;
+        found = name;
+      }
+    }
+    return found;
+  }
+
   // Get all user-defined names
   getUserNames() {
     return Array.from(this.globals.keys());

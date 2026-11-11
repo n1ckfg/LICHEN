@@ -11,6 +11,7 @@ import { Editor } from './grass/editor.js';
 import { Environment } from './grass/environment.js';
 import { Interpreter } from './grass/interpreter.js';
 import { Scheduler } from './grass/scheduler.js';
+import { splitScript, serializeWorkspace } from './grass/script.js';
 
 export class GRASSModule extends Module {
   static uid = 'ca2234bc';
@@ -101,6 +102,57 @@ export class GRASSModule extends Module {
     }
 
     img.updatePixels();
+  }
+
+  // Load button: pick a .grass script and run it
+  pickScript() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.grass,.GRASS,.txt';
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (file) file.text().then(text => this.loadScript(text, file.name));
+    };
+    input.click();
+  }
+
+  // Run a script's commands in order, as if each were typed at the prompt.
+  // Each is echoed, a multi-line one with a + on its later lines, as the UV-1
+  // showed while waiting for a closing bracket. An error is reported with its
+  // line in the file and the rest of the script still runs
+  loadScript(text, name = 'script') {
+    const commands = splitScript(text);
+    let errors = 0;
+    this.terminal.println(`LOAD ${name}`);
+    for (const { line, text: cmd } of commands) {
+      const [first, ...more] = cmd.split('\n');
+      this.terminal.println('> ' + first);
+      for (const l of more) this.terminal.println('+ ' + l);
+      try {
+        this.interpreter.execLine(cmd);
+      } catch (e) {
+        errors++;
+        this.terminal.println(`ERROR (line ${line}): ${e.message}`);
+      }
+    }
+    this.terminal.println(`Loaded ${name}: ${commands.length} commands, ${errors} errors`);
+  }
+
+  // Save button: download the workspace (macros, variables and arrays) as a
+  // .grass script, which Load runs to define them all again
+  saveScript() {
+    const { text, skipped } = serializeWorkspace(this.env);
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.download = `lichen-grass_${timestamp}.grass`;
+    a.click();
+    URL.revokeObjectURL(url);
+    const count = this.env.globals.size + this.env.arrays.size - skipped.length;
+    this.terminal.println(`Saved ${count} names to ${a.download}`);
+    if (skipped.length) this.terminal.println(`Not saved (no delimiter fits): ${skipped.join(', ')}`);
   }
 
   // Route keyboard events when this module is fullscreened.

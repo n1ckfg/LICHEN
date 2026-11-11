@@ -4,6 +4,7 @@
 import { tokenize } from './tokenizer.js';
 import { parse } from './parser.js';
 import { CommandRegistry } from './commands.js';
+import { splitMacroLines } from './script.js';
 import { registerGraphicsCommands } from './builtins/graphics.js';
 import { registerIOCommands } from './builtins/io.js';
 import { registerMathCommands } from './builtins/math.js';
@@ -134,6 +135,20 @@ export class Interpreter {
       return cmd.handler(args, [], this);
     }
 
+    // A macro called as a function returns what its RETURN gives
+    if (this.env.isMacro(node.name)) {
+      return this.invokeMacro(node.name, node.indices, []);
+    }
+
+    // An abbreviated array or macro name: PY(L) for PYR(L)
+    const full = this.env.resolvePrefix(node.name);
+    if (full && this.env.arrays.has(full)) {
+      return this.env.getArray(full, ...node.indices.map(i => this.eval(i)));
+    }
+    if (full && this.env.isMacro(full)) {
+      return this.invokeMacro(full, node.indices, []);
+    }
+
     // Fall back to variable reference
     return this.env.get(node.name);
   }
@@ -155,8 +170,8 @@ export class Interpreter {
       case '\\': // modulo
         if (right === 0) throw new Error('Division by zero');
         return Math.floor(left) % Math.floor(right);
-      case '%': // random between [left, right)
-        return Math.floor(left) + Math.floor(Math.random() * (Math.floor(right) - Math.floor(left)));
+      case '%': // random between [left, right), fractions included
+        return left + Math.random() * (right - left);
       case '&': // string concatenation
         return String(left) + String(right);
       case '=': case '==': return (left == right) ? 1 : 0;
@@ -197,14 +212,28 @@ export class Interpreter {
       if (cmd.name === 'INPUT') {
         return cmd.handler(node.args, switches, this);
       }
+      // Commands whose arguments are all names: COMPILE TRIANGLES,CT
+      if (cmd.name === 'COMPILE') {
+        const names = node.args.map(a =>
+          (a.type === 'VarRef' || a.type === 'Command') ? a.name : this.eval(a));
+        return cmd.handler(names, switches, this);
+      }
       // Commands that take a name/identifier as first arg
-      const nameFirstCmds = ['SNAP', 'DISPLAY', 'EDIT', 'DELETE', 'COMPILE', 'ARRAY', 'GOTO', 'ONERROR'];
+      const nameFirstCmds = ['SNAP', 'DISPLAY', 'EDIT', 'DELETE', 'ARRAY', 'GOTO', 'ONERROR'];
       if (nameFirstCmds.includes(cmd.name) && node.args.length > 0) {
+        let rest = node.args.slice(1);
         const firstArg = node.args[0];
-        const nameStr = (firstArg.type === 'VarRef' || firstArg.type === 'Command')
-          ? firstArg.name
-          : this.eval(firstArg);
-        const restArgs = node.args.slice(1).map(a => this.eval(a));
+        let nameStr;
+        if (firstArg.type === 'VarRef' || firstArg.type === 'Command') {
+          nameStr = firstArg.name;
+          // ARRAY PYR 10,4 parses as a call of PYR, whose arguments are ARRAY's
+          if (firstArg.type === 'Command' && firstArg.args.length > 0) {
+            rest = [...firstArg.args, ...rest];
+          }
+        } else {
+          nameStr = this.eval(firstArg);
+        }
+        const restArgs = rest.map(a => this.eval(a));
         return cmd.handler([nameStr, ...restArgs], switches, this);
       }
       // Evaluate arguments
@@ -231,6 +260,13 @@ export class Interpreter {
       if (mib && mib.locals.has(name.toLowerCase())) {
         return this.env.get(name);
       }
+    }
+
+    // An abbreviated macro name: Q runs QUANTIZED$SECOND$DEGREE$SPACE$INVADERS
+    // when nothing else starts with Q
+    const full = this.env.resolvePrefix(name);
+    if (full && this.env.isMacro(full)) {
+      return this.invokeMacro(full, node.args, switches);
     }
 
     throw new Error(`Unknown command: ${name}`);
@@ -263,7 +299,7 @@ export class Interpreter {
     const args = argNodes.map(a => this.eval(a));
 
     // Parse macro body into lines
-    const lines = body.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const lines = splitMacroLines(body);
 
     // Determine execution mode from switches
     const mode = this.getMacroMode(switches);
@@ -289,6 +325,10 @@ export class Interpreter {
     let result = 0;
     const maxSteps = 100000;
     let steps = 0;
+    // GOTO and SKIP in this macro move its own lines, not those of a .B or
+    // .F task that called it
+    const prevTask = this.currentTask;
+    this.currentTask = null;
 
     try {
       while (mib.pc < lines.length && steps < maxSteps) {
@@ -298,8 +338,8 @@ export class Interpreter {
 
         if (line === '' || line.startsWith('.')) continue;
 
-        // Strip label prefix
-        const execLine = line.replace(/^(\d+\w*)\s+/, '');
+        // Strip label prefix (a label may stand alone on its line)
+        const execLine = line.replace(/^\d+\w*(\s+|$)/, '');
         if (execLine.trim() === '') continue;
 
         try {
@@ -313,12 +353,18 @@ export class Interpreter {
             continue;
           } else if (e.message === 'SKIP') {
             continue;
+          } else if (mib.onErrorLabel && mib.labels.has(mib.onErrorLabel.toUpperCase())) {
+            // ONERROR label: branch there once, instead of stopping
+            mib.pc = mib.labels.get(mib.onErrorLabel.toUpperCase());
+            mib.onErrorLabel = null;
+            continue;
           } else {
             throw e;
           }
         }
       }
     } finally {
+      this.currentTask = prevTask;
       this.env.popMIB();
     }
 
@@ -330,7 +376,7 @@ export class Interpreter {
     const labels = new Map();
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      const match = line.match(/^(\d+\w*)\s/);
+      const match = line.match(/^(\d+\w*)(\s|$)/);
       if (match) {
         labels.set(match[1].toUpperCase(), i);
       }

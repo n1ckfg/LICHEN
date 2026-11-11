@@ -219,7 +219,25 @@ The GRASS module (`js/modules/GRASSModule.js`) is a complete embedded GRASS inte
 - Terminal + REPL overlays render over the video in fullscreen mode
 - Clicking exits fullscreen (same as Monitor)
 
-**js/ui.js integration:** `getModuleHeight` and `_drawModule` treat GRASS like Monitor (large preview, `MONITOR_PREVIEW_W × MONITOR_PREVIEW_H`). `hitTestMonitorDblClick` checks for both `'Monitor'` and `'GRASS'` types.
+**js/ui.js integration:** `getModuleHeight` and `_drawModule` treat GRASS like Monitor (large preview, `MONITOR_PREVIEW_W × MONITOR_PREVIEW_H`), plus a row under the preview for the Load and Save buttons (`hitTestGrassScriptBtn()`). `hitTestMonitorDblClick` checks for both `'Monitor'` and `'GRASS'` types.
+
+**Scripts:** a `.grass` file is plain text, what you would type at the prompt, one command per line; `files/grass/` holds the eleven lessons of the 1981 Datamax UV-1 Zgrass manual (`ref/markdown/`) in this form. `js/modules/grass/script.js` holds what reads and writes them:
+- **Load** (`GRASSModule.pickScript()`, `loadScript()`): `splitScript()` splits the file into commands. A `[]` or `{}` string runs on over lines, as a macro does, and a quote ends with its line, so a stray one can't swallow the rest of the file. Each command is echoed and run in order, as if typed, with a `+` before its later lines as the UV-1 showed. An error is printed with its line in the file and the rest still runs. Loading adds to the workspace, as GETTAPE did; it clears nothing.
+- **Save** (`saveScript()`): `serializeWorkspace()` writes every global as `NAME=[...]` or `NAME=value`, and every array as `ARRAY` plus its non-zero elements, so Loading the file defines them all again. A string goes in `[]`, else `{}`, else quotes, whichever reads back unchanged. Only a string none of them fits is left out, and reported.
+- A patch doesn't save the workspace.
+
+**Dialect:** the interpreter follows the lessons' Zgrass:
+- `=` assigns, inside any expression (`PRINT A=10%100`, `BOX X=X+20,0,18,18,3`, `IF (N=N+1)<10`), and `==` tests equality. A `=` after something that can't be assigned to is equality. FakeGRASS's `:` still assigns.
+- Whitespace matters where it did on the UV-1. A command, a space and a minus with none after it start an argument (`SKIP -4`, `LINE -X,-Y,1`), and `SKIP-4` is a subtraction. A command name, a space and an argument inside an expression nest a call (`PRINT PRINT 10`, `P P 10`). Tokens carry `spaceBefore` for this.
+- Arguments may be in parentheses (`PRINT(10,20,30)`). `%` returns fractions. A name may hold `$` after its first letter.
+- Abbreviations: an ambiguous command prefix resolves to the match with the shortest minimum length, so `P` and `PR` are PRINT (POINT now needs `POI`). A name that is neither a command nor defined runs the one macro, or reads the one array, it is a prefix of (`Q`, `PY(L)`).
+- A macro used as a function (`SQUAREM(?a,?b)`) returns its RETURN value. `INPUT` can fill an array element. `ONERROR label` branches once on an error. `COMPILE a,b` copies macro `a` to `b`. `TIMEOUT n` runs its `.F` macro every `n` frames. A macro called from a `.B` or `.F` task keeps its own GOTOs and SKIPs, and macro lines keep blank lines and quoted strings that run over several lines (`splitMacroLines()`), so SKIP counts them as Zgrass did.
+
+Checked in Node against all eleven lessons, and in headless Chrome through the buttons. 141 of the 179 commands run; every macro the lessons define runs except as listed below; and a workspace saved from six lessons (62 names, 4 arrays) loads back identical. What still fails is the hardware the lessons assume:
+- tape and disk (`PUTTAPE`, `GETTAPE`, `D...`), the `TXT` swap module, and the system macro `NB`
+- the joystick: `$X1`/`$Y1` are the mouse position in fullscreen, not a −1…1 push, and `$K1` is the last key, not a knob
+- `INPUT` waiting for a typed answer. A macro typed at the prompt runs within the frame (middleground), capped at 100000 lines, so INPUT gives 0 unless the macro was given arguments, and a loop like RANGE or DRAW runs its 100000 lines at once instead of over time. Only `.B` and `.F` macros run across frames.
+- lines the lessons show as mistakes or placeholders (`POINT 14;30,4`, `DSETUP n`), the data typed into ENTER, and two typos in the original text (lesson 4's `GOTO 1UP)`, lesson 8's `IF (N=N+1),10`)
 
 ## NAPLPS Module
 
