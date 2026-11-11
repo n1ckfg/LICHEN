@@ -1,3 +1,7 @@
+. LESSON 9 MORE ON GRAPHICS
+. SNAP copies part of the screen into a picture, and DISPLAY puts it
+. back anywhere, in displaymode 0 plop, 1 XOR, 2 OR or 3 AND.
+. Type STEST to scatter copies of a snap, and ESC to stop it.
 STEST=[CLEAR
 BOX 0,0,20,20,3
 BOX 5,0,10,15,2
@@ -5,10 +9,17 @@ BOX -5,0,10,15,1
 SNAP IT,0,0,20,20
 DISPLAY IT,-160%159,-100%100,0;SKIP 0]
 
-DISPLAY IT,X=X+$X1,Y=Y+$Y1,0;SKIP 0
+. In the lesson you steer IT with the joystick by typing
+. DISPLAY IT,X=X+$X1,Y=Y+$Y1,0;SKIP 0
+. Type MOVEIT to do that, in fullscreen, with the arrow keys.
+MOVEIT=[DISPLAY IT,X=X+$X1,Y=Y+$Y1,0;SKIP 0]
 
+. A snap 4 pixels bigger than IT keeps a black border, which wipes out
+. IT's trail as it moves.
 SNAP IT,0,0,24,24
 
+. DRAW's cursor is a snap shown twice in XOR, which draws it and takes
+. it off again, so it flickers but never stays on the picture.
 DRAW=[CLEAR
 LINE 10,0,4
 LINE -10,0,1
@@ -20,11 +31,14 @@ DISP CURS,X,Y,1;DISP CURS,X,Y,1
 IF $T1==1,POINT X,Y,$K1/64+2
 SKIP -3]
 
+. Colormodes: 0-3 plop a color, 4-7 XOR it, 8-11 OR it, 12-15 AND it.
+CLEAR
 BOX 0,0,100,100,2
 BOX 0,-25,50,50,1
 BOX 0,25,50,50,3
 BOX -25,0,50,50,9
 
+. Swap colors 2 and 3 without redrawing anything.
 A=$L2
 $L2=$L3
 $L3=A
@@ -34,10 +48,11 @@ BOX 0,-25,50,50,2
 BOX 0,25,50,50,14
 BOX -25,0,50,50,14
 
-NB
-NB
-
-PRINT NB
+. Swap them back. $L2=$L3 would make colors 2 and 3 look the same.
+A=$L2
+$L2=$L3
+$L3=A
+. The lesson's NB is a system macro this emulator doesn't have.
 
 JANEDRAW=[PROMPT "WHAT'S THE XSIZE,YSIZE OF THE
 DRAWING BOX?"
@@ -59,6 +74,8 @@ BOX X,Y,WIZE,HIZE,7
 IF $T1==0,SKIP -4
 BOX X,Y,WIZE,HIZE,KOLOR;SKIP -5]
 
+. BEHIND moves a box in XOR across lines: it passes behind the red ones
+. and in front of the green.
 BEHIND=[X=-100
 Y=50
 LINE X,Y,4
@@ -69,4 +86,18 @@ BOX X,0,20,20,5
 BOX X,0,20,20,5
 IF (X=X+1)<51,SKIP -2]
 
-$L2=$L3
+. THE ANIMATION. BOUNCE makes STEST's picture with a black border round
+. it, and bounces it off the edges of the screen. One DISPLAY draws the
+. picture at its new place and its border wipes out the old one, so it
+. never flickers. Press ESC to stop it.
+BOUNCE=[CLEAR
+BOX 0,0,20,20,3;BOX 5,0,10,15,2;BOX -5,0,10,15,1
+SNAP BALL,0,0,26,26
+CLEAR;X=0;Y=0;DX=3;DY=2
+1GO DISPLAY BALL,X=X+DX,Y=Y+DY,0
+IF X>144,DX=-3
+IF X<-144,DX=3
+IF Y>85,DY=-2
+IF Y<-85,DY=2
+WAIT 1;GOTO 1GO]
+BOUNCE

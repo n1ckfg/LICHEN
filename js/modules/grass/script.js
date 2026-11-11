@@ -5,7 +5,10 @@
 // line. A string in [] or {} may run over several lines, as a macro does
 // (Q=[BOX 0,0,100,100,2<newline>BOX 50,50,100,100,3]), so its NEXTLINEs stay
 // inside the command. Quotes can't nest, and at the top level they end with the
-// line, so one stray quote can't swallow the rest of the file.
+// line, so one stray quote can't swallow the rest of the file. A line whose
+// first character is a period is a comment, as in a macro ("the entire line is
+// taken as a comment and skipped, even if there is a ';' in the line",
+// lesson 8), and a quote or bracket in it means nothing.
 
 // A macro's lines, as GOTO, SKIP and .B interleaving count them. A quoted
 // string may run over several lines inside a macro (CHOOSY's PRINT, lesson 7),
@@ -14,7 +17,8 @@ export function splitMacroLines(body) {
   return splitScript(body, { quotesSpanLines: true, keepBlank: true }).map(c => c.text.trim());
 }
 
-// Split script text into commands, each with the 1-based line it starts on
+// Split script text into commands, each with the 1-based line it starts on.
+// Comment lines are dropped, or with keepBlank kept as lines of their own
 export function splitScript(text, { quotesSpanLines = false, keepBlank = false } = {}) {
   const src = String(text).replace(/\r\n?/g, '\n');
   const commands = [];
@@ -23,13 +27,27 @@ export function splitScript(text, { quotesSpanLines = false, keepBlank = false }
   let startLine = 1;
   let depth = 0;      // [] and {} nesting
   let quote = null;   // open " or ' at the top level
+  let comment = false;
 
   const flush = (end) => {
     const cmd = src.slice(start, end).replace(/\s+$/, '');
-    if (keepBlank || cmd.trim() !== '') commands.push({ line: startLine, text: cmd });
+    const drop = comment && !keepBlank;
+    comment = false;
+    if (!drop && (keepBlank || cmd.trim() !== '')) commands.push({ line: startLine, text: cmd });
   };
 
   for (let i = 0; i < src.length; i++) {
+    if (i === start) {
+      let j = i;
+      while (src[j] === ' ' || src[j] === '\t') j++;
+      if (src[j] === '.') {
+        // A comment: skip to the end of its line
+        comment = true;
+        const nl = src.indexOf('\n', j);
+        i = (nl === -1 ? src.length : nl) - 1;
+        continue;
+      }
+    }
     const ch = src[i];
     if (ch === '\n') {
       line++;

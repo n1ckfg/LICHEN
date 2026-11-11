@@ -1,24 +1,57 @@
-PRINT NB
-
+. LESSON 11 ADVANCED CONCEPTS
+. A macro can be used as a function, and RETURN gives its value.
 SAM=[a=10
 b=20
 PRINT SQUAREM(?a,?b)]
 SQUAREM=[INPUT a,b
 RETURN a*a+b*b]
+SAM
 
+. .B runs a macro in the background, over and over, while you go on
+. typing. Type CHANGE.B to steer colors 0 to 2 with the joystick, and
+. CTRL+C to stop every macro. The lesson's NB.B uses the system macro
+. NB, which this emulator doesn't have.
 CHANGE=[$L0=$L0+$X1*8
 $L1=$L1+$Y1*8
 $L2=$K1]
-CHANGE.B
-NB.B
 
+. .F runs a macro in the foreground, every frame or, after TIMEOUT n,
+. every n frames: here a box in XOR every 5 seconds.
 TIMEDBOX=[TIMEOUT 300
 BOX 0,0,200,200,7]
 COMPILE TIMEDBOX,CTIME
-CTIME.F
 
+. ONERROR jumps to a label when an error happens.
 UGH=[ARRAY SAM,10
 A=-1
 ONERROR 1OUT
 PR SAM(A=A+1);SKIP 0
 1OUT PRINT "SAM OUT OF BOUNDS"]
+UGH
+
+. THE ANIMATION, three macros at once. FACE draws a clock face and ends.
+. HANDS.B moves the clock's hands with the time, the second hand one
+. degree every 10 frames, and ORBIT.B sends a moon round the clock,
+. both in the background, while CTIME.F flips the middle of the screen
+. every 5 seconds. Everything moving is drawn in XOR, so the flips and
+. the hands never spoil each other. The prompt stays free: type while
+. they run. CTRL+C stops them all.
+FACE=[CLEAR
+CIRCLE 0,0,96,80,3
+N=0
+LINE SIN(N*30)*90,COS(N*30)*75,4;LINE SIN(N*30)*80,COS(N*30)*67,3
+IF (N=N+1)<12,SKIP -1]
+HANDS=[S=$SC*6;M=$MN*6
+LINE 0,0,4;LINE SIN(M)*60,COS(M)*50,6
+LINE 0,0,4;LINE SIN(S)*78,COS(S)*65,7
+1TICK WAIT 10
+LINE 0,0,4;LINE SIN(S+1)*78,COS(S+1)*65,7;LINE 0,0,4;LINE SIN(S)*78,COS(S)*65,7;S=S+1
+IF S\360==0,LINE 0,0,4;LINE SIN(M+6)*60,COS(M+6)*50,6;LINE 0,0,4;LINE SIN(M)*60,COS(M)*50,6;M=M+6
+GOTO 1TICK]
+ORBIT=[A=0;F=0
+1GO X=SIN(A)*132;Y=COS(A)*90;BOX X,Y,5,5,5;IF F,BOX OX,OY,5,5,5
+OX=X;OY=Y;F=1;A=A+4;WAIT 1;GOTO 1GO]
+FACE
+HANDS.B
+ORBIT.B
+CTIME.F

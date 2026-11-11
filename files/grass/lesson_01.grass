@@ -1,3 +1,7 @@
+. LESSON 1 GETTING STARTED
+. A line that starts with a period is a comment, and is skipped.
+.
+. PRINT does arithmetic. % picks a number at random between two others.
 PRINT 5
 PRINT 5*5
 PRINT 5*2+2
@@ -31,6 +35,7 @@ HELP
 
 PRINT HELP()
 
+. BOX XCENTER,YCENTER,XSIZE,YSIZE,COLORMODE draws a filled rectangle.
 BOX 0,0,300,200,3
 BOX 75,0,20,100,2
 BOX -75,0,20,100,1
@@ -43,4 +48,12 @@ BOX 0,0,100,100,3
 BOX 0,0,50,50,2
 POINT 0,0,1
 
+. POINT with no colormode reads the screen: 1 2 3 and -1 (off-screen)
 PRINT POI(0,0),POI(0,1),POI(30,-30),POI(200,200)
+
+. THE ANIMATION. CONFETTI draws one box, at a random place, of a random
+. size and a random colormode (0 is black), and SKIP 0 runs its line
+. again, for ever. A macro is a name given to lines in brackets, as
+. lesson 2 shows. Press ESC to stop it.
+CONFETTI=[BOX -160%159,-100%100,4%40,4%40,0%4;SKIP 0]
+CONFETTI

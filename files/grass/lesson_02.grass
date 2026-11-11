@@ -1,3 +1,5 @@
+. LESSON 2 WRITING MACROS
+. Strings go in quotes or brackets. & joins them.
 PRINT "HELLO!"
 
 PRINT [HELLO!]
@@ -8,6 +10,7 @@ PRINT A,A,A,A,A
 
 PRINT A&A&A&A&A
 
+. A string of commands is a macro. Typing its name runs it.
 Q=[BOX 0,0,100,100,2
 BOX 50,50,100,100,3]
 
@@ -16,6 +19,8 @@ PRINT P
 P P
 P P 10
 
+. Q would run this too, abbreviated, if it were the only name starting
+. with Q. As there is a Q, Q runs that.
 QUANTIZED$SECOND$DEGREE$SPACE$INVADERS=[BOX 0,0,100,100,3]
 
 MYBO=BO
@@ -27,6 +32,8 @@ USEMAP
 DEL ABC
 USEMAP
 
+. A label starts a line. GOTO jumps to it, and IF runs the rest of its
+. line only when its test is true. \ is the remainder of a division.
 MANYBOXES=[CLEAR
 A=300
 10 A=A-3
@@ -40,3 +47,15 @@ LINE X+10,Y,3
 LINE X,Y-10,4
 LINE X,Y+10,3
 GOTO 1MORE]
+
+. THE ANIMATION. TUNNEL draws MANYBOXES's rings again and again, with the
+. colors one ring further in each time, so the rings flow inward. A ring
+. is drawn as its four sides, not a filled BOX, so each pass recolors
+. the rings where they are, and nothing is cleared or flickers. O counts
+. 3,2,1,0,3,... so (K+O)\4 never goes negative. Press ESC to stop it.
+TUNNEL=[O=0
+1PASS K=0;W=300;H=200
+1RING C=(K+O)\4;BOX 0,H/2-2,W,4,C;BOX 0,2-H/2,W,4,C;BOX W/2-3,0,6,H,C;BOX 3-W/2,0,6,H,C
+W=W-12;H=H-8;IF (K=K+1)<25,GOTO 1RING
+O=(O+3)\4;GOTO 1PASS]
+TUNNEL

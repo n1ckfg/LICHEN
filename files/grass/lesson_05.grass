@@ -1,28 +1,37 @@
-PUTTAPE NUMBER,MACRONAME,[SOME DESCRIPTIVE MESSAGE]
-
-PUTTAPE 2,SHIRLEY,[SHIRLEY DRAWS PINK ELEPHANT HATS]
-
-GETTAPE SHIRLEY
-
-DSETUP 0
-DUSEMAP
-
-DSETUP 1
-DINIT 200
-
-DS 1
-SAM=NB
-DPUT SAM,[SAM IS A COPY OF NB]
-DUSEMAP
-
-DGET SAM
+. LESSON 5 STORING MACROS ON TAPE AND DISK
+. There is no cassette or disk here, so this lesson's commands, PUTTAPE,
+. GETTAPE, DSETUP, DINIT, DS, DPUT, DGET, DCREATE and DUSEMAP, aren't
+. emulated. The GRASS node's buttons do their job instead:
+.   Save .grass writes every macro, variable and array to a file, as
+.   PUTTAPE and DPUT did. Load .grass resets the module and runs a
+.   file, defining what it holds again, as GETTAPE and DGET did, but
+.   with memory cleared first.
+.
+. USEMAP lists what is in memory, which Save would write out.
 USEMAP
 
-DCREATE SUBMAPNAME,[MESSAGE]
+. SPOKES turns a reel's three spokes from angle OLD to ANG. A macro run
+. by another macro gets its arguments from INPUT. The spokes are XOR,
+. colormode 7, so drawing a spoke again takes it off: each new spoke is
+. drawn, then its old one again. With F 0 there are no old ones yet.
+SPOKES=[INPUT RX,ANG,OLD,F
+LINE RX,15,4;LINE RX+28*COS(ANG),15+24*SIN(ANG),7;IF F,LINE RX,15,4;LINE RX+28*COS(OLD),15+24*SIN(OLD),7
+LINE RX,15,4;LINE RX+28*COS(ANG+120),15+24*SIN(ANG+120),7;IF F,LINE RX,15,4;LINE RX+28*COS(OLD+120),15+24*SIN(OLD+120),7
+LINE RX,15,4;LINE RX+28*COS(ANG+240),15+24*SIN(ANG+240),7;IF F,LINE RX,15,4;LINE RX+28*COS(OLD+240),15+24*SIN(OLD+240),7]
 
-DCREATE PAINT,[PAINT PROGRAM SUBMAP]
-DUSEMAP
-
-DSETUP n
-
-DSETUP n,PAINT
+. THE ANIMATION. TAPE plays a cassette. Both reels turn, the full one
+. slower than the empty one, a step a frame, as WAIT 1 waits for the
+. next. The hub is a plain box drawn over the spokes each step.
+. Press ESC to stop it.
+TAPE=[CLEAR;A=0;B=0;F=0
+BOX 0,0,290,180,1;BOX 0,0,280,170,0
+BOX 0,-62,120,26,1;BOX 0,-62,110,18,0;BOX 0,-62,24,10,3
+R=31
+CIRCLE -70,15,R*7/6,R,2;IF (R=R+1)<40,SKIP 0
+R=31
+CIRCLE 70,15,R*7/6,R,2;IF (R=R+1)<33,SKIP 0
+LINE -70,-24,4;LINE 0,-57,2;LINE 70,-18,2
+1TURN SPOKES -70,A,A+5,F;BOX -70,15,13,11,3
+SPOKES 70,B,B+9,F;BOX 70,15,13,11,3
+F=1;A=A-5;B=B-9;WAIT 1;GOTO 1TURN]
+TAPE

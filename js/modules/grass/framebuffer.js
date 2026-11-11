@@ -113,17 +113,29 @@ export class Framebuffer {
     this._op();
   }
 
-  // Draw a filled box (GRASS coords: center + half-sizes)
-  box(cx, cy, halfW, halfH, colormode) {
-    const x1 = this.toBufferX(cx - halfW);
-    const y1 = this.toBufferY(cy + halfH);
-    const x2 = this.toBufferX(cx + halfW);
-    const y2 = this.toBufferY(cy - halfH);
+  // The buffer rectangle of an xsize by ysize area centred on (cx, cy), as
+  // BOX and SNAP take it (the lessons' XSIZE and YSIZE are whole sizes), and
+  // placed as DISPLAY places a snap, so SNAP and DISPLAY at one spot line up.
+  // Clipped to the screen; null if nothing is on it
+  rect(cx, cy, xsize, ysize) {
+    const w = Math.abs(Math.floor(xsize));
+    const h = Math.abs(Math.floor(ysize));
+    if (w === 0 || h === 0) return null;
+    const left = this.toBufferX(cx) - Math.floor(w / 2);
+    const top = this.toBufferY(cy) - Math.floor(h / 2);
+    const minX = Math.max(0, left);
+    const maxX = Math.min(FB_WIDTH - 1, left + w - 1);
+    const minY = Math.max(0, top);
+    const maxY = Math.min(FB_HEIGHT - 1, top + h - 1);
+    if (minX > maxX || minY > maxY) return null;
+    return { minX, maxX, minY, maxY };
+  }
 
-    const minX = Math.max(0, Math.min(x1, x2));
-    const maxX = Math.min(FB_WIDTH - 1, Math.max(x1, x2));
-    const minY = Math.max(0, Math.min(y1, y2));
-    const maxY = Math.min(FB_HEIGHT - 1, Math.max(y1, y2));
+  // Draw a filled box (GRASS coords: center + whole sizes)
+  box(cx, cy, xsize, ysize, colormode) {
+    const r = this.rect(cx, cy, xsize, ysize);
+    if (!r) { this._op(); return; }
+    const { minX, maxX, minY, maxY } = r;
 
     for (let by = minY; by <= maxY; by++) {
       for (let bx = minX; bx <= maxX; bx++) {
@@ -192,17 +204,11 @@ export class Framebuffer {
     this._op();
   }
 
-  // Capture a region as a sprite (returns 2D array of 2-bit values)
-  snap(zx, zy, halfW, halfH) {
-    const x1 = this.toBufferX(zx - halfW);
-    const y1 = this.toBufferY(zy + halfH);
-    const x2 = this.toBufferX(zx + halfW);
-    const y2 = this.toBufferY(zy - halfH);
-
-    const minX = Math.max(0, Math.min(x1, x2));
-    const maxX = Math.min(FB_WIDTH - 1, Math.max(x1, x2));
-    const minY = Math.max(0, Math.min(y1, y2));
-    const maxY = Math.min(FB_HEIGHT - 1, Math.max(y1, y2));
+  // Capture a region as a sprite (center + whole sizes, as BOX)
+  snap(zx, zy, xsize, ysize) {
+    const r = this.rect(zx, zy, xsize, ysize);
+    if (!r) return { data: new Uint8Array(0), width: 0, height: 0 };
+    const { minX, maxX, minY, maxY } = r;
 
     const w = maxX - minX + 1;
     const h = maxY - minY + 1;

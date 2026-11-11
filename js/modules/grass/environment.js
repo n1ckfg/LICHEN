@@ -49,7 +49,7 @@ export class Environment {
     }
 
     // Horizontal boundary
-    this.devices.set('$HB', 320);
+    this.devices.set('$HB', 40);  // 8-pixel columns: all left colors
 
     // Clock
     this.devices.set('$HR', 0);

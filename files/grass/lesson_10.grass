@@ -1,13 +1,26 @@
-GETTAPE TXT
+. LESSON 10 SWAP MODULES
+. A swap module is a program loaded from tape. The lesson's is TXT,
+. which writes numbers and letters on the TV, and GETTAPE TXT loads it.
+. There is no tape and no TXT here, so XYAXES puts tick marks where TXT
+. wrote the numbers.
 XYAXES=[LINE 160,-80,4
 LINE -140,-80,1
 LINE -140,100,1
-X=-146;Y=-88
-N=0
-TXT X,Y,1,1,3,0,0,N
-X=X+20
-IF (N=N+1)<15,SKIP -2
-N=0;X=-146
-TXT X,Y,1,1,2,0,0,N
-Y=Y+20
-IF (N=N+1)<10, SKIP -2]
+X=-140;N=0
+LINE X,-80,4;LINE X,-85,1;X=X+20
+IF (N=N+1)<15,SKIP -1
+Y=-80;N=0
+LINE -140,Y,4;LINE -145,Y,1;Y=Y+20
+IF (N=N+1)<10,SKIP -1]
+
+. THE ANIMATION. SCOPE draws XYAXES and then a wave over and over, left
+. to right, like an oscilloscope. Just ahead of the pen a narrow box
+. blacks out the last pass, so the old wave is replaced as the new one
+. is drawn. The wave is two sines, and as it starts each pass where the
+. last left off, it seems to move. Press ESC to stop it.
+SCOPE=[CLEAR;XYAXES;A=0
+1PASS X=-138;LINE X,10+SIN(A)*40+SIN(A*3)*20,4
+BOX X+4,11,6,180,0;LINE X,10+SIN(A)*40+SIN(A*3)*20,3;A=A+3
+IF (X=X+1)<159,SKIP -1
+GOTO 1PASS]
+SCOPE

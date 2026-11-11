@@ -1,3 +1,5 @@
+. LESSON 4 MORE ON MACROS
+. Labels, GOTO, IF, SKIP, SIN and COS, INPUT and PROMPT, COMPILE.
 TRIANGLES=[CLEAR
 PRINT "LOOK AT THE TV!"
 SIZE=0
@@ -10,7 +12,8 @@ IF SIZE<50,GOTO 1UP]
 
 COMPILE TRIANGLES,CT
 
-IF (SIZE=SIZE+2)<50,GOTO 1UP)
+. The lesson also shows IF (SIZE=SIZE+2)<50,GOTO 1UP as a shorter way
+. to write the last line of TRIANGLES.
 
 COUNTDOWN=[A=10
 1LESS PRINT A
@@ -22,6 +25,7 @@ PRINT "BLASTOFF"]
 PRINT 5==5
 PRINT 5==6
 
+. LINE with colormode 4 moves the pen without drawing.
 SWEEP=[ANGLE=0
 CLEAR
 X=SIN(ANGLE)*150
@@ -30,6 +34,7 @@ LINE X,Y,4
 LINE -X,-Y,1%4
 IF (ANGLE=ANGLE+2)<180,SKIP -4]
 
+. INPUT takes the macro's arguments, or waits for you to type them.
 HOWMANYBOXES=[CLEAR
 PROMPT "NUMBER OF BOXES TO DRAW?"
 INPUT QUAN
@@ -60,6 +65,8 @@ IF (X=X+1)<159,SKIP -2]
 SINECURVE 0
 SINECURVE 30
 
+. Typed by itself, MANYSINES asks for its three numbers. Try it, or
+. MANYSINES 0,100,5
 MANYSINES=[PROMPT "FIRST OFFSET?"
 PROMPT "LAST OFFSET?"
 PROMPT "HOW MANY?"
@@ -68,12 +75,18 @@ INCREMENT=(LAST-FIRST)/QUAN
 SINECURVE FIRST
 IF (FIRST=FIRST+INCREMENT)<=LAST,SKIP -1]
 
-MANYSINES
-
-MANYSINES 0,100,5
-
 COMPILE SINECURVE,FASTSINE
 
 NAMES=[PROMPT "WHAT'S YOUR NAME?"
 INP.STR XXXX
 PRINT "THAT'S FUNNY!, ",XXXX," IS MY NAME TOO!"]
+
+. THE ANIMATION. RADAR is SWEEP going round and round. Each half turn
+. paints its lines in the next color over the last half turn's, so it
+. never needs to CLEAR. Press ESC to stop it.
+RADAR=[CLEAR;ANGLE=0;C=1
+X=SIN(ANGLE)*150;Y=COS(ANGLE)*96
+LINE X,Y,4;LINE -X,-Y,C
+IF (ANGLE=ANGLE+1)<180,SKIP -2
+ANGLE=0;C=C\3+1;SKIP -3]
+RADAR

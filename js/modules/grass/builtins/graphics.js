@@ -17,10 +17,10 @@ export function registerGraphicsCommands(interp) {
   reg.register('BOX', (args, switches, ctx) => {
     const cx = Math.floor(args[0] || 0);
     const cy = Math.floor(args[1] || 0);
-    const halfW = Math.floor(args[2] || 0);
-    const halfH = Math.floor(args[3] || 0);
+    const xsize = Math.floor(args[2] || 0);
+    const ysize = Math.floor(args[3] || 0);
     const colormode = Math.floor(args[4] ?? 3) & 15;
-    ctx.fb.box(cx, cy, halfW, halfH, colormode);
+    ctx.fb.box(cx, cy, xsize, ysize, colormode);
     return 1;
   }, 1);
 
@@ -65,9 +65,9 @@ export function registerGraphicsCommands(interp) {
     const name = String(args[0]);
     const x = Math.floor(args[1]);
     const y = Math.floor(args[2]);
-    const halfW = Math.floor(args[3]);
-    const halfH = Math.floor(args[4]);
-    const sprite = ctx.fb.snap(x, y, halfW, halfH);
+    const xsize = Math.floor(args[3]);
+    const ysize = Math.floor(args[4]);
+    const sprite = ctx.fb.snap(x, y, xsize, ysize);
     ctx.sprites.store(name, sprite);
     return 1;
   }, 2);

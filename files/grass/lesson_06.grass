@@ -1,11 +1,38 @@
-POINT 14;30,4
-SKIP-2
-POINT (14,30,2)
-TEST="PRINT '"'"
-IF A=10,PRINT "huh?"
+. LESSON 6 DEBUGGING
+. The lesson's mistakes, each with its fix, which runs:
+.
+. POINT 14;30,4 has a semicolon where a comma goes.
+POINT 14,30,4
+. SKIP-2 needs a space, SKIP -2, or it subtracts 2 from SKIP.
+. POINT (14,30,2) has a space before its parenthesis.
+POINT(14,30,2)
+. TEST="PRINT '"'" puts a quote inside quotes. Brackets nest, quotes
+. don't, so:
+TEST=[PRINT '"']
+TEST
+. IF A=10,PRINT "huh?" always prints, because = sets A to 10. Use ==
+IF A==10,PRINT "huh?"
+.
+. Reckless abbreviation: in DOODLE CR1,CR2,...,CR10,CR11, CR1 could be
+. CR10 or CR11 too. Name them CR01, CR02 and so on.
+. SIN FIRST,ORIGINAL can't make a macro SIN, which is a system function.
+.
+. The lesson's advice: put a PRINT in a loop to watch a variable change.
+. The animation does, printing M each pass. Watch it in fullscreen.
 
-DOODLE CR1,CR2,CR3,CR4,CR5,CR6,CR7,CR8,CR9,CR10,CR11
-
-SIN FIRST,ORIGINAL
-
-SIN1=SIN
+. THE ANIMATION. TIMES draws the times table of M around a circle:
+. a line from each of 60 points, N, to point N*M. M grows a little each
+. pass, so the figure turns from a heart to a kidney to a flower. The
+. lines are drawn in XOR, colormodes 5 to 7. The first pass just draws
+. them. After that each step draws a line to N*M and then the last
+. pass's line to N*MO again, which takes it off, so nothing is ever
+. cleared. Where lines cross, their colors mix. Press ESC to stop.
+TIMES=[CLEAR;N=0;M=2
+LINE 115*COS(N*6),96*SIN(N*6),4;LINE 115*COS(N*M*6),96*SIN(N*M*6),N\3+5
+IF (N=N+1)<60,SKIP -1
+P=0
+1PASS P=P+1;N=0;M=(200+4*P)/100;MO=(200+4*(P-1))/100;PRINT M
+1LINE A=N*6;B=N*M*6;C=N*MO*6;K=N\3+5;LINE 115*COS(A),96*SIN(A),4;LINE 115*COS(B),96*SIN(B),K;LINE 115*COS(A),96*SIN(A),4;LINE 115*COS(C),96*SIN(C),K
+IF (N=N+1)<60,GOTO 1LINE
+GOTO 1PASS]
+TIMES

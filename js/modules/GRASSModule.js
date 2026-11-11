@@ -98,20 +98,26 @@ export class GRASSModule extends Module {
     img.updatePixels();
   }
 
-  // Load button: pick a .grass script and run it
+  // Load button: pick a .grass script, reset the module (as the Reset button
+  // does), and run the script on the fresh machine. Cancelling the file
+  // dialog changes nothing
   pickScript() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.grass,.GRASS,.txt';
     input.onchange = (e) => {
       const file = e.target.files[0];
-      if (file) file.text().then(text => this.loadScript(text, file.name));
+      if (file) file.text().then(text => {
+        this.reset();
+        this.loadScript(text, file.name);
+      });
     };
     input.click();
   }
 
   // Queue a script's commands, to run in order as if each were typed at the
-  // prompt (see GrassSession)
+  // prompt (see GrassSession). Adds to what is there; the Load button resets
+  // first
   loadScript(text, name = 'script') {
     this.session.load(text, name);
   }

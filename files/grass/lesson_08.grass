@@ -1,3 +1,4 @@
+. LESSON 8 ARRAYS
 ARRAY STUFF,100
 
 PRSTUFF=[N=0
@@ -7,8 +8,12 @@ IF (N=N+1)<100,SK -1]
 STUFF(91)=12345
 PRSTUFF
 
+. PYR holds a pyramid: for each of 10 endpoints, X, Y, Z and the color
+. of the line to it, 4 meaning move without drawing.
 ARRAY PYR,40
 
+. ENTER asks for an endpoint and loops for ever, so in the lesson you
+. type the ten lines of numbers below into it, then press ESC.
 ENTER=[PRINT "TYPE ENDPOINT NUMBER, X,Y,Z,COLOR
 VALUES:"
 INPUT N,X,Y,Z,K
@@ -18,16 +23,25 @@ PYR(N*4+2)=Z
 PYR(N*4+3)=K
 SKIP -6]
 
-0,50,0,0,4
-1,0,0,50,3
-2,-50,0,0,3
-3,0,0,-50,3
-4,50,0,0,3
-5,0,50,0,1
-6,0,0,50,1
-7,0,0,-50,4
-8,0,50,0,2
-9,-50,0,0,2
+. Here ENDPOINT takes one endpoint as its arguments instead, and PYRDATA
+. gives it all ten.
+ENDPOINT=[INPUT N,X,Y,Z,K
+PYR(N*4)=X
+PYR(N*4+1)=Y
+PYR(N*4+2)=Z
+PYR(N*4+3)=K]
+
+PYRDATA=[ENDPOINT 0,50,0,0,4
+ENDPOINT 1,0,0,50,3
+ENDPOINT 2,-50,0,0,3
+ENDPOINT 3,0,0,-50,3
+ENDPOINT 4,50,0,0,3
+ENDPOINT 5,0,50,0,1
+ENDPOINT 6,0,0,50,1
+ENDPOINT 7,0,0,-50,4
+ENDPOINT 8,0,50,0,2
+ENDPOINT 9,-50,0,0,2]
+PYRDATA
 
 PRPYR=[N=0
 L=0
@@ -35,20 +49,21 @@ PROMPT "PYR("&(4*N+L)&")=",PYR(4*N+L)
 IF (L=L+1)<4,SKIP -1
 PRINT
 IF (N=N+1)<10,SKIP -4]
+PRPYR
 
-PUTTAPE 2,PYR,[PYRAMID ENDPOINT ARRAY FOR LESSON8]
-
-GETTAPE XXXXXX
+. In the lesson PUTTAPE saves PYR to cassette here; Save .grass does it.
 
 DRAWPYR=[CLEAR
 N=0
 LINE PYR(N*4),PYR(N*4+1),PYR(N*4+3)
 IF (N=N+1)<10,SKIP -1]
 
+. Turning a point by ANGLE about the Z axis:
 XNEW=X*COS(ANGLE)+Y*SIN(ANGLE)
 YNEW=-X*SIN(ANGLE)+Y*COS(ANGLE)
 ZNEW=Z
 
+. Type CZROT to see the pyramid spin about Z, and ESC to stop it.
 ZROT=[A=0
 BOX 0,0,110,110,0
 S=SIN(A)
@@ -61,8 +76,8 @@ WAIT 1
 A=A+6;SKIP -8]
 
 COM ZROT,CZROT
-CZROT
 
+. About the X axis:
 XNEW=X
 YNEW=Y*COS(ANGLE)-Z*SIN(ANGLE)
 ZNEW=Y*SIN(ANGLE)+Z*COS(ANGLE)
@@ -76,10 +91,12 @@ LINE PYR(L),PYR(L+1)*C-PYR(L+2)*S,PYR(L+3)
 IF (N=N+1)<10,SKIP -2
 A=A+6;SKIP -6]
 
+. About the Y axis:
 XNEW=X*COS(ANGLE)+Z*SIN(ANGLE)
 YNEW=Y
 ZNEW=-X*SIN(ANGLE)+Z*COS(ANGLE)
 
+. DOUBLEROT turns it about X and Y at once. Hold the trigger to erase.
 DOUBLEROT=[A=0;B=0
 10CLEAR IF $T1==1,BOX 0,0,110,110,0
 SA=SIN(A);SB=SIN(B);CA=COS(A);CB=COS(B)
@@ -96,14 +113,19 @@ LINE X,Y,PYR(N*4+3)
 IF (N=N+1)<10,GOTO 1MOVE
 A=A+6;B=B+12;GOTO 10CLEAR]
 
+. Two dimensions. ARRAY makes PYR again, empty, so PYRDATA fills it
+. again. One index still counts through it row by row, so PYR(N*4+L)
+. is PYR(N,L), and the macros above still work.
 ARRAY PYR 10,4
+PYRDATA
 
 PRPYR=[N=0
 L=0
 PROMPT "PYR("&N&','&L&")=",PYR(N,L)
 IF (L=L+1)<4,SKIP -1
 PRINT
-IF (N=N+1),10,SKIP -4]
+IF (N=N+1)<10,SKIP -4]
+PRPYR
 
 ARRAY CHECKERBOARD,8,8
 DATA=[Y=0
@@ -114,3 +136,16 @@ DATA 1,0,1,0,0,0,-1,0
 X=X+1
 DATA 0,1,0,0,0,-1,0,-1
 IF (X=X+1)<8,SKIP -3]
+
+. THE ANIMATION. SPIN is DOUBLEROT made bigger, and drawn in XOR,
+. colormodes 5 to 7, so it needn't clear the screen: each line is drawn
+. at its new place, then the same line at its old place, kept in the
+. array OLD, is drawn again, which takes it off. Press ESC to stop it.
+SPIN=[A=0;B=0;F=0;ARRAY OLD 10,2
+1TURN SA=SIN(A);SB=SIN(B);CA=COS(A);CB=COS(B);N=0
+1MOVE Y=(PYR(N,1)*CA-PYR(N,2)*SA)*1.6;X=(PYR(N,0)*CB+(PYR(N,1)*SA+PYR(N,2)*CA)*SB)*1.9;K=PYR(N,3)\4+4
+LINE PX,PY,4;LINE X,Y,K;PX=X;PY=Y
+IF F,LINE QX,QY,4;LINE OLD(N,0),OLD(N,1),K
+QX=OLD(N,0);QY=OLD(N,1);OLD(N,0)=X;OLD(N,1)=Y;IF (N=N+1)<10,GOTO 1MOVE
+F=1;A=A+6;B=B+4;WAIT 1;GOTO 1TURN]
+SPIN

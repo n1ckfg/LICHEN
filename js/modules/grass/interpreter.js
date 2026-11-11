@@ -53,6 +53,7 @@ export class Interpreter {
   // here and now. A macro called any other way (inside an expression, or
   // from another macro) still runs inline, as one line of its caller
   execTopLevel(source) {
+    if (String(source).trimStart().startsWith('.')) return null; // a comment
     const ast = parse(tokenize(source));
     if (ast && ast.type === 'Command' && !this.commands.resolve(ast.name) &&
         !(ast.switches || []).some(s => s === 'B' || s === 'F')) {
@@ -435,7 +436,9 @@ export class Interpreter {
         this.palette.setRight(slot, Math.floor(value));
       }
     } else if (upper === '$HB') {
-      this.palette.horizontalBoundary = Math.floor(value);
+      // In 8-pixel columns, 0-40: lesson 7's "set $HB to 20 and the screen
+      // shows the right half colors $R0-$R3" on the right half
+      this.palette.horizontalBoundary = Math.floor(value) * 8;
     }
   }
 }
