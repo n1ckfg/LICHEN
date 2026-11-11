@@ -64,6 +64,7 @@ import './modules/DitherModule.js';
 import './modules/EdgesModule.js';
 import './modules/LevelsModule.js';
 import './modules/LUTModule.js';
+import './modules/MatteModule.js';
 import './modules/MosaicModule.js';
 import './modules/ResampleModule.js';
 import './modules/RestoreModule.js';
