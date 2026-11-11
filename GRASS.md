@@ -60,7 +60,7 @@ Calculate the cosine of `angle`.<br>
 Remove a variable or macro with the specified `name`.<br>
 
 **DISPLAY `name, x, y, [displaymode]`**<br>
-Blit a previously captured picture prototype (`name`) to the screen at position (`x`, `y`) using an optional `displaymode`.<br>
+Blit a previously captured picture prototype (`name`) to the screen at position (`x`, `y`) using an optional `displaymode`: 0 plop, 1 XOR, 2 OR, 3 AND (4, 8 and 12 also give XOR, OR and AND).<br>
 
 **EDIT `name`**<br>
 Open the full-screen editor for a macro `name`.<br>
@@ -75,7 +75,7 @@ Jump to a specified label within the current macro.<br>
 List all available commands and basic syntax help.<br>
 
 **INPUT `var1, [var2, ...]`**<br>
-Get values and assign them to variables, either from macro arguments or from user input via the REPL.<br>
+Get values and assign them to variables, either from macro arguments or from user input via the REPL. A running macro waits for a typed line of comma-separated values; `INPUT.STR` takes the line as a string.<br>
 
 **INT `value`**<br>
 Truncate a value to its integer component.<br>

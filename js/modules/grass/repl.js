@@ -13,6 +13,7 @@ export class REPL {
     this.inputPrompt = '';      // prompt for INPUT command
     this.cursorBlink = true;
     this.cursorTimer = 0;
+    this.busy = false;          // a middleground macro is running
   }
 
   // Handle keyboard input
@@ -29,11 +30,17 @@ export class REPL {
         this.inputCallback = null;
         const prompt = this.inputPrompt;
         this.inputPrompt = '';
-        this.terminal.println((prompt ? prompt : '> ') + line);
+        // The answer goes after the macro's PROMPT text, if it left one open
+        if (!this.terminal.atLineStart) {
+          this.terminal.println(line);
+        } else {
+          this.terminal.println((prompt ? prompt : '> ') + line);
+        }
         this.inputBuffer = '';
         this.cursorPos = 0;
         cb(line);
       } else if (line.length > 0) {
+        this.terminal.newline();
         this.terminal.println('> ' + line);
         this.history.push(line);
         this.historyIndex = this.history.length;
@@ -112,13 +119,17 @@ export class REPL {
     }
   }
 
-  // Request input for the INPUT command
+  // Request input for the INPUT command. The prompt shows on the input line,
+  // and goes into the terminal with the answer
   requestInput(prompt, callback) {
     this.inputPrompt = prompt || '';
     this.inputCallback = callback;
-    if (prompt) {
-      this.terminal.println(prompt);
-    }
+  }
+
+  // Drop a pending INPUT request (on break)
+  cancelInput() {
+    this.inputCallback = null;
+    this.inputPrompt = '';
   }
 
   // Check if REPL is waiting for INPUT
@@ -138,8 +149,9 @@ export class REPL {
       this.cursorTimer = 0;
     }
 
-    // Prompt
-    const prompt = this.inputCallback ? (this.inputPrompt || '? ') : '> ';
+    // Prompt. While a macro runs there is no attention mark, as on the UV-1;
+    // what's typed then waits to run after it
+    const prompt = this.inputCallback ? (this.inputPrompt || '? ') : (this.busy ? '' : '> ');
 
     // Input text
     p.noStroke();

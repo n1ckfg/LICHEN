@@ -2,16 +2,9 @@ import { Module } from './Module.js';
 import { registerModule } from '../moduleRegistry.js';
 import { passthroughFrag } from '../shaders/passthrough.js';
 
-import { Framebuffer, FB_WIDTH, FB_HEIGHT } from './grass/framebuffer.js';
-import { Palette } from './grass/palette.js';
-import { SpriteStore } from './grass/sprites.js';
-import { Terminal } from './grass/terminal.js';
-import { REPL } from './grass/repl.js';
-import { Editor } from './grass/editor.js';
-import { Environment } from './grass/environment.js';
-import { Interpreter } from './grass/interpreter.js';
-import { Scheduler } from './grass/scheduler.js';
-import { splitScript, serializeWorkspace } from './grass/script.js';
+import { FB_WIDTH, FB_HEIGHT } from './grass/framebuffer.js';
+import { GrassSession } from './grass/session.js';
+import { serializeWorkspace } from './grass/script.js';
 
 export class GRASSModule extends Module {
   static uid = 'ca2234bc';
@@ -21,28 +14,9 @@ export class GRASSModule extends Module {
     this.inputs = [];
     this.outputs = [{ id: '0a9c', name: 'out', type: 'video' }];
     this.historicalInfo = 'GRASS';
-
-    // FakeGRASS subsystem
-    this.framebuffer = new Framebuffer();
-    this.palette = new Palette();
-    this.spriteStore = new SpriteStore();
-    this.terminal = new Terminal();
-    this.repl = new REPL(this.terminal);
-    this.editor = new Editor(this.terminal);
-    this.env = new Environment();
-    this.scheduler = new Scheduler();
-    this.interpreter = new Interpreter(
-      this.env, this.framebuffer, this.palette,
-      this.spriteStore, this.terminal, this.repl, this.scheduler
-    );
-    this.interpreter._editor = this.editor;
-
-    this.repl.onSubmit = (line) => {
-      try {
-        this.interpreter.execLine(line);
-      } catch (e) {
-        this.terminal.println('ERROR: ' + e.message);
-      }
+    this.params = {
+      // Lines a middleground macro runs a frame; .B macros share as many
+      speed: { id: '1adf', value: 8, min: 1, max: 1000, step: 1, label: 'Speed' },
     };
 
     // p5.Image used to transfer framebuffer pixels to WebGL as a texture
@@ -52,20 +26,39 @@ export class GRASSModule extends Module {
     this.createShader(passthroughFrag);
     this.createOutputFBO();
 
+    this._startSession();
+  }
+
+  // A fresh GRASS machine, with its parts under the names the UI uses
+  _startSession() {
+    this.session = new GrassSession();
+    this.framebuffer = this.session.framebuffer;
+    this.palette = this.session.palette;
+    this.terminal = this.session.terminal;
+    this.repl = this.session.repl;
+    this.editor = this.session.editor;
+    this.env = this.session.env;
+    this.scheduler = this.session.scheduler;
+    this.interpreter = this.session.interpreter;
+
     this.terminal.println('GRASS — UV-1 Emulator');
     this.terminal.println('Double-click to enter. ESC to exit.');
     this.terminal.println('');
   }
 
+  // Reset button: back to the state the module starts in. Every macro stops,
+  // and the screen, terminal, prompt history, workspace (macros, variables,
+  // arrays, snaps), palette and clock start over. The Speed knob, a patch
+  // setting, stays where it is
+  reset() {
+    this.session.breakAll();
+    this._startSession();
+  }
+
   // Called every frame by the pipeline (always, regardless of fullscreen state)
   process(graph, glCanvas) {
-    this.env.updateClock();
-    try {
-      this.scheduler.tick(this.interpreter);
-    } catch (e) {
-      this.terminal.println('ERROR: ' + e.message);
-      this.scheduler.killCurrent();
-    }
+    this.session.speed = Math.max(1, Math.round(this.params.speed.value));
+    this.session.frame();
 
     // Build p5.Image from framebuffer + palette lookup
     this._updateFBImage();
@@ -79,10 +72,11 @@ export class GRASSModule extends Module {
     this.outputFBO.end();
   }
 
-  // Transfer GRASS 2-bit framebuffer pixels into a p5.Image via palette lookup
+  // Transfer what the TV shows this frame (framebuffer.shown) into a p5.Image
+  // via palette lookup
   _updateFBImage() {
     const img = this.fbImage;
-    const fb = this.framebuffer;
+    const shown = this.framebuffer.shown;
     const pal = this.palette;
 
     img.loadPixels();
@@ -91,7 +85,7 @@ export class GRASSModule extends Module {
     for (let by = 0; by < FB_HEIGHT; by++) {
       for (let bx = 0; bx < FB_WIDTH; bx++) {
         const fbIdx = by * FB_WIDTH + bx;
-        const colorVal = fb.pixels[fbIdx] & 3;
+        const colorVal = shown[fbIdx] & 3;
         const rgba = pal.getColor(colorVal, bx);
         const pIdx = fbIdx * 4;
         d[pIdx]     = rgba[0];
@@ -116,26 +110,10 @@ export class GRASSModule extends Module {
     input.click();
   }
 
-  // Run a script's commands in order, as if each were typed at the prompt.
-  // Each is echoed, a multi-line one with a + on its later lines, as the UV-1
-  // showed while waiting for a closing bracket. An error is reported with its
-  // line in the file and the rest of the script still runs
+  // Queue a script's commands, to run in order as if each were typed at the
+  // prompt (see GrassSession)
   loadScript(text, name = 'script') {
-    const commands = splitScript(text);
-    let errors = 0;
-    this.terminal.println(`LOAD ${name}`);
-    for (const { line, text: cmd } of commands) {
-      const [first, ...more] = cmd.split('\n');
-      this.terminal.println('> ' + first);
-      for (const l of more) this.terminal.println('+ ' + l);
-      try {
-        this.interpreter.execLine(cmd);
-      } catch (e) {
-        errors++;
-        this.terminal.println(`ERROR (line ${line}): ${e.message}`);
-      }
-    }
-    this.terminal.println(`Loaded ${name}: ${commands.length} commands, ${errors} errors`);
+    this.session.load(text, name);
   }
 
   // Save button: download the workspace (macros, variables and arrays) as a
@@ -155,24 +133,32 @@ export class GRASSModule extends Module {
     if (skipped.length) this.terminal.println(`Not saved (no delimiter fits): ${skipped.join(', ')}`);
   }
 
+  // Is a macro holding the prompt? ESC then stops it instead of leaving
+  isBusy() {
+    return this.session.isBusy();
+  }
+
   // Route keyboard events when this module is fullscreened.
-  // ESC when editor is inactive exits fullscreen (handled by main.js before this is called).
-  // ESC when editor is active saves the macro (handled here by forwarding to editor).
+  // ESC with nothing running exits fullscreen (handled by main.js before this
+  // is called). ESC inside the EDIT macro editor saves the macro, and ESC
+  // while a macro runs stops it. CTRL+C stops every macro, .B and .F too
   handleKey(key, keyCode, p) {
     if (this.editor.active) {
       this.editor.handleKey(key, keyCode, p);
       return;
     }
-    // ESC with no active editor: kill running tasks (fullscreen exit handled by main.js)
     if (keyCode === p.ESCAPE || keyCode === 27) {
-      this.scheduler.killAll();
-      this.terminal.println('[BREAK]');
+      this.session.breakMacro();
       return;
     }
-    // Track last key in $K1 device variable
-    if (key && key.length === 1) {
-      this.env.setDevice('$K1', key.charCodeAt(0));
+    if ((key === 'c' || key === 'C') && p.keyIsDown(p.CONTROL)) {
+      this.session.breakAll();
+      return;
     }
+    // While a macro runs, the arrow keys are only the joystick
+    const arrow = keyCode === p.LEFT_ARROW || keyCode === p.RIGHT_ARROW ||
+      keyCode === p.UP_ARROW || keyCode === p.DOWN_ARROW;
+    if (arrow && this.repl.busy) return;
     this.repl.handleKey(key, keyCode, p);
   }
 
@@ -187,24 +173,18 @@ export class GRASSModule extends Module {
     }
   }
 
-  // Convert main canvas mouse coordinates to GRASS coordinate space and update device vars.
-  // Called from ui.js when this module is fullscreened.
-  updateMouseFromCanvas(mx, my, canvasW, canvasH) {
-    const scaleX = canvasW / FB_WIDTH;
-    const scaleY = canvasH / FB_HEIGHT;
-    const scale = Math.min(scaleX, scaleY);
-    const w = Math.floor(FB_WIDTH * scale);
-    const h = Math.floor(FB_HEIGHT * scale);
-    const ox = Math.floor((canvasW - w) / 2);
-    const oy = Math.floor((canvasH - h) / 2);
-
-    const bx = Math.floor((mx - ox) / scale);
-    const by = Math.floor((my - oy) / scale);
-    const zx = Math.max(-160, Math.min(159, bx - 160));
-    const zy = Math.max(-100, Math.min(100, 100 - by));
-
-    this.env.setDevice('$X1', zx);
-    this.env.setDevice('$Y1', zy);
+  // Joystick 1, from the keyboard and mouse. Called from ui.js every frame
+  // this module is fullscreened; out of fullscreen the stick is let go.
+  // The arrow keys push it ($X1, $Y1: -1, 0 or 1), the mouse button is the
+  // trigger ($T1), and the mouse's position across the screen turns the knob
+  // ($K1: -128 at the left edge to 127 at the right)
+  updateJoystick(p) {
+    const x = (p.keyIsDown(p.RIGHT_ARROW) ? 1 : 0) - (p.keyIsDown(p.LEFT_ARROW) ? 1 : 0);
+    const y = (p.keyIsDown(p.UP_ARROW) ? 1 : 0) - (p.keyIsDown(p.DOWN_ARROW) ? 1 : 0);
+    const trigger = p.mouseIsPressed ? 1 : 0;
+    const t = p.width > 0 ? Math.max(0, Math.min(1, p.mouseX / p.width)) : 0.5;
+    const knob = Math.max(-128, Math.min(127, Math.round(t * 255 - 128))) || 0; // no -0
+    this.session.setJoystick(x, y, trigger, knob);
   }
 
   dispose() {

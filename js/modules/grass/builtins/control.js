@@ -52,19 +52,13 @@ export function registerControlCommands(interp) {
     throw err;
   }, 1);
 
-  // WAIT n — pause execution for n frames (1/60s each)
+  // WAIT n — pause for n frames (1/60s each). The task's lines stop for this
+  // frame and start again n frames on. Does nothing in a macro run inline
   reg.register('WAIT', (args, switches, ctx) => {
-    const frames = Math.floor(args[0] || 1);
+    const frames = Math.max(1, Math.floor(args[0] || 1));
     if (ctx.currentTask) {
-      if (!ctx.currentTask._waitCount) {
-        ctx.currentTask._waitCount = frames;
-      }
-      ctx.currentTask._waitCount--;
-      if (ctx.currentTask._waitCount > 0) {
-        ctx.currentTask.pc--;
-      } else {
-        delete ctx.currentTask._waitCount;
-      }
+      ctx.currentTask.sleep = frames - 1;
+      ctx.currentTask.yielded = true;
     }
     return 1;
   }, 2);

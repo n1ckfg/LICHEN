@@ -205,25 +205,38 @@ A patch doesn't keep files picked in a module's panel, so Image, VideoPlayer, QT
 
 ## GRASS Module
 
-The GRASS module (`js/modules/GRASSModule.js`) is a complete embedded GRASS interpreter — an emulation of the Datamax UV-1 / Sandin Image Processor's GRASS language (from the FakeGRASS project). It has no input ports and one video output.
+The GRASS module (`js/modules/GRASSModule.js`) is a complete embedded GRASS interpreter — an emulation of the Datamax UV-1 / Sandin Image Processor's GRASS language (from the FakeGRASS project). It has no input ports, one video output, and one param, Speed: the lines a frame a running macro gets (see Running macros).
 
 **Embedded source:** All FakeGRASS subsystems live in `js/modules/grass/` (flattened from FakeGRASS's `lang/`, `graphics/`, and `ui/` directories). No import path changes were needed since the relative structure is preserved.
 
+**Session:** `js/modules/grass/session.js`'s `GrassSession` is the whole machine: screen, terminal, prompt, interpreter, scheduler and command queue, with no p5 or DOM. `GRASSModule` wraps it, keeps its parts under the old names (`mod.terminal`, `mod.env`, ...), and calls `session.frame()` from `process()`. So Node can drive it a frame at a time, as the tests below do.
+
 **Rendering path:** The GRASS 2-bit framebuffer is converted to a `p5.Image` each frame via palette lookup (`_updateFBImage()`), then uploaded to the module's WebGL `outputFBO` as a texture via the passthrough shader. The terminal/REPL overlays are NOT in the video output — they are rendered directly on the main P2D canvas only when the module is fullscreened.
+
+**The beam:** the UV-1's TV showed screen memory at whatever moment the beam passed, so a cursor drawn and then erased in XOR flickered on screen instead of vanishing (lesson 7's DRAW, and lesson 9's `DISP CURS,X,Y,1;DISP CURS,X,Y,1`). The picture shown is `framebuffer.shown`: screen memory as it stood after a random one of the frame's drawing commands, or at the frame's end, chosen from the count the last frame made (`beginFrame()`, `endFrame()`). A frame that draws nothing shows memory as it is, so a still picture is unchanged.
 
 **Fullscreen behavior:**
 - Double-click the node preview to enter fullscreen (same hit-test logic as Monitor)
 - When fullscreened, all keyboard input is captured and routed to `mod.handleKey()` via `js/main.js keyPressed`
-- Mouse position is converted to GRASS coordinates (`$X1`/`$Y1`) each frame via `updateMouseFromCanvas()`
-- ESC (with no editor open) exits fullscreen; ESC inside the GRASS EDIT macro editor saves the macro
+- Joystick 1 is the keyboard and mouse (`updateJoystick()`, called by `NodeGraphUI` each fullscreen frame). The arrow keys push the stick (`$X1`, `$Y1`: −1, 0 or 1), the mouse button is the trigger (`$T1`), and the mouse's position across the screen is the knob (`$K1`: −128 at the left edge to 127 at the right). Out of fullscreen the stick is let go and the knob stays where it was. While a macro runs, the arrow keys only push the stick
+- ESC stops a running macro and stays fullscreen; with nothing running it exits fullscreen; inside the GRASS EDIT macro editor it saves the macro. CTRL+C stops every macro, `.B` and `.F` too, and drops queued commands
 - Terminal + REPL overlays render over the video in fullscreen mode
-- Clicking exits fullscreen (same as Monitor)
+- Clicking is the trigger, so it doesn't exit fullscreen (ESC does)
 
-**js/ui.js integration:** `getModuleHeight` and `_drawModule` treat GRASS like Monitor (large preview, `MONITOR_PREVIEW_W × MONITOR_PREVIEW_H`), plus a row under the preview for the Load and Save buttons (`hitTestGrassScriptBtn()`). `hitTestMonitorDblClick` checks for both `'Monitor'` and `'GRASS'` types.
+**Running macros:** commands typed at the prompt and commands from a loaded script join one queue (`session.queue`), and each frame starts queued commands until one holds it. `Interpreter.execTopLevel()` runs each: a line that is just a macro's name, with any arguments (`DRAW`, `GRIDBOXES 30`), starts that macro in the middleground, and anything else runs there and then. A middleground macro:
+- runs the Speed param's lines a frame (default 8), so its loops read the joystick as it moves and its drawing shows as it happens
+- holds the queue, and the prompt shows no `>`, until it ends, as the UV-1 held the attention mark. Lines typed meanwhile run after it, and a script carries on after it
+- suspends `.B` macros until it ends (lesson 11). These share the same number of lines a frame between them, one line each in turn
+- waits at `INPUT` for a typed answer when no arguments are left. The values go in separated by commas (lesson 8's `0,50,0,0,4`), fill the variables in order and are all set at once; with too few, the next is asked for. `INPUT.STR` takes the line whole. The answer goes after the macro's PROMPT text, which stays open on its line as PROMPT leaves it (`Terminal.atLineStart`)
+
+A macro called any other way (inside an expression, or from another macro) still runs inline as one line of its caller, capped at 100000 lines, and an INPUT there gets 0. Each scheduled macro has its own frame for locals, arguments and ONERROR (`mib`), which a `.B` macro keeps between passes. `WAIT n` stops a macro's lines for n frames. An error stops only the macro it is in, and is reported with the macro's name and, from a script, its line. Setting `$HR`, `$MN` or `$SC` sets the clock, which keeps time from there (lesson 7's CLOCK).
+
+**js/ui.js integration:** `getModuleHeight` and `_drawModule` treat GRASS like Monitor (large preview, `MONITOR_PREVIEW_W × MONITOR_PREVIEW_H`), plus two rows under the preview: the Load and Save buttons, then Reset (`hitTestGrassScriptBtn()`). `hitTestMonitorDblClick` checks for both `'Monitor'` and `'GRASS'` types.
 
 **Scripts:** a `.grass` file is plain text, what you would type at the prompt, one command per line; `files/grass/` holds the eleven lessons of the 1981 Datamax UV-1 Zgrass manual (`ref/markdown/`) in this form. `js/modules/grass/script.js` holds what reads and writes them:
-- **Load** (`GRASSModule.pickScript()`, `loadScript()`): `splitScript()` splits the file into commands. A `[]` or `{}` string runs on over lines, as a macro does, and a quote ends with its line, so a stray one can't swallow the rest of the file. Each command is echoed and run in order, as if typed, with a `+` before its later lines as the UV-1 showed. An error is printed with its line in the file and the rest still runs. Loading adds to the workspace, as GETTAPE did; it clears nothing.
+- **Load** (`GRASSModule.pickScript()`, `loadScript()`, `GrassSession.load()`): `splitScript()` splits the file into commands. A `[]` or `{}` string runs on over lines, as a macro does, and a quote ends with its line, so a stray one can't swallow the rest of the file. The commands are queued and run in order, as if typed (see Running macros), each echoed with a `+` before its later lines as the UV-1 showed. A script that runs a macro waits for it, so lesson 4 stops at MANYSINES for its three values, and lesson 8's CZROT rotates until ESC. An error is printed with its line in the file and the rest still runs. Loading adds to the workspace, as GETTAPE did; it clears nothing.
 - **Save** (`saveScript()`): `serializeWorkspace()` writes every global as `NAME=[...]` or `NAME=value`, and every array as `ARRAY` plus its non-zero elements, so Loading the file defines them all again. A string goes in `[]`, else `{}`, else quotes, whichever reads back unchanged. Only a string none of them fits is left out, and reported.
+- **Reset** (`reset()`): stops every macro and replaces the session with a new one, so the screen, terminal, prompt history, workspace (macros, variables, arrays, snaps), palette and clock are as a newly added node's. Checked in headless Chrome against a new node, field by field. The Speed knob is a patch setting and stays where it is.
 - A patch doesn't save the workspace.
 
 **Dialect:** the interpreter follows the lessons' Zgrass:
@@ -232,11 +245,11 @@ The GRASS module (`js/modules/GRASSModule.js`) is a complete embedded GRASS inte
 - Arguments may be in parentheses (`PRINT(10,20,30)`). `%` returns fractions. A name may hold `$` after its first letter.
 - Abbreviations: an ambiguous command prefix resolves to the match with the shortest minimum length, so `P` and `PR` are PRINT (POINT now needs `POI`). A name that is neither a command nor defined runs the one macro, or reads the one array, it is a prefix of (`Q`, `PY(L)`).
 - A macro used as a function (`SQUAREM(?a,?b)`) returns its RETURN value. `INPUT` can fill an array element. `ONERROR label` branches once on an error. `COMPILE a,b` copies macro `a` to `b`. `TIMEOUT n` runs its `.F` macro every `n` frames. A macro called from a `.B` or `.F` task keeps its own GOTOs and SKIPs, and macro lines keep blank lines and quoted strings that run over several lines (`splitMacroLines()`), so SKIP counts them as Zgrass did.
+- DISPLAY's displaymodes 0–3 are plop, XOR, OR and AND, as in lesson 9, so two DISPLAYMODE 1s draw and erase. 4 and up keep FakeGRASS's colormode encoding (4, 8 and 12 are XOR, OR and AND).
 
-Checked in Node against all eleven lessons, and in headless Chrome through the buttons. 141 of the 179 commands run; every macro the lessons define runs except as listed below; and a workspace saved from six lessons (62 names, 4 arrays) loads back identical. What still fails is the hardware the lessons assume:
+Checked in Node against all eleven lessons, and in headless Chrome through the buttons, the keyboard and the mouse. 141 of the 179 commands run, and a workspace saved from six lessons (62 names, 4 arrays) loads back identical. Stepped a frame at a time, every macro of lessons 7 and 9 runs as the lessons describe: RANGE prints the trigger, the three DRAWs and COLORS, CHOOSY, STEST and JANEDRAW follow the stick, trigger and knob, CLOCK and JANEDRAW wait for and take typed answers, CBARS and BEHIND draw over frames and end, and both XOR cursors show in some frames and never in all. What still fails is the hardware the lessons assume:
 - tape and disk (`PUTTAPE`, `GETTAPE`, `D...`), the `TXT` swap module, and the system macro `NB`
-- the joystick: `$X1`/`$Y1` are the mouse position in fullscreen, not a −1…1 push, and `$K1` is the last key, not a knob
-- `INPUT` waiting for a typed answer. A macro typed at the prompt runs within the frame (middleground), capped at 100000 lines, so INPUT gives 0 unless the macro was given arguments, and a loop like RANGE or DRAW runs its 100000 lines at once instead of over time. Only `.B` and `.F` macros run across frames.
+- the UV-1's colours: the palette is LICHEN's, so `$L0`–`$R3` values and the default colours don't match the lessons' (white, red, green, blue; "127 is yellow")
 - lines the lessons show as mistakes or placeholders (`POINT 14;30,4`, `DSETUP n`), the data typed into ENTER, and two typos in the original text (lesson 4's `GOTO 1UP)`, lesson 8's `IF (N=N+1),10`)
 
 ## NAPLPS Module

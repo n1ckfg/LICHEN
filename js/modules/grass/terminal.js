@@ -6,36 +6,58 @@ export class Terminal {
     this.lines = [];
     this.maxLines = maxLines;
     this.dirty = true;
+    // Is the last line ended? println ends it; print leaves it open, so the
+    // next print (or an INPUT answer) goes on the same line
+    this.atLineStart = true;
   }
 
-  // Add a line of text
+  // Print text as a line of its own, after any line print left open
   println(text) {
+    if (!this.atLineStart) {
+      this.print(text);
+      this.newline();
+      return;
+    }
     const str = String(text);
     // Split on newlines so multi-line output works
     const parts = str.split('\n');
     for (const part of parts) {
       this.lines.push(part);
     }
-    while (this.lines.length > this.maxLines) {
-      this.lines.shift();
-    }
+    this._trim();
     this.dirty = true;
   }
 
-  // Print without newline — append to last line
+  // Print without newline — continue the open line, or start one
   print(text) {
-    const str = String(text);
-    if (this.lines.length === 0) {
-      this.lines.push(str);
-    } else {
-      this.lines[this.lines.length - 1] += str;
-    }
+    const parts = String(text).split('\n');
+    parts.forEach((part, i) => {
+      if (i === 0 && !this.atLineStart && this.lines.length > 0) {
+        this.lines[this.lines.length - 1] += part;
+      } else {
+        this.lines.push(part);
+      }
+    });
+    this.atLineStart = false;
+    this._trim();
     this.dirty = true;
+  }
+
+  // End the open line
+  newline() {
+    this.atLineStart = true;
+  }
+
+  _trim() {
+    while (this.lines.length > this.maxLines) {
+      this.lines.shift();
+    }
   }
 
   // Clear terminal
   clear() {
     this.lines = [];
+    this.atLineStart = true;
     this.dirty = true;
   }
 

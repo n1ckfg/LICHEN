@@ -5,6 +5,9 @@
 //   - $XX = device variable
 //   - Arrays created with ARRAY command
 
+// $HR, $MN and $SC in milliseconds
+const CLOCK_UNITS = { $HR: 3600000, $MN: 60000, $SC: 1000 };
+
 export class Environment {
   constructor() {
     // Global variables (uppercase names, macros, etc.)
@@ -17,6 +20,8 @@ export class Environment {
     this.mibStack = [];
     // Error handler label
     this.onErrorLabel = null;
+    // Setting $HR, $MN or $SC sets the clock, which then keeps time from there
+    this.clockOffset = 0;
 
     // Initialize device variables with defaults
     this.initDeviceVars();
@@ -91,6 +96,10 @@ export class Environment {
 
     // Device variable
     if (upper.startsWith('$')) {
+      const unit = CLOCK_UNITS[upper];
+      if (unit && typeof value === 'number') {
+        this.clockOffset += (Math.floor(value) - (this.devices.get(upper) ?? 0)) * unit;
+      }
       this.devices.set(upper, value);
       return;
     }
@@ -158,7 +167,12 @@ export class Environment {
 
   // Push a new MIB frame (macro invocation)
   pushMIB(macroName, args) {
-    this.mibStack.push({
+    this.mibStack.push(this.newMIB(macroName, args));
+  }
+
+  // A new MIB frame (macro invocation)
+  newMIB(macroName, args) {
+    return ({
       macroName,
       locals: new Map(),
       args: args || [],
@@ -215,7 +229,7 @@ export class Environment {
 
   // Update clock device vars
   updateClock() {
-    const now = new Date();
+    const now = new Date(Date.now() + this.clockOffset);
     this.devices.set('$HR', now.getHours());
     this.devices.set('$MN', now.getMinutes());
     this.devices.set('$SC', now.getSeconds());

@@ -14,6 +14,37 @@ export class Framebuffer {
     // Current drawing position (for LINE)
     this.cursorX = 0;
     this.cursorY = 0;
+    // What the TV shows this frame (see beginFrame)
+    this.shown = new Uint8Array(FB_WIDTH * FB_HEIGHT);
+    this.ops = 0;
+    this.lastOps = 0;
+    this.beamAt = 1;
+    this.beamDone = false;
+  }
+
+  // The UV-1's TV showed the screen memory at whatever moment the beam passed,
+  // so a cursor drawn and then erased in XOR (lesson 7's DRAW, lesson 9's
+  // DISP CURS twice) flickered instead of vanishing. Each frame is shown as it
+  // stood after a random one of its drawing commands, or at its end, drawn
+  // from the number the last frame made. A frame that draws nothing is shown
+  // whole
+  beginFrame() {
+    this.ops = 0;
+    this.beamAt = 1 + Math.floor(Math.random() * (this.lastOps + 1));
+    this.beamDone = false;
+  }
+
+  endFrame() {
+    if (!this.beamDone) this.shown.set(this.pixels);
+    this.lastOps = this.ops;
+  }
+
+  // Count a drawing command, and catch the picture if the beam is here
+  _op() {
+    if (++this.ops === this.beamAt && !this.beamDone) {
+      this.shown.set(this.pixels);
+      this.beamDone = true;
+    }
   }
 
   // Convert GRASS coords (-160..159, -100..100) to buffer coords (0..319, 0..200)
@@ -79,6 +110,7 @@ export class Framebuffer {
   // Clear entire framebuffer to color 0
   clear() {
     this.pixels.fill(0);
+    this._op();
   }
 
   // Draw a filled box (GRASS coords: center + half-sizes)
@@ -99,11 +131,13 @@ export class Framebuffer {
         this.pixels[idx] = applyColormode(this.pixels[idx] & 3, colormode);
       }
     }
+    this._op();
   }
 
   // Draw a single point
   point(zx, zy, colormode) {
     this.setPixel(zx, zy, colormode);
+    this._op();
   }
 
   // Draw a line from current position to (zx, zy) using Bresenham's algorithm
@@ -130,6 +164,7 @@ export class Framebuffer {
     // Update cursor to endpoint
     this.cursorX = zx;
     this.cursorY = zy;
+    this._op();
   }
 
   // Draw an ellipse (GRASS coords: center + radii)
@@ -142,6 +177,7 @@ export class Framebuffer {
 
     if (arx === 0 && ary === 0) {
       this.setPixelBuf(bcx, bcy, colormode);
+      this._op();
       return;
     }
 
@@ -153,6 +189,7 @@ export class Framebuffer {
       const py = bcy + Math.round(ary * Math.sin(angle));
       this.setPixelBuf(px, py, colormode);
     }
+    this._op();
   }
 
   // Capture a region as a sprite (returns 2D array of 2-bit values)
@@ -195,8 +232,10 @@ export class Framebuffer {
         if (!this.inBounds(bx, by)) continue;
         const srcPixel = sprite.data[sy * sprite.width + sx];
         const idx = by * FB_WIDTH + bx;
-        // displayMode acts like colormode operation on the sprite pixel
-        const operation = (displayMode >> 2) & 3;
+        // Displaymodes 0-3 are the lessons' plop, XOR, OR and AND (two
+        // DISPLAYMODE 1s draw and erase). 4 and up keep FakeGRASS's colormode
+        // encoding, where 4, 8 and 12 are XOR, OR and AND
+        const operation = displayMode < 4 ? displayMode & 3 : (displayMode >> 2) & 3;
         const existing = this.pixels[idx] & 3;
         let result;
         switch (operation) {
@@ -209,5 +248,6 @@ export class Framebuffer {
         this.pixels[idx] = result;
       }
     }
+    this._op();
   }
 }

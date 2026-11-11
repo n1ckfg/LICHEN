@@ -45,6 +45,34 @@ export class Interpreter {
     }
   }
 
+  // Run a command typed at the prompt (or read from a script). A line that
+  // is just a macro's name, with any arguments (DRAW, GRIDBOXES 30), starts
+  // that macro in the middleground: it runs over frames, holding the prompt
+  // until it ends, so its loops can read the joystick and its INPUTs wait for
+  // a typed answer. Returns the task then, else null after running the line
+  // here and now. A macro called any other way (inside an expression, or
+  // from another macro) still runs inline, as one line of its caller
+  execTopLevel(source) {
+    const ast = parse(tokenize(source));
+    if (ast && ast.type === 'Command' && !this.commands.resolve(ast.name) &&
+        !(ast.switches || []).some(s => s === 'B' || s === 'F')) {
+      let name = null;
+      if (this.env.isMacro(ast.name)) {
+        name = ast.name;
+      } else {
+        const full = this.env.resolvePrefix(ast.name);
+        if (full && this.env.isMacro(full)) name = full;
+      }
+      if (name) {
+        const args = ast.args.map(a => this.eval(a));
+        const lines = splitMacroLines(this.env.get(name));
+        return this.scheduler.addTask('MG', name.toUpperCase(), lines, args, this.env.newMIB(name, args));
+      }
+    }
+    this.eval(ast);
+    return null;
+  }
+
   // Evaluate an AST node
   eval(node) {
     if (node === null || node === undefined) return 0;
@@ -305,8 +333,8 @@ export class Interpreter {
     const mode = this.getMacroMode(switches);
 
     if (mode === 'FG' || mode === 'BG') {
-      // Schedule as foreground or background task
-      this.scheduler.addTask(mode, name, lines, args);
+      // Schedule as foreground or background task, with its own locals
+      this.scheduler.addTask(mode, name, lines, args, this.env.newMIB(name, args));
       return 1;
     }
 
