@@ -5,7 +5,7 @@
 $L1=29
 . SNAP copies part of the screen into a picture, and DISPLAY puts it
 . back anywhere, in displaymode 0 plop, 1 XOR, 2 OR or 3 AND.
-. Type STEST to scatter copies of a snap, and ESC to stop it.
+. Type STEST to scatter copies of a snap, and press Stop to stop it.
 STEST=[CLEAR
 BOX 0,0,20,20,3
 BOX 5,0,10,15,2
@@ -93,7 +93,7 @@ IF (X=X+1)<51,SKIP -2]
 . THE ANIMATION. BOUNCE makes STEST's picture with a black border round
 . it, and bounces it off the edges of the screen. One DISPLAY draws the
 . picture at its new place and its border wipes out the old one, so it
-. never flickers. Press ESC to stop it.
+. never flickers. The node's Stop button stops it, and Play carries on.
 BOUNCE=[CLEAR
 BOX 0,0,20,20,3;BOX 5,0,10,15,2;BOX -5,0,10,15,1
 SNAP BALL,0,0,26,26

@@ -14,7 +14,7 @@ TEST
 . THE ANIMATION, and a macro to edit. SCANNER sweeps a bar back and
 . forth, changing color at each end. Each step draws the bar in its new
 . place first, then blacks out the strip it left behind, so the bar is
-. always whole on the screen. Press ESC to stop it, type EDIT SCANNER,
+. always whole on the screen. Press the node's Stop button, type EDIT SCANNER,
 . change the bar width 10, or D, the step, and run it again.
 SCANNER=[CLEAR;X=0;D=2;C=1
 X=X+D;BOX X,0,10,201,C;BOX X-3*D,0,D,201,0

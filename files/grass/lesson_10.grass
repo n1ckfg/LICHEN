@@ -21,7 +21,7 @@ IF (N=N+1)<10,SKIP -1]
 . to right, like an oscilloscope. Just ahead of the pen a narrow box
 . blacks out the last pass, so the old wave is replaced as the new one
 . is drawn. The wave is two sines, and as it starts each pass where the
-. last left off, it seems to move. Press ESC to stop it.
+. last left off, it seems to move. The node's Stop button stops it, and Play carries on.
 SCOPE=[CLEAR;XYAXES;A=0
 1PASS X=-138;LINE X,10+SIN(A)*40+SIN(A*3)*20,4
 BOX X+4,11,6,180,0;LINE X,10+SIN(A)*40+SIN(A*3)*20,3;A=A+3

@@ -13,7 +13,7 @@ SAM
 
 . .B runs a macro in the background, over and over, while you go on
 . typing. Type CHANGE.B to steer colors 0 to 2 with the joystick, and
-. CTRL+C to stop every macro. The lesson's NB.B uses the system macro
+. the node's Stop button to stop every macro. The lesson's NB.B uses the system macro
 . NB, which this emulator doesn't have.
 CHANGE=[$L0=$L0+$X1*8
 $L1=$L1+$Y1*8
@@ -39,7 +39,8 @@ UGH
 . both in the background, while CTIME.F flips the middle of the screen
 . every 5 seconds. Everything moving is drawn in XOR, so the flips and
 . the hands never spoil each other. The prompt stays free: type while
-. they run. CTRL+C stops them all.
+. they run. The node's Stop button stops them all, and Play starts them
+. again where they were.
 FACE=[CLEAR
 CIRCLE 0,0,96,80,3
 N=0

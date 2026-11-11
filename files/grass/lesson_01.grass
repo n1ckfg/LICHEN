@@ -58,6 +58,6 @@ PRINT POI(0,0),POI(0,1),POI(30,-30),POI(200,200)
 . THE ANIMATION. CONFETTI draws one box, at a random place, of a random
 . size and a random colormode (0 is black), and SKIP 0 runs its line
 . again, for ever. A macro is a name given to lines in brackets, as
-. lesson 2 shows. Press ESC to stop it.
+. lesson 2 shows. The node's Stop button stops it, and Play carries on.
 CONFETTI=[BOX -160%159,-100%100,4%40,4%40,0%4;SKIP 0]
 CONFETTI

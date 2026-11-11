@@ -42,6 +42,8 @@ export class GrassSession {
     this.speed = 8;
     // Commands waiting to run: { text, line?, batch?, echo? } or { summary }
     this.queue = [];
+    // Macros the Stop button stopped, for Play: { FG, MG, BG } task lists
+    this.stopped = null;
 
     // Joystick 1, as the frame's caller last set it (setJoystick). A
     // joystick nobody touched this frame is let go: centred, trigger out.
@@ -139,8 +141,63 @@ export class GrassSession {
     if (item && item.batch) item.batch.errors++;
   }
 
-  // ESC: stop the middleground macro, or the macro waiting for INPUT. .B and
-  // .F macros keep running, and queued commands carry on
+  // Is a macro running (middleground, .B or .F), or one waiting for INPUT?
+  isRunning() {
+    return this.scheduler.isRunning() || this.repl.isWaitingForInput();
+  }
+
+  // Is there a stopped macro for Play to resume?
+  hasStopped() {
+    return this.stopped !== null;
+  }
+
+  // The Stop button: break, as ESC did, so the prompt is free again, and also
+  // stop the .B and .F macros. Every macro keeps its place (line, variables,
+  // labels, a WAIT under way), so Play can carry on from there. A macro
+  // waiting for INPUT will ask again. Queued commands carry on
+  stop() {
+    const sc = this.scheduler;
+    if (!this.isRunning()) return;
+    const tasks = { FG: sc.foreground, MG: sc.middleground, BG: sc.background };
+    for (const list of Object.values(tasks)) {
+      for (const t of list) {
+        // Its INPUT line runs again on Play (pc is already back on it)
+        if (t._waitingForInput) t._waitingForInput = false;
+      }
+    }
+    this.repl.cancelInput();
+    sc.foreground = [];
+    sc.middleground = [];
+    sc.background = [];
+    sc.breakRequested = true;
+    // A second Stop, after Play or new macros, adds to what's stopped
+    if (this.stopped) {
+      for (const k of Object.keys(tasks)) this.stopped[k].push(...tasks[k]);
+    } else {
+      this.stopped = tasks;
+    }
+    this.terminal.newline();
+    this.terminal.println('[BREAK]');
+  }
+
+  // The Play button: carry on with the macros Stop stopped, where they were.
+  // A middleground one goes after any started since, as a typed one would
+  play() {
+    const s = this.stopped;
+    if (!s) return;
+    this.stopped = null;
+    const sc = this.scheduler;
+    sc.foreground.push(...s.FG);
+    sc.middleground.push(...s.MG);
+    sc.background.push(...s.BG);
+    const names = [...s.MG, ...s.BG, ...s.FG].map(t => t.name);
+    this.terminal.newline();
+    this.terminal.println(`[PLAY] ${names.join(', ')}`);
+  }
+
+  // ESC's old break: end the middleground macro, or the macro waiting for
+  // INPUT, for good. .B and .F macros keep running, and queued commands
+  // carry on. (The Stop button now does this, resumably)
   breakMacro() {
     if (this.repl.isWaitingForInput()) {
       this.repl.cancelInput();
@@ -155,6 +212,7 @@ export class GrassSession {
     this.repl.cancelInput();
     this.scheduler.killAll();
     this.queue = [];
+    this.stopped = null;
     this.terminal.println('[BREAK]');
   }
 }

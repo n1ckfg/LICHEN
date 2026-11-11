@@ -139,22 +139,28 @@ export class GRASSModule extends Module {
     if (skipped.length) this.terminal.println(`Not saved (no delimiter fits): ${skipped.join(', ')}`);
   }
 
-  // Is a macro holding the prompt? ESC then stops it instead of leaving
+  // Is a macro holding the prompt?
   isBusy() {
     return this.session.isBusy();
   }
 
+  // Stop button: break every running macro, keeping its place for Play
+  stop() {
+    this.session.stop();
+  }
+
+  // Play button: carry on with what Stop stopped
+  play() {
+    this.session.play();
+  }
+
   // Route keyboard events when this module is fullscreened.
-  // ESC with nothing running exits fullscreen (handled by main.js before this
-  // is called). ESC inside the EDIT macro editor saves the macro, and ESC
-  // while a macro runs stops it. CTRL+C stops every macro, .B and .F too
+  // ESC exits fullscreen, and macros carry on running (main.js handles it
+  // before this is called), except inside the EDIT macro editor, where ESC
+  // saves the macro. CTRL+C stops every macro, .B and .F too, for good
   handleKey(key, keyCode, p) {
     if (this.editor.active) {
       this.editor.handleKey(key, keyCode, p);
-      return;
-    }
-    if (keyCode === p.ESCAPE || keyCode === 27) {
-      this.session.breakMacro();
       return;
     }
     if ((key === 'c' || key === 'C') && p.keyIsDown(p.CONTROL)) {

@@ -194,9 +194,9 @@ const sketch = (p) => {
       const fsmod = pipeline.graph.nodes.get(ui.fullscreenMonitor);
       if (fsmod && fsmod.type === 'GRASS') {
         // ESC while editor is open saves the macro (editor handles it); stay fullscreen
-        // ESC while a macro runs stops it (handleKey); stay fullscreen
-        // ESC otherwise exits fullscreen
-        if ((p.keyCode === 27) && !fsmod.editor.active && !fsmod.isBusy()) {
+        // ESC otherwise exits fullscreen, and running macros carry on (the
+        // node's Stop button breaks them)
+        if ((p.keyCode === 27) && !fsmod.editor.active) {
           ui.fullscreenMonitor = null;
         } else {
           fsmod.handleKey(p.key, p.keyCode, p);

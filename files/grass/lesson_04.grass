@@ -87,7 +87,7 @@ PRINT "THAT'S FUNNY!, ",XXXX," IS MY NAME TOO!"]
 
 . THE ANIMATION. RADAR is SWEEP going round and round. Each half turn
 . paints its lines in the next color over the last half turn's, so it
-. never needs to CLEAR. Press ESC to stop it.
+. never needs to CLEAR. The node's Stop button stops it, and Play carries on.
 RADAR=[CLEAR;ANGLE=0;C=1
 X=SIN(ANGLE)*150;Y=COS(ANGLE)*96
 LINE X,Y,4;LINE -X,-Y,C

@@ -30,7 +30,8 @@ IF A==10,PRINT "huh?"
 . lines are drawn in XOR, colormodes 5 to 7. The first pass just draws
 . them. After that each step draws a line to N*M and then the last
 . pass's line to N*MO again, which takes it off, so nothing is ever
-. cleared. Where lines cross, their colors mix. Press ESC to stop.
+. cleared. Where lines cross, their colors mix.
+. The node's Stop button stops it, and Play carries on.
 TIMES=[CLEAR;N=0;M=2
 LINE 115*COS(N*6),96*SIN(N*6),4;LINE 115*COS(N*M*6),96*SIN(N*M*6),N\3+5
 IF (N=N+1)<60,SKIP -1

@@ -596,7 +596,7 @@ export class NodeGraphUI {
       mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh';
     let contentH = 1;
     if (isLargePreview) {
-      // GRASS has a row of Load and Save buttons under its preview, then Reset
+      // GRASS has a row of Load and Save buttons under its preview, then Play, Stop and Reset
       contentH = 6 + MONITOR_PREVIEW_H + (mod.type === 'GRASS' ? 50 : 0);
     } else if (hasPreview) {
       contentH = 6 + PREVIEW_H + (hasFileBtn ? 26 : 0);
@@ -1160,18 +1160,28 @@ export class NodeGraphUI {
     return null;
   }
 
-  // GRASS's Load, Save and Reset buttons: { id, action: 'load' | 'save' | 'reset' } or null
-  hitTestGrassScriptBtn(wx, wy) {
-    const graph = this.pipeline.graph;
+  // The GRASS node's buttons under its preview: Load and Save, then Play,
+  // Stop and Reset. Each { action, x, y, w, label }, 20 high
+  _grassButtons(mod) {
+    const btnY = this._previewRect(mod).y + MONITOR_PREVIEW_H + 6;
     const halfW = (MODULE_WIDTH - 24) / 2;
-    for (const [id, mod] of graph.nodes) {
+    const thirdW = (MODULE_WIDTH - 28) / 3;
+    const third = (i) => mod.x + 10 + i * (thirdW + 4);
+    return [
+      { action: 'load', x: mod.x + 10, y: btnY, w: halfW, label: 'Load .grass' },
+      { action: 'save', x: mod.x + 14 + halfW, y: btnY, w: halfW, label: 'Save .grass' },
+      { action: 'play', x: third(0), y: btnY + 24, w: thirdW, label: 'Play' },
+      { action: 'stop', x: third(1), y: btnY + 24, w: thirdW, label: 'Stop' },
+      { action: 'reset', x: third(2), y: btnY + 24, w: thirdW, label: 'Reset' },
+    ];
+  }
+
+  // GRASS's buttons: { id, action: 'load' | 'save' | 'play' | 'stop' | 'reset' } or null
+  hitTestGrassScriptBtn(wx, wy) {
+    for (const [id, mod] of this.pipeline.graph.nodes) {
       if (mod.type !== 'GRASS' || mod.collapsed) continue;
-      const btnY = this._previewRect(mod).y + MONITOR_PREVIEW_H + 6;
-      if (wy >= btnY && wy <= btnY + 20) {
-        if (wx >= mod.x + 10 && wx <= mod.x + 10 + halfW) return { id, action: 'load' };
-        if (wx >= mod.x + 14 + halfW && wx <= mod.x + MODULE_WIDTH - 10) return { id, action: 'save' };
-      } else if (wy >= btnY + 24 && wy <= btnY + 44) {
-        if (wx >= mod.x + 10 && wx <= mod.x + MODULE_WIDTH - 10) return { id, action: 'reset' };
+      for (const b of this._grassButtons(mod)) {
+        if (wx >= b.x && wx <= b.x + b.w && wy >= b.y && wy <= b.y + 20) return { id, action: b.action };
       }
     }
     return null;
@@ -1930,26 +1940,24 @@ export class NodeGraphUI {
       p.rect(preview.x - 0.5, preview.y - 0.5, MONITOR_PREVIEW_W + 1, MONITOR_PREVIEW_H + 1, 2);
     }
 
-    // GRASS Load and Save script buttons (side by side, under the preview),
-    // then Reset (full width below them)
+    // GRASS buttons under the preview: Load and Save, then Play, Stop and
+    // Reset. Play is dim with nothing stopped, Stop with nothing running
     if (mod.type === 'GRASS') {
-      const btnY = preview.y + MONITOR_PREVIEW_H + 6;
-      const halfW = (MODULE_WIDTH - 24) / 2;
-      const buttons = [
-        [mod.x + 10, btnY, halfW, 'Load .grass'],
-        [mod.x + 14 + halfW, btnY, halfW, 'Save .grass'],
-        [mod.x + 10, btnY + 24, MODULE_WIDTH - 20, 'Reset'],
-      ];
-      for (const [bx, by, bw, label] of buttons) {
-        p.fill(60, 60, 90);
-        p.stroke(100);
+      const dim = {
+        play: !mod.session.hasStopped(),
+        stop: !mod.session.isRunning(),
+      };
+      for (const b of this._grassButtons(mod)) {
+        const off = dim[b.action];
+        p.fill(off ? 45 : 60, off ? 45 : 60, off ? 65 : 90);
+        p.stroke(off ? 75 : 100);
         p.strokeWeight(1);
-        p.rect(bx, by, bw, 20, 3);
+        p.rect(b.x, b.y, b.w, 20, 3);
         p.noStroke();
-        p.fill(200);
+        p.fill(off ? 110 : 200);
         p.textSize(9);
         p.textAlign(p.CENTER, p.CENTER);
-        p.text(label, bx + bw / 2, by + 10);
+        p.text(b.label, b.x + b.w / 2, b.y + 10);
       }
     }
 
@@ -2210,13 +2218,15 @@ export class NodeGraphUI {
       return;
     }
 
-    // Check GRASS Load / Save / Reset buttons
+    // Check GRASS Load / Save / Play / Stop / Reset buttons
     const grassHit = this.hitTestGrassScriptBtn(world.x, world.y);
     if (grassHit !== null) {
       const mod = this.pipeline.graph.nodes.get(grassHit.id);
       if (mod) {
         if (grassHit.action === 'load') mod.pickScript();
         else if (grassHit.action === 'save') mod.saveScript();
+        else if (grassHit.action === 'play') mod.play();
+        else if (grassHit.action === 'stop') mod.stop();
         else mod.reset();
       }
       return;

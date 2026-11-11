@@ -5,7 +5,8 @@
 $L1=29
 . In fullscreen the keyboard and mouse are joystick 1: the arrow keys
 . push the stick, $X1 and $Y1, the mouse button is the trigger, $T1, and
-. the mouse across the screen is the knob, $K1. ESC stops a macro.
+. the mouse across the screen is the knob, $K1. ESC leaves fullscreen,
+. and the macro carries on; the node's Stop button stops it.
 . Type RANGE, DRAW, COLORS, CHOOSY or CLOCK to try them.
 RANGE=[PRINT $T1;SKIP 0]
 
@@ -53,7 +54,7 @@ PRINT $HR,$MN,$SC;SKIP 0]
 . in the right. MARQUEE then hands each color on to the next slot,
 . $L1 to $L3 and $R1 to $R3, so the colors march along the bars. Only
 . the colors change, never the picture, so there is nothing to redraw.
-. Press ESC to stop it.
+. The node's Stop button stops it, and Play carries on.
 CBARS
 MARQUEE=[A=$L1;$L1=$L2;$L2=$L3;$L3=A
 A=$R1;$R1=$R2;$R2=$R3;$R3=A;WAIT 8;SKIP -1]
