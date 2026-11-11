@@ -39,7 +39,7 @@ Calculate the arctangent of `value` and return the angle.<br>
 Calculate the two-argument arctangent of `y` and `x`.<br>
 
 **BOX `xcenter, ycenter, xsize, ysize, [colormode]`**<br>
-Draw a box centered at (`xcenter`, `ycenter`) with half-width `xsize` and half-height `ysize` using the specified `colormode` (defaults to 3).<br>
+Draw a box centered at (`xcenter`, `ycenter`), `xsize` wide and `ysize` high, using the specified `colormode` (defaults to 3).<br>
 
 **CHR `num`**<br>
 Convert a number to its corresponding character.<br>
@@ -132,7 +132,7 @@ Calculate the sine of `angle`.<br>
 Perform a relative jump based on `n` lines (negative for backward, positive for forward, 0 for same line).<br>
 
 **SNAP `name, x, y, xsize, ysize`**<br>
-Capture a rectangular region of the screen as a sprite and store it under `name`.<br>
+Capture the `xsize` by `ysize` region of the screen centered at (`x`, `y`) as a sprite and store it under `name`. DISPLAY at the same spot puts it back in place.<br>
 
 **SQRT `value`**<br>
 Calculate the square root of a non-negative `value`.<br>

@@ -1,4 +1,8 @@
 . LESSON 11 ADVANCED CONCEPTS
+. In these examples color 1 is teal, not red. $L1 says which of the
+. palette's 256 colors color 1 shows (lesson 7); 29 is teal, and
+. $L1=1 makes it red again.
+$L1=29
 . A macro can be used as a function, and RETURN gives its value.
 SAM=[a=10
 b=20

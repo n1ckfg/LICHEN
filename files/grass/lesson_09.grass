@@ -1,4 +1,8 @@
 . LESSON 9 MORE ON GRAPHICS
+. In these examples color 1 is teal, not red. $L1 says which of the
+. palette's 256 colors color 1 shows (lesson 7); 29 is teal, and
+. $L1=1 makes it red again.
+$L1=29
 . SNAP copies part of the screen into a picture, and DISPLAY puts it
 . back anywhere, in displaymode 0 plop, 1 XOR, 2 OR or 3 AND.
 . Type STEST to scatter copies of a snap, and ESC to stop it.

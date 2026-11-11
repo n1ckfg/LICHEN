@@ -1,4 +1,8 @@
 . LESSON 5 STORING MACROS ON TAPE AND DISK
+. In these examples color 1 is teal, not red. $L1 says which of the
+. palette's 256 colors color 1 shows (lesson 7); 29 is teal, and
+. $L1=1 makes it red again.
+$L1=29
 . There is no cassette or disk here, so this lesson's commands, PUTTAPE,
 . GETTAPE, DSETUP, DINIT, DS, DPUT, DGET, DCREATE and DUSEMAP, aren't
 . emulated. The GRASS node's buttons do their job instead:

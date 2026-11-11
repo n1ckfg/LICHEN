@@ -1,4 +1,8 @@
 . LESSON 10 SWAP MODULES
+. In these examples color 1 is teal, not red. $L1 says which of the
+. palette's 256 colors color 1 shows (lesson 7); 29 is teal, and
+. $L1=1 makes it red again.
+$L1=29
 . A swap module is a program loaded from tape. The lesson's is TXT,
 . which writes numbers and letters on the TV, and GETTAPE TXT loads it.
 . There is no tape and no TXT here, so XYAXES puts tick marks where TXT
