@@ -18,19 +18,19 @@ export class DisplacerModule extends Module {
       { id: '3e00', name: 'map', type: 'video' },
     ];
     this.outputs = [{ id: 'c7b3', name: 'out', type: 'video' }];
-    // Max displacements are in pixels of the logical frame, so +-640 and +-480
-    // can push a pixel a whole frame width or height
+    // Max displacements are in pixels of the logical frame, and run up to a
+    // whole frame width or height either way
     this.params = {
       xChannel: {
         id: 'd407', value: 0, min: 0, max: CHANNELS.length - 1, step: 1, label: 'X From',
         widget: 'dropdown', valueLabels: CHANNELS,
       },
-      xMax: { id: '0705', value: 20, min: -640, max: 640, step: 1, label: 'X Max' },
+      xMax: { id: '0705', value: 20, min: -glCanvas.width, max: glCanvas.width, step: 1, label: 'X Max' },
       yChannel: {
         id: '3f5c', value: 1, min: 0, max: CHANNELS.length - 1, step: 1, label: 'Y From',
         widget: 'dropdown', valueLabels: CHANNELS,
       },
-      yMax: { id: 'c16a', value: 20, min: -480, max: 480, step: 1, label: 'Y Max' },
+      yMax: { id: 'c16a', value: 20, min: -glCanvas.height, max: glCanvas.height, step: 1, label: 'Y Max' },
       edges: {
         id: '176c', value: 0, min: 0, max: EDGES.length - 1, step: 1, label: 'Edges',
         widget: 'dropdown', valueLabels: EDGES,
@@ -38,6 +38,11 @@ export class DisplacerModule extends Module {
     };
     this.createShader(displacerFrag);
     this.createOutputFBO();
+  }
+
+  frameResized(w, h) {
+    [this.params.xMax.min, this.params.xMax.max] = [-w, w];
+    [this.params.yMax.min, this.params.yMax.max] = [-h, h];
   }
 
   process(graph, glCanvas) {

@@ -1,5 +1,6 @@
 import { Module } from './Module.js';
 import { cropFrag } from '../shaders/crop.js';
+import { letterbox } from '../frame.js';
 import { registerModule } from '../moduleRegistry.js';
 
 const FLASH_MS = 450;    // how long the box flashes once it is drawn
@@ -17,11 +18,13 @@ export class CropModule extends Module {
     super('Crop', glCanvas, id);
     this.inputs = [{ id: '3756', name: 'in', type: 'video' }];
     this.outputs = [{ id: 'd1a5', name: 'out', type: 'video' }];
+    // In frame pixels: the ranges are the frame's size, and the box starts as the whole frame
+    const fw = glCanvas.width, fh = glCanvas.height;
     this.params = {
-      x: { id: '1dc8', value: 0, min: 0, max: 640, step: 1, label: 'X' },
-      y: { id: '658f', value: 0, min: 0, max: 480, step: 1, label: 'Y' },
-      width: { id: 'bff1', value: 640, min: 0, max: 640, step: 1, label: 'Width' },
-      height: { id: '60a8', value: 480, min: 0, max: 480, step: 1, label: 'Height' },
+      x: { id: '1dc8', value: 0, min: 0, max: fw, step: 1, label: 'X' },
+      y: { id: '658f', value: 0, min: 0, max: fh, step: 1, label: 'Y' },
+      width: { id: 'bff1', value: fw, min: 0, max: fw, step: 1, label: 'Width' },
+      height: { id: '60a8', value: fh, min: 0, max: fh, step: 1, label: 'Height' },
       mode: {
         id: '2894', value: FLOATING, min: 0, max: 1, step: 1, label: 'Mode', widget: 'dropdown',
         valueLabels: ['Floating', 'Fit'],
@@ -52,6 +55,16 @@ export class CropModule extends Module {
     this.outputFBO.end();
   }
 
+  // The ranges follow the frame, and a box as wide or high as the old frame
+  // stays as wide or high as the new one
+  frameResized(w, h) {
+    const p = this.params;
+    if (p.width.value === p.width.max) p.width.value = w;
+    if (p.height.value === p.height.max) p.height.value = h;
+    p.x.max = p.width.max = w;
+    p.y.max = p.height.max = h;
+  }
+
   _fit() {
     return Math.round(this.params.mode.value) === FIT;
   }
@@ -63,15 +76,9 @@ export class CropModule extends Module {
     return this.box && (!this.flashStart || this._fit()) ? this.inputFBO : this.outputFBO;
   }
 
-  // The fullscreen picture, letterboxed to 4:3 as ui.js draws it
+  // The fullscreen picture, letterboxed to the frame's shape as ui.js draws it
   _letterbox(canvasW, canvasH) {
-    let dw = canvasW;
-    let dh = canvasW / (640 / 480);
-    if (dh > canvasH) {
-      dh = canvasH;
-      dw = canvasH * (640 / 480);
-    }
-    return { dx: (canvasW - dw) / 2, dy: (canvasH - dh) / 2, dw, dh };
+    return letterbox(this.glCanvas.width, this.glCanvas.height, canvasW, canvasH);
   }
 
   // A point on screen in frame pixels, held to the picture

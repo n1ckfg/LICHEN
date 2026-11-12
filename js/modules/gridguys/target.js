@@ -1,5 +1,6 @@
 export class Target {
-  constructor(width = 640, height = 480) {
+  // width x height is the frame's size, which GridGuys keeps up to date
+  constructor(width, height) {
     this.width = width;
     this.height = height;
     this.speedMin = 0.01;

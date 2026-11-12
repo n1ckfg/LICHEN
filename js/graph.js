@@ -196,6 +196,9 @@ export class ConnectionGraph {
   }
 
   fromJSON(data, createModuleFn) {
+    // Counts loads, so ProcessingPipeline can tell a patch replaced the last
+    // one and take its frame size afresh
+    this.loads = (this.loads ?? 0) + 1;
     this.nodes.clear();
     this.connections = [];
     this.controlConnections = [];

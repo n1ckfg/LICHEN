@@ -73,6 +73,11 @@ export class ImageModule extends Module {
     this.outputFBO.end();
   }
 
+  // The image is drawn centred in a buffer of the frame's size
+  frameResized(w, h) {
+    if (this.pg) this.pg.resizeCanvas(w, h, true);
+  }
+
   dispose() {
     if (this.pg) this.pg.remove();
     if (this.fileInput) this.fileInput.remove();

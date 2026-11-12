@@ -43,7 +43,8 @@
 //   --fixed <fps>    the clock modules read moves exactly 1/fps a frame
 //   --seed <n>       Math.random() and crypto.getRandomValues() repeat from seed n
 //   --density <d>    render at this pixel density instead of the one that makes
-//                    the patch's 640x480 canvas cover the Monitor's size
+//                    the patch's frame (its Monitors' Buffer Width x Buffer
+//                    Height) cover the Monitor's size
 //
 // The output finds node-gles3 in $NODE_GLES3, then beside itself (as
 // node-gles3's own examples sit), then at the folder --gles3 gave. A Camera
@@ -120,11 +121,15 @@ function registeredModules() {
 
 // The size of LICHEN's processing canvas, from the createGraphics() call in
 // js/main.js, so the patch runs at the size it was made at
+// The frame size before a Monitor sets one, from js/frame.js
 function canvasSize() {
-  const main = fs.readFileSync(path.join(JS, 'main.js'), 'utf8');
-  const m = main.match(/createGraphics\(\s*(\d+)\s*,\s*(\d+)\s*,\s*p\.WEBGL\s*\)/);
-  if (!m) fail('js/main.js has no createGraphics(width, height, p.WEBGL) call to take the canvas size from');
-  return [Number(m[1]), Number(m[2])];
+  const frame = fs.readFileSync(path.join(JS, 'frame.js'), 'utf8');
+  const size = (name) => {
+    const m = frame.match(new RegExp(`export const ${name}\\s*=\\s*(\\d+)`));
+    if (!m) fail(`js/frame.js has no ${name} to take the canvas size from`);
+    return Number(m[1]);
+  };
+  return [size('DEFAULT_FRAME_WIDTH'), size('DEFAULT_FRAME_HEIGHT')];
 }
 
 // ---------------------------------------------------------------------------
@@ -442,7 +447,9 @@ function lichenWorkerScope() {
 // it does in the browser.
 function lichenP5(gl, glm, opts) {
   const { mat4, mat3 } = glm;
-  const { width, height, openCapture } = opts;
+  // The canvas's size, which resizeCanvas() changes, as a patch's Monitors do
+  let { width, height } = opts;
+  const { openCapture } = opts;
   let density = opts.density;
 
   const C = {
@@ -780,7 +787,7 @@ function lichenP5(gl, glm, opts) {
   // RGBA rows top first at the size asked
   class Capture {
     constructor(onReady) {
-      this.width = 640; this.height = 480;
+      this.width = width; this.height = height;
       this.loadedmetadata = false;
       this.elt = { readyState: 0, srcObject: null, videoWidth: 0, videoHeight: 0 };
       this._frame = null;
@@ -1209,6 +1216,22 @@ void main() {
     pixelDensity(d) {
       if (d === undefined) return density;
       density = d;
+    }
+
+    // As p5's: every framebuffer made without a size follows, and comes back cleared
+    resizeCanvas(w, h) {
+      width = w; height = h;
+      this.width = w; this.height = h;
+      for (const fbo of this.framebuffers) {
+        if (!fbo._autoSized) continue;
+        fbo.width = w; fbo.height = h;
+        fbo._delete();
+        fbo._create();
+        fbo.defaultCamera._setDefault();
+      }
+      this._defaultCamera._setDefault();
+      this.uPMatrix.mat4.set(this._defaultCamera.projMatrix);
+      this.uMVMatrix.mat4.set(this._defaultCamera.cameraMatrix);
     }
 
     // The canvas itself, for drawing outside any framebuffer
@@ -1786,17 +1809,28 @@ function lichenMain(CFG, SOURCES, CLASSICS, WORKERS) {
   const { createModuleByUid } = load(CFG.registryUrl);
   for (const url of CFG.moduleUrls) load(url);
 
-  const monitorNode = CFG.patch.nodes.find(n => n.id === CFG.monitorId);
-  const probe = new ConnectionGraph();
-  probe.fromJSON({ nodes: [monitorNode], connections: [], controlConnections: [] },
-    (uid, id, type) => createModuleByUid(uid, glCanvas, id, type));
-  const monitorProbe = probe.nodes.get(CFG.monitorId);
-  const outW = Math.round(monitorProbe.params.width?.value ?? CFG.canvas[0]);
-  const outH = Math.round(monitorProbe.params.height?.value ?? CFG.canvas[1]);
-  monitorProbe.dispose();
+  const probeNode = (nodeId) => {
+    const probe = new ConnectionGraph();
+    probe.fromJSON({ nodes: [CFG.patch.nodes.find(n => n.id === nodeId)], connections: [], controlConnections: [] },
+      (uid, id, type) => createModuleByUid(uid, glCanvas, id, type));
+    const mod = probe.nodes.get(nodeId);
+    const params = Object.fromEntries(Object.entries(mod.params).map(([k, p]) => [k, p.value]));
+    mod.dispose();
+    return params;
+  };
+  const shown = probeNode(CFG.monitorId);
+  const outW = Math.round(shown.width ?? CFG.canvas[0]);
+  const outH = Math.round(shown.height ?? CFG.canvas[1]);
+  // The frame is the size the patch's first Monitor's Buffer Width and Height
+  // give it, as in the app (ProcessingPipeline._syncFrameSize)
+  const first = CFG.frameMonitorId === CFG.monitorId ? shown : probeNode(CFG.frameMonitorId);
+  const frameW = Math.round(first.bufferWidth ?? CFG.canvas[0]);
+  const frameH = Math.round(first.bufferHeight ?? CFG.canvas[1]);
+  glCanvas.resizeCanvas(frameW, frameH);
   // The patch renders at the Monitor's size, or past it on one side when the
-  // Monitor isn't 4:3, and the picture is stretched to it as a recording is
-  density = densityOption ? Number(densityOption) : Math.max(outW / CFG.canvas[0], outH / CFG.canvas[1]);
+  // Monitor isn't the frame's shape, and the picture is stretched to it as a
+  // recording is
+  density = densityOption ? Number(densityOption) : Math.max(outW / frameW, outH / frameH);
   glCanvas.pixelDensity(density);
 
   seedRandom();
@@ -2001,7 +2035,7 @@ function convert(opts) {
 
   const title = path.basename(opts.patch, path.extname(opts.patch));
   const cfg = {
-    title, patch, monitorId: monitor.id, canvas: canvasSize(), gles3Dir,
+    title, patch, monitorId: monitor.id, frameMonitorId: monitors[0].id, canvas: canvasSize(), gles3Dir,
     pageUrl: pathToFileURL(path.join(ROOT, 'index.html')).href,
     graphUrl, pipelineUrl, registryUrl, moduleUrls,
   };

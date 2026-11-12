@@ -7,7 +7,7 @@
 // so a map value of 0 is the full negative shift, 128 none, and 255 the full
 // positive one. Sampling ahead moves the picture the other way: where the map
 // is white and X Max is positive, the image slides left, and with Y Max
-// positive it slides up. Offsets are in pixels of the logical frame (640 x 480)
+// positive it slides up. Offsets are in pixels of the logical frame (glCanvas's size)
 // and applied in uv space, so they don't depend on the pixel density.
 export const displacerFrag = `
 precision highp float;

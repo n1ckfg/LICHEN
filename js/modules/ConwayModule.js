@@ -1,5 +1,6 @@
 import { Module } from './Module.js';
 import { conwaySimulationFrag, conwayRenderFrag } from '../shaders/conway.js';
+import { letterbox } from '../frame.js';
 import { registerModule } from '../moduleRegistry.js';
 
 const PATTERNS = {
@@ -221,15 +222,7 @@ export class ConwayModule extends Module {
   }
 
   getPixelPos(canvasX, canvasY, canvasW, canvasH) {
-    const aspect = 640 / 480;
-    let dw = canvasW;
-    let dh = canvasW / aspect;
-    if (dh > canvasH) {
-      dh = canvasH;
-      dw = canvasH * aspect;
-    }
-    const dx = (canvasW - dw) / 2;
-    const dy = (canvasH - dh) / 2;
+    const { dx, dy, dw, dh } = letterbox(this.glCanvas.width, this.glCanvas.height, canvasW, canvasH);
 
     const relX = (canvasX - dx) / dw;
     const relY = (canvasY - dy) / dh;
@@ -368,6 +361,12 @@ export class ConwayModule extends Module {
     this.renderShader.setUniform('u_aliveColor', this.aliveColor);
     this.renderQuad();
     this.outputFBO.end();
+  }
+
+  // The board came back cleared at the new size, so it is seeded afresh
+  frameResized() {
+    this.pendingRandomize = true;
+    this.lastPen = null;
   }
 
   dispose() {

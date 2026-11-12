@@ -1,6 +1,7 @@
 import { Module } from './Module.js';
 import { vertSrc } from '../shaders/vert.js';
 import { chromaKeyFrag, chromaKeyPickFrag, keySpace, CHROMA_KEY_MAX } from '../shaders/chroma-key.js';
+import { letterbox } from '../frame.js';
 import { registerModule } from '../moduleRegistry.js';
 
 // A pipette, drawn up from its tip at the bottom left, with a + or − beside it
@@ -125,17 +126,12 @@ export class ChromaKeyModule extends Module {
     return [this.params.r.value, this.params.g.value, this.params.b.value];
   }
 
-  // A click on the fullscreen picture, letterboxed to 4:3 as ui.js draws it
+  // A click on the fullscreen picture, letterboxed to the frame's shape as ui.js draws it
   handleMouseDown(mx, my, canvasW, canvasH, button) {
     if (button !== 'left') return;
-    let dw = canvasW;
-    let dh = canvasW / (640 / 480);
-    if (dh > canvasH) {
-      dh = canvasH;
-      dw = canvasH * (640 / 480);
-    }
-    const u = (mx - (canvasW - dw) / 2) / dw;
-    const v = (my - (canvasH - dh) / 2) / dh;
+    const { dx, dy, dw, dh } = letterbox(this.glCanvas.width, this.glCanvas.height, canvasW, canvasH);
+    const u = (mx - dx) / dw;
+    const v = (my - dy) / dh;
     if (u < 0 || u > 1 || v < 0 || v > 1) return;
     this.pendingPicks.push({ u, v, tool: this.tool });
   }

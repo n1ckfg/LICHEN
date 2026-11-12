@@ -3,7 +3,7 @@
 // meet, so bilinear filtering averages them, and uTaps x uTaps taps cover a
 // cell 2 uTaps input pixels a side. For 320 x 240 that is one tap at pixel
 // density 1, where a cell is 2 x 2, and 2 x 2 at density 2. Where a cell is a
-// single input pixel (640 x 480 at density 1), the one tap sits on its centre
+// single input pixel (a 640 x 480 frame at density 1), the one tap sits on its centre
 // and reads it exactly. A tap at the centre alone would alias fine detail,
 // which the model draws as lines.
 export const infrDrawingsInputFrag = `

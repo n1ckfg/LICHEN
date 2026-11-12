@@ -26,17 +26,24 @@ export class SlitscanModule extends Module {
     this.createOutputFBO();
     this.writeShader = glCanvas.createShader(vertSrc, atlasWriteFrag);
 
-    const tileW = Math.max(1, Math.floor(glCanvas.width / 4));
-    const tileH = Math.max(1, Math.floor(glCanvas.height / 4));
-    const atlasW = tileW * COLS;
-    const atlasH = tileH * ROWS;
+    this.atlasA = this.createFramebuffer({ width: 1, height: 1 });
+    this.atlasB = this.createFramebuffer({ width: 1, height: 1 });
+    this._sizeAtlas(glCanvas.width, glCanvas.height);
+  }
 
-    this.atlasA = this.createFramebuffer({ width: atlasW, height: atlasH });
-    this.atlasB = this.createFramebuffer({ width: atlasW, height: atlasH });
-    this.atlasA.begin(); glCanvas.clear(); this.atlasA.end();
-    this.atlasB.begin(); glCanvas.clear(); this.atlasB.end();
-
+  // Tiles a quarter of the frame a side, so the atlas follows the frame's size
+  _sizeAtlas(w, h) {
+    const tileW = Math.max(1, Math.floor(w / 4));
+    const tileH = Math.max(1, Math.floor(h / 4));
+    for (const fbo of [this.atlasA, this.atlasB]) {
+      fbo.resize(tileW * COLS, tileH * ROWS);
+      fbo.begin(); this.glCanvas.clear(); fbo.end();
+    }
     this.frameOffset = 0;
+  }
+
+  frameResized(w, h) {
+    this._sizeAtlas(w, h);
   }
 
   process(graph, glCanvas) {

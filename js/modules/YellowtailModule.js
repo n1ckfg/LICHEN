@@ -1,5 +1,6 @@
 import { Module } from './Module.js';
 import { passthroughFrag } from '../shaders/passthrough.js';
+import { letterbox } from '../frame.js';
 import { registerModule } from '../moduleRegistry.js';
 import { polylinePieces, XYOutputs } from './latk/strokes.js';
 import { StringSeed } from '../stringseed.js';
@@ -32,11 +33,13 @@ function mulberry32(a) {
 // canvas, wherever it fits whole. Its tempo is how many of its frames are
 // drawn per 60th of a second, so some strokes are drawn slowly and some
 // dashed off, without changing their shape.
+const TUNED_SHORT_SIDE = 480;
 function randomStroke(seed, w, h) {
   const rand = mulberry32(parseInt(seed, 16));
   const rnd = (a, b) => a + rand() * (b - a);
   const gauss = () => Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand());
-  const scale = Math.min(w, h) / 480;
+  // The pen's speeds were tuned on a short side of 480 px, and scale with the frame's
+  const scale = Math.min(w, h) / TUNED_SHORT_SIDE;
   const tempo = Math.exp(rnd(Math.log(0.4), Math.log(2.5)));   // log-uniform, 0.4x to 2.5x
 
   const length = Math.min(w, h) * (0.15 + 1.1 * Math.pow(rand(), 1.5));  // px along the path
@@ -497,15 +500,7 @@ export class YellowtailModule extends Module {
   }
 
   getPixelPos(canvasX, canvasY, canvasW, canvasH) {
-    const aspect = this.w / this.h;
-    let dw = canvasW;
-    let dh = canvasW / aspect;
-    if (dh > canvasH) {
-      dh = canvasH;
-      dw = canvasH * aspect;
-    }
-    const dx = (canvasW - dw) / 2;
-    const dy = (canvasH - dh) / 2;
+    const { dx, dy, dw, dh } = letterbox(this.w, this.h, canvasW, canvasH);
 
     const relX = (canvasX - dx) / dw;
     const relY = (canvasY - dy) / dh;
@@ -741,6 +736,17 @@ export class YellowtailModule extends Module {
 
     // With no gestures, the loop is all blank, so the beam rests unlit in the middle
     this.xy.publish(this, this._gesturePieces(), this.w, this.h, dt, this.params.loopHz.value);
+  }
+
+  // Gestures keep their points, and wrap at the new edges
+  frameResized(w, h) {
+    this.w = w;
+    this.h = h;
+    this.pg.resizeCanvas(w, h, true);
+    for (const G of this.gestureArray) {
+      G.w = w;
+      G.h = h;
+    }
   }
 
   dispose() {

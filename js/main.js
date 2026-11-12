@@ -1,5 +1,6 @@
 import { ProcessingPipeline } from './pipeline.js';
 import { NodeGraphUI } from './ui.js';
+import { DEFAULT_FRAME_WIDTH, DEFAULT_FRAME_HEIGHT } from './frame.js';
 // - - - SOURCES - - -
 import './modules/CameraModule.js';
 import './modules/CloudyModule.js';
@@ -133,7 +134,8 @@ const sketch = (p) => {
     const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
     canvas.elt.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    glCanvas = p.createGraphics(640, 480, p.WEBGL);
+    // The frame every module renders at; a patch's Monitors resize it (see Frame Size in ARCHITECTURE.md)
+    glCanvas = p.createGraphics(DEFAULT_FRAME_WIDTH, DEFAULT_FRAME_HEIGHT, p.WEBGL);
     pipeline = new ProcessingPipeline(glCanvas);
     ui = new NodeGraphUI(pipeline, p);
 

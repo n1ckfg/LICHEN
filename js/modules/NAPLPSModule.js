@@ -291,6 +291,11 @@ export class NAPLPSModule extends Module {
     }
   }
 
+  // The commands are drawn again each frame, into a buffer of the frame's size
+  frameResized(w, h) {
+    if (this.pg) this.pg.resizeCanvas(w, h, true);
+  }
+
   dispose() {
     if (this.pg) this.pg.remove();
     if (this.fileInput) this.fileInput.remove();

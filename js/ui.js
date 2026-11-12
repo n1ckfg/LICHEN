@@ -1,5 +1,6 @@
 import { createModule, createModuleByUid, getRegistry } from './moduleRegistry.js';
 import { vertSrc } from './shaders/vert.js';
+import { letterbox } from './frame.js';
 const blitFrag = `
 precision highp float;
 varying vec2 vTexCoord;
@@ -1349,15 +1350,8 @@ export class NodeGraphUI {
       const mod = graph.nodes.get(this.fullscreenMonitor);
       if (mod) {
         p.background(0);
-        const aspect = 640 / 480;
-        let dw = p.width;
-        let dh = p.width / aspect;
-        if (dh > p.height) {
-          dh = p.height;
-          dw = p.height * aspect;
-        }
-        const dx = (p.width - dw) / 2;
-        const dy = (p.height - dh) / 2;
+        const g = this.pipeline.glCanvas;
+        const { dx, dy, dw, dh } = letterbox(g.width, g.height, p.width, p.height);
 
         if (mod.type === 'GRASS') {
           // Joystick 1 reads the arrow keys and mouse while GRASS is fullscreened

@@ -90,6 +90,13 @@ export class Module {
     // Override in subclasses
   }
 
+  // The frame changed to w x h (see Frame Size in ARCHITECTURE.md). Every
+  // framebuffer made without a size has followed it, and come back cleared, so
+  // only what a module sized or drew itself needs seeing to here.
+  frameResized(w, h) {
+    // Override in subclasses
+  }
+
   // Knobs, cables and module code keep a param within min..max. A number typed
   // into its field may go past them, so the UI sets that, and a patch loads it,
   // with clamp false.

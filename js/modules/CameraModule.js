@@ -21,7 +21,7 @@ export class CameraModule extends Module {
       this.capture = p.createCapture(p.VIDEO, () => {
         this.captureReady = true;
       });
-      this.capture.size(640, 480);
+      this.capture.size(this.glCanvas.width, this.glCanvas.height);
       this.capture.hide();
     } catch (e) {
       console.warn('Camera not available:', e);
@@ -37,6 +37,10 @@ export class CameraModule extends Module {
     this.shader.setUniform('tex0', this.capture);
     this.renderQuad();
     this.outputFBO.end();
+  }
+
+  frameResized(w, h) {
+    if (this.capture) this.capture.size(w, h);
   }
 
   dispose() {

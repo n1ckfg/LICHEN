@@ -33,27 +33,35 @@ export class UnrealBloomModule extends Module {
     this.renderTargetsHorizontal = [];
     this.renderTargetsVertical = [];
     
-    // Level 0 is half res
-    let resx = Math.round(glCanvas.width / 2);
-    let resy = Math.round(glCanvas.height / 2);
-
     // Need to use the options object for createFramebuffer in p5.js
-    this.renderTargetBright = this.createFramebuffer({ width: resx, height: resy });
-
+    this.renderTargetBright = this.createFramebuffer({ width: 1, height: 1 });
     for (let i = 0; i < this.nMips; i++) {
-      this.renderTargetsHorizontal.push(this.createFramebuffer({ width: resx, height: resy }));
-      this.renderTargetsVertical.push(this.createFramebuffer({ width: resx, height: resy }));
-      
+      this.renderTargetsHorizontal.push(this.createFramebuffer({ width: 1, height: 1 }));
+      this.renderTargetsVertical.push(this.createFramebuffer({ width: 1, height: 1 }));
+    }
+    this._sizeMips(glCanvas.width, glCanvas.height);
+  }
+
+  // Level 0 is half the frame, and each level after it half the last
+  _sizeMips(w, h) {
+    const g = this.glCanvas;
+    let resx = Math.round(w / 2);
+    let resy = Math.round(h / 2);
+    const clear = (fbo) => { fbo.begin(); g.clear(); fbo.end(); };
+    this.renderTargetBright.resize(resx, resy);
+    clear(this.renderTargetBright);
+    for (let i = 0; i < this.nMips; i++) {
+      this.renderTargetsHorizontal[i].resize(resx, resy);
+      this.renderTargetsVertical[i].resize(resx, resy);
+      clear(this.renderTargetsHorizontal[i]);
+      clear(this.renderTargetsVertical[i]);
       resx = Math.max(1, Math.round(resx / 2));
       resy = Math.max(1, Math.round(resy / 2));
     }
-    
-    // Clear FBOs initially
-    this.renderTargetBright.begin(); glCanvas.clear(); this.renderTargetBright.end();
-    for (let i = 0; i < this.nMips; i++) {
-      this.renderTargetsHorizontal[i].begin(); glCanvas.clear(); this.renderTargetsHorizontal[i].end();
-      this.renderTargetsVertical[i].begin(); glCanvas.clear(); this.renderTargetsVertical[i].end();
-    }
+  }
+
+  frameResized(w, h) {
+    this._sizeMips(w, h);
   }
 
   process(graph, glCanvas) {

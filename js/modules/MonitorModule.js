@@ -1,5 +1,6 @@
 import { Module } from './Module.js';
 import { registerModule } from '../moduleRegistry.js';
+import { DEFAULT_FRAME_WIDTH, DEFAULT_FRAME_HEIGHT, letterbox } from '../frame.js';
 
 function isChromium() {
   const ua = navigator.userAgent;
@@ -41,18 +42,34 @@ export class MonitorModule extends Module {
     this._recordingMimeType = null;
     this._recordingCanvas = null; // Offscreen canvas for single-monitor recording
 
-    // Recording params
     this.params = {
+      // The frame every module renders at, which all of a patch's Monitors
+      // share (ProcessingPipeline._syncFrameSize)
+      bufferWidth: {
+        id: '45ca', value: DEFAULT_FRAME_WIDTH,
+        min: 64,
+        max: 3840,
+        step: 8,
+        label: 'Buffer Width'
+      },
+      bufferHeight: {
+        id: '9593', value: DEFAULT_FRAME_HEIGHT,
+        min: 48,
+        max: 2160,
+        step: 8,
+        label: 'Buffer Height'
+      },
+      // Recording params
       width: {
         id: 'c3ae', value: 1440,
-        min: 640,
+        min: 160,
         max: 3840,
         step: 160,
         label: 'Width'
       },
       height: {
         id: '7fda', value: 1080,
-        min: 480,
+        min: 120,
         max: 2160,
         step: 120,
         label: 'Height'
@@ -65,6 +82,12 @@ export class MonitorModule extends Module {
         label: 'Bitrate (M)'
       }
     };
+    // A patch saved before Buffer Width and Height existed loads them as
+    // declared, at the default size, which is how it ran (see graph.fromJSON)
+    this.declared = Object.fromEntries(Object.entries(this.params).map(([k, p]) => [k, p.value]));
+    // A Monitor placed in a patch takes up the frame size the patch has
+    this.params.bufferWidth.value = glCanvas.width;
+    this.params.bufferHeight.value = glCanvas.height;
   }
 
   process(graph, glCanvas) {
@@ -162,16 +185,8 @@ export class MonitorModule extends Module {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Letterbox: maintain 640x480 aspect ratio
-    const aspect = 640 / 480;
-    let dw = canvas.width;
-    let dh = canvas.width / aspect;
-    if (dh > canvas.height) {
-      dh = canvas.height;
-      dw = canvas.height * aspect;
-    }
-    const dx = (canvas.width - dw) / 2;
-    const dy = (canvas.height - dh) / 2;
+    // Letterbox: keep the frame's shape
+    const { dx, dy, dw, dh } = letterbox(this.glCanvas.width, this.glCanvas.height, canvas.width, canvas.height);
 
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);

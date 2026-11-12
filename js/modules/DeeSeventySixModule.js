@@ -79,6 +79,11 @@ export class DeeSeventySixModule extends Module {
     this.accumFBO.end();
   }
 
+  // The exposure starts again on the fresh, white paper
+  frameResized() {
+    this.reset();
+  }
+
   reset() {
     this.progress = 0;
     this.initialized = false;

@@ -12,7 +12,8 @@ js/main.js (p5.js loop)
 ### Key Files
 
 - `js/main.js` — p5.js entry point; owns `ProcessingPipeline` and `NodeGraphUI`; handles global keyboard shortcuts (Ctrl+A select all, Ctrl+S save patch, Ctrl+O load patch, Delete/Backspace delete selected node, Escape exit fullscreen); also parses and loads shareable patch data from the URL hash.
-- `js/pipeline.js` — `ProcessingPipeline`: holds the `ConnectionGraph`, drives per-frame processing
+- `js/pipeline.js` — `ProcessingPipeline`: holds the `ConnectionGraph`, drives per-frame processing, and keeps glCanvas at the patch's frame size (see Frame Size)
+- `js/frame.js` — the default frame size, the bounds a typed one is held to, and `letterbox()`, which places the frame in a canvas of another shape (see Frame Size)
 - `js/graph.js` — `ConnectionGraph`: DAG of modules; tracks video `connections` and parameter `controlConnections`; re-runs topological sort on every structural change; serializes/deserializes the full patch as JSON. This is the source of truth for patch state.
 - `js/moduleRegistry.js` — global module registry; `registerModule(typeName, class)` / `createModule(typeName, glCanvas, id)` for the UI, and `createModuleByUid(uid, glCanvas, id, savedType)` for loading patches. It checks every module's ids (see Patch IDs)
 - `js/ui.js` — `NodeGraphUI`: full node graph editor drawn on the p5.js P2D canvas, with a DOM sidebar palette and right-click search popup; handles pan/zoom, node drag, cable wiring, parameter knobs, and monitor preview rendering
@@ -90,13 +91,13 @@ A node shows its output (a Monitor its input) in a preview on the 2D canvas. The
 - **A picture that fits glCanvas:** `_blitFBO()` fills glCanvas with the framebuffer, which leaves no page in it, and glCanvas is the copy, as it always was. It draws under `blendMode(REPLACE)`, as the tiles do. It used to blend, so where a picture's alpha was below 1 the preview tiles still on glCanvas showed through, as thumbnails in its top-left corner. Delay's dark areas have alpha 0.1, so Delay showed it most, in fullscreen and in a Monitor's second-screen window, recording and Screenshot. In fullscreen the leaked tiles faded over about a second, since nothing draws previews there; through a Monitor they were the current ones. Checked in headless Chrome at pixel density 1 and 2, with each frame's preview tiles on glCanvas, for every node in `workflows/`: all 248 opaque pictures match the old blend on every value. Each of the 32 translucent ones (Delay, and BufferSmear, TimeTunnel, Glitch and Brcosa carrying alpha below 1) now matches the picture blitted alone onto a cleared glCanvas.
 - **A bigger one:** an upscaling Restore's or Resample's output has more pixels than glCanvas (see Restore Module). It is drawn into glCanvas a tile at a time with `previewFrag`, one pixel to one, and each tile is copied to its place on a 2D canvas of the picture's size. That canvas is the copy.
 
-`_drawFBO()` draws the copy on screen. A preview tile that won't fit on glCanvas is drawn that way too, which can't happen at the UI's zoom limits. Fullscreen and the second-screen window still letterbox every picture to 4:3, and the recording still stretches it to the Monitor's Width and Height. Monitor's Screenshot button, under Record, stretches it the same way and saves it as a PNG (`MonitorModule.saveScreenshot()`). It copies when clicked, outside `draw()`: glCanvas keeps no picture between frames, but a copy made in the same task as the drawing reads it.
+`_drawFBO()` draws the copy on screen. A preview tile that won't fit on glCanvas is drawn that way too, which can't happen at the UI's zoom limits. Fullscreen and the second-screen window letterbox every picture to the frame's shape (see Frame Size), and the recording still stretches it to the Monitor's Width and Height. Monitor's Screenshot button, under Record, stretches it the same way and saves it as a PNG (`MonitorModule.saveScreenshot()`). It copies when clicked, outside `draw()`: glCanvas keeps no picture between frames, but a copy made in the same task as the drawing reads it.
 
 Checked in headless Chrome on an M2 Max, at pixel density 1 and 2:
 - **Pictures that fit:** a fullscreen Monitor, its recording from fullscreen and from the node view, and its second-screen copy all match commit 4970850 on every pixel.
 - **Bigger ones:** the copy matches Restore's framebuffer on every pixel at 1440×1080, 1920×1440, 2560×1440, 1281×961 and 3840×2160. So does a recording at the same Width and Height, from fullscreen and from the node view, and a fullscreen window of 1440×1080 device pixels. Copied through glCanvas, as before, that window differed from the framebuffer on 35% of values at density 1, by up to 26 levels.
 
-Each tile costs a copy of glCanvas, about 1 ms. At density 1, where glCanvas is 640×480, showing a bigger picture can therefore cost more than making it:
+Each tile costs a copy of glCanvas, about 1 ms. At density 1, where glCanvas is 640×480 at the default frame size, showing a bigger picture can therefore cost more than making it:
 
 | Picture | Tiles at density 1 | Tiles at density 2 |
 | --- | --- | --- |
@@ -131,6 +132,30 @@ Unasked, p5 1.9 gives a framebuffer 2× MSAA wherever the user agent contains "s
 - **Their own options:** QTVR, VRML and SlowscanJam's screen, as before.
 
 Firefox's user agent has no "safari", so it always drew these framebuffers this way. In the 19-node patch, a frame went from 4.7 to 3.1 ms at pixel density 2. In headless Chrome, every module fed colour bars on every input outputs the same as before on every pixel after 60 frames, at pixel density 1 and 2, except one pixel each of Coils and Protozoa, by one level. Both come from the quad's diagonal. Under MSAA, a pixel the diagonal crosses is shaded by both triangles and the two results averaged, and their interpolated `vTexCoord` differ by rounding.
+
+### Frame Size
+
+Every module renders at the frame size, glCanvas's logical size, times the pixel density. It is 640×480 (`DEFAULT_FRAME_WIDTH`, `DEFAULT_FRAME_HEIGHT` in `js/frame.js`) until a patch says otherwise. A patch sets it with its Monitors' Buffer Width and Buffer Height (`bufferWidth`, `bufferHeight`, the first two knobs, 64–3840 by 2160 in steps of 8). These are the frame in logical pixels, not the recording's size, which is still Width and Height.
+
+**One size a patch.** There is one glCanvas, so all of a patch's Monitors share one value. `ProcessingPipeline._syncFrameSize()` runs at the start of every `processFrame()` and decides it:
+- **A Monitor that changed:** a Monitor whose Buffer Width or Height differs from what it held last frame sets the size, whether a knob, a typed value or a cable changed it. Each Monitor's last values are kept in a `WeakMap`.
+- **A patch just loaded:** `ConnectionGraph.fromJSON()` counts loads in `graph.loads`. Once a load leaves no Monitor seen before, the first Monitor in the patch's node order sets the size, or a patch with no Monitor goes back to 640×480.
+- **Otherwise** the size stays. A Monitor added to the patch takes it up: its constructor sets its buffer knobs to glCanvas's size, and so does the next sync.
+
+The size is then rounded and held to 16–4096 (`MIN_FRAME_SIZE`, `MAX_FRAME_SIZE`; past 4096 a browser's WebGL canvas may not allocate), and written back to every Monitor with `clamp` false, so they all show the size in use. A Monitor's `declared` values are the default 640×480, so a patch saved before the buffer knobs existed loads them at 640×480, which is how it ran: `ConnectionGraph.fromJSON()` puts back the `declared` value of a param a patch lacks (see Patch IDs). `tools/patch-to-gles3.mjs` takes the first Monitor's size the same way.
+
+**Resizing.** A new size calls `ProcessingPipeline.resizeFrame(w, h)`. That calls `glCanvas.resizeCanvas(w, h, true)`, which reallocates every framebuffer made without a size of its own, clears it, and resets glCanvas's camera and viewport, then `mod.frameResized(w, h)` on every node. `Module.frameResized()` does nothing, and only a module that sized or drew something itself overrides it:
+- **Buffers sized from the frame:** LuminanceDelay and Slitscan resize their atlases, UnrealBloom its mip chain, Image and NAPLPS their P2D graphics, and Camera asks the device for the new size.
+- **State laid out over the frame:** Yellowtail resizes its graphics and its gestures' wrap, RuttEtra rebuilds its scan-line grid, InkMarkers takes a fresh sheet of paper at the new size, InkDrops clears to bare paper, Conway seeds a new board and DeeSeventySix resets.
+- **Drawn only on change:** ESP32 and Skeleton draw their outputs again, since they came back cleared.
+- **Pixel params:** Crop's X, Y, Width and Height, Transform's X and Y, and Displacer's X Max and Y Max run over the frame's pixels, so their ranges follow it. A Crop box the full width or height of the old frame stays full.
+- **Labels:** DepthAnything's Size options fit the model input's long side to the frame's shape.
+
+So a resize starts every feedback module over, and anything drawn into a buffer is lost. Each module reads the size from glCanvas when it needs it, and nothing else in `js/` assumes 640×480. Fullscreen, Monitor's second-screen window, and every module that takes the mouse in fullscreen (ChromaKey, Conway, Crop, InkDrops, InkMarkers, Transform, Yellowtail) place the frame with `letterbox()`, so a click lands where the picture is. Some numbers keep their own sizes on purpose: Whitney's sketch canvases, InfrDrawings' model inputs and Yellowtail's `TUNED_SHORT_SIDE`, the frame its speeds were tuned at.
+
+**Limits.** Node previews are still a fixed 4:3 box, so a frame of another shape shows stretched in the node graph. Fullscreen, the second-screen window, a recording at the same shape, and the export show it as it is.
+
+Checked in headless Chrome at pixel density 2. Every module but Camera and the four ONNX ones was built at 640×480 and the frame set to 1280×720. No module threw, and every output came back 1280×720 (Resample's is its own size). Each matched a twin built fresh at 1280×720 on the same steady input, except where it draws from random seeds or a clock. RuttEtra, ESP32 and Skeleton only matched after they had `frameResized()` hooks. At 640×480, the modules this changed (LuminanceDelay, Slitscan, UnrealBloom, RuttEtra, Crop, Transform, Displacer, ESP32, Monitor) gave the same output as HEAD's on every pixel. The sync rules were each tried: two Monitors, then a third added, a typed 100000, saving and loading a 1280×720 patch, an old workflow, a patch with no Monitor and a portrait 480×800 frame. In fullscreen at 16:9, a mouse drag on InkMarkers drew where the mouse went.
 
 ## Adding a New Module
 
@@ -180,7 +205,7 @@ The script is self-contained: module code, shaders, libraries and workers are al
 
 A file with no import or export statement is a classic script and runs in the global scope, as a `<script>` would, with no `process` in sight, since Emscripten builds take that to mean Node.
 
-The patch renders at pixel density Monitor size / 640x480, the larger of the two ratios (2.25 for 1440x1080), so the final buffer's pixels are rendered ones. The app instead uses the display's `ceil(devicePixelRatio)`, so set `--density` to match it.
+The patch renders at the first Monitor's Buffer Width and Height (see Frame Size), and `lichenP5`'s `Graphics.resizeCanvas()` reallocates the framebuffers as p5's does. The pixel density is the shown Monitor's size over the frame size, the larger of the two ratios (2.25 for 1440x1080 over 640x480), so the final buffer's pixels are rendered ones. The app instead uses the display's `ceil(devicePixelRatio)`, so set `--density` to match it.
 
 The script's flags:
 - `--windowed`: a 960x720 window instead of fullscreen
@@ -429,7 +454,7 @@ The InkMarkers module (`js/modules/InkMarkersModule.js`, `js/modules/inkmarkers/
 | Param | Label | Range | Default | Sets |
 | --- | --- | --- | --- | --- |
 | `tip` | Tip | Chisel, Bullet, Brush, Fine | Chisel | The tip's width (1.5, 1, 1.2, 0.4 × Size), pressure curve and edge profile |
-| `size` | Size | 1–48 px | 13 | Stroke width in frame pixels, before tip and pressure. The sketch's 24 on its 1200 px canvas, at 640 |
+| `size` | Size | 1–48 px | 13 | Stroke width in frame pixels, before tip and pressure. The sketch's 24 on its 1200 px canvas, at 640 (the default frame) |
 | `flow` | Flow | 0.1–1 | 0.5 | Ink a pass lays down |
 | `bleed` | Bleed | 0–1 | 0.6 | Alcohol spread and the blur of the overlay layer |
 | `paper` | Paper | Smooth, Cold Press, Marker Pad, Kraft | Marker Pad | The paper. Changing it starts a fresh sheet, as in the sketch |
@@ -627,7 +652,7 @@ The Channel module (`js/modules/ChannelModule.js`, `js/shaders/channel.js`) buil
 
 ## Transform and Crop Modules
 
-Transform (`js/modules/TransformModule.js`) moves, turns and scales its input, and Crop (`js/modules/CropModule.js`) keeps only a box of it. Both work in pixels of the 640×480 frame, with y down, and fill anything outside the picture with opaque black, as Displacer's Black edges do. Their shaders address the frame through `vTexCoord`, so pixel density doesn't matter.
+Transform (`js/modules/TransformModule.js`) moves, turns and scales its input, and Crop (`js/modules/CropModule.js`) keeps only a box of it. Both work in pixels of the frame (640×480 by default, see Frame Size), with y down, and fill anything outside the picture with opaque black, as Displacer's Black edges do. Their shaders address the frame through `vTexCoord`, so pixel density doesn't matter.
 
 - **Transform:** X and Y move the picture's centre from the frame's. Rotation turns it clockwise about that centre, in degrees. Scale X and Scale Y are factors, 1.00 for 100%, and a negative one flips that axis. The picture is scaled, then turned, then moved.
 - **Crop:** X and Y are the box's top-left corner, and Width and Height its size. A typed negative Width or Height runs the box the other way from the corner. The Mode drop-down sets what the box's picture fills. Floating (0, the default) leaves it where it is, with opaque black round it. Fit (1) stretches it to the whole frame, so its shape follows the frame's rather than the box's. With Fit, the part of a box past the picture's edge is black, and a box of no width or height gives a black frame.
@@ -689,10 +714,10 @@ Patches save Model and Size as indexes, so a new model (Anime4K's GAN ones, say)
 Two other ways of strengthening it were tried in numpy and dropped. Running the network at half or quarter resolution changed the picture a little less than Amount 1 (means of 3.1 and 3.3), and softened fine detail. Running it twice in a row changed it about as much as Amount 2, at twice the cost.
 
 **Width and Height.** Restore is the one module whose output can be another size than the frame. It scales its input to Width × Height and runs the network at that size, so the network works on the blur the scaling leaves, which is what the Restore family is tuned for.
-- **Real pixels:** both are in real pixels, as Monitor's Width and Height are, not in pixels of the logical frame. On a retina display the frame is already 1280×960, so 1440×1080 is 1.125 times its size there, and 2.25 times on a standard display.
+- **Real pixels:** both are in real pixels, as Monitor's Width and Height are, not in pixels of the logical frame. On a retina display the default frame is already 1280×960, so 1440×1080 is 1.125 times its size there, and 2.25 times on a standard display.
 - **Input:** at 0 a knob reads Input, and that axis takes the input's own size. A negative size typed in is Input too, though the knob shows the number. Both default to it, so a new node, and a patch saved before the knobs, give the output they gave before. A Restore at Input after an upscaling one takes that one's size.
 - **Whole pixels:** a dragged or cabled knob gives fractions, which are rounded. A typed value is used as it is, so 1366 × 768 works, and so does one past the knob's 3840 × 2160 (see Typed values). Every new size reallocates the module's buffers, so a cable on either knob reallocates them on every frame it moves.
-- **Shape:** the input is stretched to fill, whatever the two sizes' shapes. Everything downstream still shows the picture as the 4:3 frame.
+- **Shape:** the input is stretched to fill, whatever the two sizes' shapes. Everything downstream still shows the picture at the frame's shape.
 - **Scaling:** there is no scaling pass. Every pass that reads the input is told the input has the output's size, so its taps fall an output pixel apart, and the input texture's own bilinear filter scales it. A size below the input's is read the same way, with no averaging, so below half size it aliases.
 - **Downstream:** other modules read the bigger picture by uv, as they read any input, and write the frame's size. The extra pixels are only seen by a Monitor cabled straight to Restore, whose fullscreen, second-screen and recording copies take the picture at its own size (see Full-size copies in Node Previews). A recording is pixel for pixel when Monitor's Width and Height match Restore's.
 
@@ -756,7 +781,7 @@ Fixing the input size when the session starts (`freeDimensionOverrides`) made fp
 
 | Param | Label | Options | Default | Sets |
 | --- | --- | --- | --- | --- |
-| `size` | Size | 238 × 182, 336 × 252, 434 × 322, 518 × 392, 686 × 518 | 336 × 252 | The model's input: depth-anything-v2-js's short sides, 182 to 518, with the long side fitted to the 4:3 frame. Both are multiples of the ViT's 14 px patches. 518 is the size the model was trained at |
+| `size` | Size | 238 × 182, 336 × 252, 434 × 322, 518 × 392, 686 × 518 | 336 × 252 | The model's input: depth-anything-v2-js's short sides, 182 to 518, with the long side fitted to the frame's shape (the sizes listed are the 4:3 default's). Both are multiples of the ViT's 14 px patches. 518 is the size the model was trained at |
 | `colormap` | Color | Grey, Turbo | Grey | Grey shows near as white. Turbo, depth-anything-v2-js's polynomial fit of Google's Turbo, runs from blue (far) to red (near) |
 | `invert` | Invert | Off, On | Off | Swaps near and far |
 
@@ -953,7 +978,7 @@ The Displacer module (`js/modules/DisplacerModule.js`, `js/shaders/displacer.js`
 
 `out(x, y) = in(x + d_x × X Max, y + d_y × Y Max)`
 
-Sampling ahead moves the picture the other way, as in After Effects. Where the map is white and X Max is positive, the image slides left, and with Y Max positive it slides up. X Max and Y Max are in pixels of the logical 640×480 frame, from −640 to 640 and −480 to 480, so the result doesn't change with pixel density. Both default to 20.
+Sampling ahead moves the picture the other way, as in After Effects. Where the map is white and X Max is positive, the image slides left, and with Y Max positive it slides up. X Max and Y Max are in pixels of the logical frame, from minus to plus its width and height (±640 and ±480 by default, see Frame Size), so the result doesn't change with pixel density. Both default to 20.
 
 **Channels.** `xChannel` (X From) and `yChannel` (Y From) pick the channel that drives each axis. Their options follow After Effects' "Use For" menu, in its order. Patches save the option as its index, so a new one is appended, never inserted.
 
@@ -1008,7 +1033,7 @@ Grey is the default because Dither only quantized luminance before RGB was added
 
 ## LuminanceDelay and Slitscan Modules
 
-Both modules implement time-based effects that require random access to a ring buffer of past input frames. The original WebGL2 reference (ShaderPadTests `slitscan-slow-luminance.html` and `slitscan-wiggle-spatial.html`) stores history in a `sampler2DArray`, which isn't available in WebGL1. LICHEN emulates this with a 2D **tile atlas**: a single framebuffer holding an 8×8 grid of 64 downscaled history frames (tile size = `glCanvas / 4` per axis, so the atlas is `glCanvas.width × 2` by `glCanvas.height × 2`).
+Both modules implement time-based effects that require random access to a ring buffer of past input frames. The original WebGL2 reference (ShaderPadTests `slitscan-slow-luminance.html` and `slitscan-wiggle-spatial.html`) stores history in a `sampler2DArray`, which isn't available in WebGL1. LICHEN emulates this with a 2D **tile atlas**: a single framebuffer holding an 8×8 grid of 64 downscaled history frames (tile size = `glCanvas / 4` per axis, so the atlas is `glCanvas.width × 2` by `glCanvas.height × 2`). A new frame size resizes both atlases and clears them (see Frame Size).
 
 **Ring buffer write:** Two atlases ping-pong each frame. The shared `js/shaders/atlas-write.js` shader reads the previous atlas into the new one, replacing only the pixels inside the current write tile with the upstream input. After the write pass the pointers are swapped so `atlasA` always holds the latest history.
 
@@ -1228,7 +1253,7 @@ The ESP32 module (`js/modules/ESP32Module.js`, `js/modules/esp32/u8g2.js`, `js/s
 **Kept from the port:**
 - **The display:** `esp32/u8g2.js` is the port's software display, a draw buffer and the buffer the panel shows, with its `drawPixel()` and its `drawLine()`, a port of U8g2's Bresenham line.
 - **The pace:** a buffer goes to the panel every 30 ms, the time the ESP32 takes to send a full buffer over a 400 kHz I2C bus, so the picture changes 33 times a second at most. Each buffer is due 30 ms after the last was, as the port's `delay()` scheduled them, and a stall of more than 250 ms isn't caught up.
-- **The panel:** `esp32Frag` is the port's shader: each display pixel is a slightly inset rounded square, with a halo from the lit pixels within three cells of it and a white-hot core where they are dense. The panel is the largest one of the display's shape that fits the frame with a small margin, in whole-pixel cells. For 128 × 64 that is 512 × 256 in the 640×480 frame, with 4 px cells.
+- **The panel:** `esp32Frag` is the port's shader: each display pixel is a slightly inset rounded square, with a halo from the lit pixels within three cells of it and a white-hot core where they are dense. The panel is the largest one of the display's shape that fits the frame with a small margin, in whole-pixel cells. For 128 × 64 that is 512 × 256 in the default 640×480 frame, with 4 px cells.
 
 **Not kept:** the animation and its 190 KB of bitmaps and vertices, and the display's clip window, draw colour, boxes, frames and bitmaps, which only the animation used. The port's C and G keys are the Color and Grid drop-downs, and its R key restarted the animation.
 
@@ -1247,7 +1272,7 @@ Patches save Color as an index, so a new option is appended, never inserted.
 **X and Y.** The pins are read as Twoscilloscope's are, by `XYInputs` (see Twoscilloscope's X and Y): a loop on either pin, values only, or nothing, which leaves the display blank. They are read every frame, so a values-only input keeps a trail of 60 points a second, though the display shows it 33 times a second. For each buffer, `_page()` does one pass of a sketch's loop: clear the buffer, draw, send.
 - **Strokes:** `findPieces()` gives the lit runs of the loop's blanking. Each is drawn as U8g2 lines from one sample to the next, and a run of one sample as a pixel.
 - **No colour:** the display has one bit a pixel, so the loop's colour lane is ignored, and every stroke is drawn in the panel's Color.
-- **Placing:** the loop's −1..1 is the canvas, which is 4:3. It keeps its shape, and its centre is the display's. The display's longer side, Width or Height, spans the canvas's same side, and the other side is in proportion. A square display counts as wide. So the display shows the canvas at one scale. Where the canvas runs past the display it is cut off, and where it stops short the display is blank:
+- **Placing:** the loop's −1..1 is the canvas, which has the frame's shape (4:3 by default). It keeps its shape, and its centre is the display's. The display's longer side, Width or Height, spans the canvas's same side, and the other side is in proportion. A square display counts as wide. So the display shows the canvas at one scale. Where the canvas runs past the display it is cut off, and where it stops short the display is blank:
 
   | Display | The canvas, in display pixels | Shows |
   | --- | --- | --- |
@@ -1346,7 +1371,7 @@ The Skeleton module (`js/modules/SkeletonModule.js`, `js/modules/skeleton/`, `js
 | `fill` | Fill | 0–1 | 0 | The share of a cell that must pass Threshold for the cell to be part of a shape (see Mask below). At 0, any part of it will do |
 | `resolution` | Resolution | 64–1024, in steps of 32 | 256 | Cells across the tracer's grid. The grid keeps the frame's shape, so 256 is 256 × 192, where camera_trace used 256 × 256 |
 | `hold` | Hold | Off, On | Off | Keeps the last trace on X and Y, and starts no new one (see Hold below) |
-| `minLength` | Min Length | 0–100 px | 0 | Lines shorter than this, in px of the 640×480 frame, are left out of X, Y and the preview |
+| `minLength` | Min Length | 0–100 px | 0 | Lines shorter than this, in px of the frame, are left out of X, Y and the preview |
 | `loopHz` | Loop Hz | 1–100 | 5 | Loops a second on X and Y, as Latk's |
 
 **A trace goes through three stages:**
@@ -1454,7 +1479,7 @@ With isolation, ORT runs its default of min(4, ⌈cores / 2⌉) threads, which `
 - **Parameters**: Module parameters are normalized or use specific ranges defined in the `params` object. The UI handles scaling these values for display.
 - **Coordinate System**: p5.js uses a 2D coordinate system for the UI (top-left 0,0), while the WebGL `glCanvas` uses standard GL coordinates (centered 0,0 or screen-space depending on usage).
 - **Pixel Density**: framebuffers are allocated at the graphics' pixel density, so on a retina display `gl_FragCoord` runs over twice as many pixels as `glCanvas.width` / `glCanvas.height` report. A shader that works in `gl_FragCoord` space — or that derives a texel step from a resolution — must be given `Module.fragResolution()` rather than the logical size, and any pixel-valued uniform the shader compares against `gl_FragCoord` must be scaled by `Module.pixelDensity` (Conway's spawn position, radius and cell size; GridGuys' target). Getting this wrong confines the output to one quadrant, and in a feedback shader it also reads off the clamped edge. Shaders that address themselves through `vTexCoord` are unaffected, which is most of them — only `conway`, `dither`, `gridguys-simulation`, `inkdrops` and `spiralgalaxy` read `gl_FragCoord` (`cyberlace` uses it for a `mod(…, 2.0)` dither that is deliberately one physical pixel wide, and RuttEtra's grid pass to count the texels of a buffer of density 1).
-- **Output Sizes**: every module's output is the frame's size, except Restore's and Resample's, which are their Width × Height (see Restore Module and Resample Module). An input read by uv works at any size. A module that needs its input's size in pixels reads `fbo.width * fbo.density` from the framebuffer, as DepthAnything does, instead of assuming `fragResolution()`.
+- **Output Sizes**: every module's output is the frame's size (see Frame Size), except Restore's and Resample's, which are their Width × Height (see Restore Module and Resample Module). An input read by uv works at any size. A module that needs its input's size in pixels reads `fbo.width * fbo.density` from the framebuffer, as DepthAnything does, instead of assuming `fragResolution()`. Never write 640 or 480: read `glCanvas.width` and `glCanvas.height` when needed, and size anything that follows the frame in `frameResized()`.
 - **Framebuffer Orientation**: `NodeGraphUI` blits an FBO to the P2D canvas through a shader that flips `v`, so within a framebuffer `gl_FragCoord.y = 0` is the *top* of the displayed image. A pass that reads a buffer it also writes (feedback, ping-pong) must address it with the unflipped `gl_FragCoord.xy / resolution`: `v = y / H` is by definition the row being written, and reading through a flipped uv mirrors the buffer on every iteration. `InkDrops` and `SpiralGalaxy` both carry notes on this.
 - **No `glCanvas.image()` in `process()`**: p5 draws `image()` through the bound shader whenever that shader has a sampler, not through its own texture shader. Between frames the bound shader is one of `NodeGraphUI`'s preview shaders, because `framebuffer.end()` pops each module's own `shader()` call back off. An `image()` copy therefore draws whatever the UI blitted last, instead of the image. This is what turned Dither's error diffusion solid black. To read an upstream frame, bind it as a sampler uniform. To copy one, draw it through a shader you bind yourself.
 - **Give a hand-built `p5.Geometry` its own `gid`**: `model()` caches a geometry's GPU buffers under `geometry.gid`, and `new p5.Geometry()` leaves it undefined. Two such geometries then share the cache key `undefined`, and the second draws the first's buffers. Whitney sets `geometry.gid = 'Whitney|<n>'` and frees it with `freeGeometry()` in `dispose()`. `SegmentRenderer` does the same, named for the module it draws for (`'Latk|<n>'`, `'Twoscilloscope|<n>'`), and so do Mesh (`'Mesh|<n>'`), SlowscanJam and RuttEtra. RuttEtra rebuilds its geometry, so it also frees the one each replaces. A geometry with many faces should also get one edge of its own, as RuttEtra's does, unless it is drawn with strokes: otherwise the first `model()` builds stroke geometry for every edge.

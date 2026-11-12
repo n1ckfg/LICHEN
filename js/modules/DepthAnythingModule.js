@@ -16,12 +16,17 @@ const STD = [0.229, 0.224, 0.225];
 const MAX_TAPS = 8;          // the input shader's loop bound
 
 // The model's input sizes: depth-anything-v2-js's short sides, with the long
-// side fitted to LICHEN's 4:3 frame. 518 is the size the model was trained at.
-// Patches save the choice as its index, so a new size is appended, never inserted
-const SIZES = [182, 252, 322, 392, 518].map((h) => {
-  const w = Math.round(h * 4 / 3 / PATCH) * PATCH;
-  return { w, h, label: `${w} × ${h}` };
-});
+// side fitted to the frame's shape (see Frame Size in ARCHITECTURE.md). 518 is
+// the size the model was trained at. Patches save the choice as its index, so
+// a new size is appended, never inserted
+const SHORT_SIDES = [182, 252, 322, 392, 518];
+function sizesFor(frameW, frameH) {
+  return SHORT_SIDES.map((s) => {
+    const long = Math.round(s * Math.max(frameW, frameH) / Math.min(frameW, frameH) / PATCH) * PATCH;
+    const [w, h] = frameW >= frameH ? [long, s] : [s, long];
+    return { w, h, label: `${w} × ${h}` };
+  });
+}
 
 // Depth Anything V2 (Yang et al., 2024), a monocular depth model: it estimates
 // how near each point of a picture is. A frame goes through the same four
@@ -44,11 +49,12 @@ export class DepthAnythingModule extends Module {
     super('DepthAnything', glCanvas, id);
     this.inputs = [{ id: '398f', name: 'in', type: 'video' }];
     this.outputs = [{ id: '5ac8', name: 'out', type: 'video' }];
+    this.sizes = sizesFor(glCanvas.width, glCanvas.height);
     this.params = {
       // The model's input size. A larger one sees finer depth, and takes longer
       size: {
-        id: '624f', value: 1, min: 0, max: SIZES.length - 1, step: 1, label: 'Size',
-        widget: 'dropdown', valueLabels: SIZES.map((s) => s.label),
+        id: '624f', value: 1, min: 0, max: SHORT_SIDES.length - 1, step: 1, label: 'Size',
+        widget: 'dropdown', valueLabels: this.sizes.map((s) => s.label),
       },
       // Grey shows near as white. Turbo runs from blue (far) to red (near)
       colormap: {
@@ -64,7 +70,7 @@ export class DepthAnythingModule extends Module {
 
     this.inputShader = glCanvas.createShader(vertSrc, infrDrawingsInputFrag);
     // Resized to the Size chosen when a frame starts
-    this.inputFBO = this.createFramebuffer({ width: SIZES[1].w, height: SIZES[1].h, density: 1 });
+    this.inputFBO = this.createFramebuffer({ width: this.sizes[1].w, height: this.sizes[1].h, density: 1 });
     this.readback = new PixelReadback(glCanvas);
     this.maps = new Map();      // a size, as 'w x h' -> its depth maps' texture
     this.map = null;            // the latest depth map's texture
@@ -113,8 +119,14 @@ export class DepthAnythingModule extends Module {
     if (this.result) this._uploadResult();
     this._drawOutput(glCanvas);
     const input = this.getInput(graph, 0);
-    const size = SIZES[Math.round(this.params.size.value)];
+    const size = this.sizes[Math.round(this.params.size.value)];
     if (input && this.model && !this._waiting(size) && !this.reading) this._startFrame(input, size, glCanvas);
+  }
+
+  // The sizes keep the frame's shape, and their labels with them
+  frameResized(w, h) {
+    this.sizes = sizesFor(w, h);
+    this.params.size.valueLabels = this.sizes.map((s) => s.label);
   }
 
   // Frames of size wait while the last run failed at it, and the wait isn't over

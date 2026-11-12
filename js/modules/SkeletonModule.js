@@ -222,6 +222,11 @@ export class SkeletonModule extends Module {
     this.dirty = true;
   }
 
+  // The output came back cleared, so it is drawn again
+  frameResized() {
+    this.dirty = true;
+  }
+
   _drawPreview(glCanvas) {
     const w = glCanvas.width, h = glCanvas.height;
     let count = 0;

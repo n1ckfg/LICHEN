@@ -4,6 +4,7 @@ import {
   inkMarkersPaperFrag, inkMarkersStrokeVert, inkMarkersStrokeFrag, inkMarkersBlendFrag,
 } from '../shaders/inkmarkers.js';
 import { InkMarkersPanel } from './inkmarkers/panel.js';
+import { letterbox } from '../frame.js';
 import { registerModule } from '../moduleRegistry.js';
 
 // Ink Markers Studio's widths per tip, as multiples of Size, and pressure curves
@@ -100,12 +101,9 @@ export class InkMarkersModule extends Module {
     this.endStroke(this.mousePen);
   }
 
-  // Frame pixels under a point on the fullscreen canvas, letterboxed to 4:3 as ui.js draws it
+  // Frame pixels under a point on the fullscreen canvas, letterboxed to the frame's shape as ui.js draws it
   framePos(mx, my, canvasW, canvasH) {
-    const aspect = this.w / this.h;
-    let dw = canvasW, dh = canvasW / aspect;
-    if (dh > canvasH) { dh = canvasH; dw = canvasH * aspect; }
-    const dx = (canvasW - dw) / 2, dy = (canvasH - dh) / 2;
+    const { dx, dy, dw, dh } = letterbox(this.w, this.h, canvasW, canvasH);
     return [(mx - dx) / dw * this.w, (my - dy) / dh * this.h];
   }
 
@@ -228,6 +226,14 @@ export class InkMarkersModule extends Module {
       this.strokes.push(s);
     }
     this._pendingClear = true;
+  }
+
+  // Every buffer came back cleared at the new size, so the sheet starts again
+  // on fresh paper; strokes being drawn carry on
+  frameResized(w, h) {
+    this.w = w;
+    this.h = h;
+    this._paperType = -1;
   }
 
   onTrigger(name) {

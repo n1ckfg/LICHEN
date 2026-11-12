@@ -1,5 +1,6 @@
 import { Module } from './Module.js';
 import { transformFrag } from '../shaders/transform.js';
+import { letterbox } from '../frame.js';
 import { registerModule } from '../moduleRegistry.js';
 
 const SCALE_PER_WHEEL = 1.001;   // scale factor per unit of wheel delta
@@ -12,8 +13,9 @@ export class TransformModule extends Module {
     this.inputs = [{ id: 'db89', name: 'in', type: 'video' }];
     this.outputs = [{ id: 'ea91', name: 'out', type: 'video' }];
     this.params = {
-      x: { id: '41a3', value: 0, min: -640, max: 640, step: 1, label: 'X' },
-      y: { id: 'eb04', value: 0, min: -480, max: 480, step: 1, label: 'Y' },
+      // In frame pixels, up to a frame's width or height either way
+      x: { id: '41a3', value: 0, min: -glCanvas.width, max: glCanvas.width, step: 1, label: 'X' },
+      y: { id: 'eb04', value: 0, min: -glCanvas.height, max: glCanvas.height, step: 1, label: 'Y' },
       rotation: { id: '2d7a', value: 0, min: -180, max: 180, step: 0.1, label: 'Rotation' },
       scaleX: { id: '3d47', value: 1, min: -4, max: 4, step: 0.01, label: 'Scale X' },
       scaleY: { id: '3adf', value: 1, min: -4, max: 4, step: 0.01, label: 'Scale Y' },
@@ -40,15 +42,14 @@ export class TransformModule extends Module {
     this.outputFBO.end();
   }
 
-  // The fullscreen picture, letterboxed to 4:3 as ui.js draws it
+  // The fullscreen picture, letterboxed to the frame's shape as ui.js draws it
   _letterbox(canvasW, canvasH) {
-    let dw = canvasW;
-    let dh = canvasW / (640 / 480);
-    if (dh > canvasH) {
-      dh = canvasH;
-      dw = canvasH * (640 / 480);
-    }
-    return { dx: (canvasW - dw) / 2, dy: (canvasH - dh) / 2, dw, dh };
+    return letterbox(this.glCanvas.width, this.glCanvas.height, canvasW, canvasH);
+  }
+
+  frameResized(w, h) {
+    [this.params.x.min, this.params.x.max] = [-w, w];
+    [this.params.y.min, this.params.y.max] = [-h, h];
   }
 
   handleMouseDown(mx, my, canvasW, canvasH, button) {

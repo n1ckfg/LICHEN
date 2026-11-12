@@ -4,6 +4,7 @@ import {
   inkDropsBakeFrag, inkDropsLiftFrag, inkDropsMainFrag,
   INK_MAXD, INK_MAXR, INK_RING_LIFE,
 } from '../shaders/inkdrops.js';
+import { letterbox } from '../frame.js';
 import { registerModule } from '../moduleRegistry.js';
 
 const MAXD = INK_MAXD;          // wet drops uploaded per pass
@@ -611,15 +612,7 @@ export class InkDropsModule extends Module {
   // Map a click on the fullscreen canvas to sheet uv, accounting for the
   // letterboxing (same fit as Conway) and for the flipped y in sheetUV().
   getSheetUV(canvasX, canvasY, canvasW, canvasH) {
-    const aspect = this.glCanvas.width / this.glCanvas.height;
-    let dw = canvasW;
-    let dh = canvasW / aspect;
-    if (dh > canvasH) {
-      dh = canvasH;
-      dw = canvasH * aspect;
-    }
-    const dx = (canvasW - dw) / 2;
-    const dy = (canvasH - dh) / 2;
+    const { dx, dy, dw, dh } = letterbox(this.glCanvas.width, this.glCanvas.height, canvasW, canvasH);
     return [(canvasX - dx) / dw, 1.0 - (canvasY - dy) / dh];
   }
 
@@ -633,6 +626,11 @@ export class InkDropsModule extends Module {
       this.lastRingClick = this.time;
       this.addRing((ux - 0.5) * (this.glCanvas.width / this.glCanvas.height), uy - 0.5);
     }
+  }
+
+  // Every buffer came back cleared, and the sheet starts as bare paper
+  frameResized() {
+    this._pendingClear = true;
   }
 
   handleKey(key) {

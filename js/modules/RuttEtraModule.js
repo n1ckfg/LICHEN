@@ -377,6 +377,13 @@ export class RuttEtraModule extends Module {
     return pieces;
   }
 
+  // The scan lines are a grid over the frame, so it is built again
+  frameResized(w, h) {
+    this.width = w;
+    this.height = h;
+    this.lastScanStep = -1;
+  }
+
   dispose() {
     if (this.geometry) this.glCanvas.freeGeometry(this.geometry);
     this.geometry = null;

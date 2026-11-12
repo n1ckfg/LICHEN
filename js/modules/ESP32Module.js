@@ -92,6 +92,13 @@ export class ESP32Module extends Module {
     this._drawPanel(glCanvas);
   }
 
+  // The output came back cleared, and the canvas maps onto the display by its
+  // shape, so the next frame sends a buffer and draws the panel again
+  frameResized() {
+    this.due = this.clock;
+    this.drawnLook = null;
+  }
+
   // Follow Width and Height, which a knob or a cable gives in fractions.
   // Returns whether the display changed size.
   _resize() {
