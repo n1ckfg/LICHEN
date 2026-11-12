@@ -17,13 +17,13 @@ void main() {
   float s = sin(a);
   p = vec2(c * p.x + s * p.y, -s * p.x + c * p.y);
   if (abs(uScale.x) < 1e-6 || abs(uScale.y) < 1e-6) {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    gl_FragColor = vec4(0.0);
     return;
   }
   vec2 uv = (p / uScale + 0.5 * uResolution) / uResolution;
 
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    gl_FragColor = vec4(0.0);
     return;
   }
   gl_FragColor = texture2D(tex0, uv);

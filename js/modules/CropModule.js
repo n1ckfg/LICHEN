@@ -8,7 +8,7 @@ const BLINK_MS = 75;     // each on or off of the flash
 
 // What the box's picture fills, in drop-down order. Patches save the mode as
 // its index, so append, never insert.
-const FLOATING = 0;      // left where it is, black round it
+const FLOATING = 0;      // left where it is, transparent round it
 const FIT = 1;           // stretched to the whole frame
 
 export class CropModule extends Module {

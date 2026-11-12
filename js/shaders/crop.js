@@ -16,15 +16,15 @@ void main() {
 
   vec2 uv = vTexCoord;
   if (uFit > 0.5) {
-    // The box stretched to the frame. Past the picture's edge is black, as
+    // The box stretched to the frame. Past the picture's edge is transparent, as
     // round a floating box
     uv = (lo + vTexCoord * (hi - lo)) / uResolution;
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0 || hi.x - lo.x < 1e-3 || hi.y - lo.y < 1e-3) {
-      gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+      gl_FragColor = vec4(0.0);
       return;
     }
   } else if (p.x < lo.x || p.x >= hi.x || p.y < lo.y || p.y >= hi.y) {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    gl_FragColor = vec4(0.0);
     return;
   }
   gl_FragColor = texture2D(tex0, uv);
