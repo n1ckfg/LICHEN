@@ -22,6 +22,7 @@ js/main.js (p5.js loop)
 - `coi-serviceworker.js` — a service worker that cross-origin isolates the page, so ONNX Runtime's WASM backend can run threads (see Cross-Origin Isolation)
 - `workflows/` — contains JSON patches (connection graph state, module types, and parameter values) that can be loaded via Ctrl+O
 - `tools/convert-workflows.mjs` — converts patches saved before ids to the id format, using the frozen table in `tools/legacy-ids.json` (see Patch IDs)
+- `tools/new-uids.mjs` — gives a module class a fresh `static uid` and fresh ids for its params and ports, as step 3 of Adding a New Module asks
 - `tools/patch-to-gles3.mjs` — turns a patch into a standalone node-gles3 script that plays it fullscreen with no UI (see Exporting to node-gles3)
 - `tools/pix2pix-onnx.py` — converts a pix2pix generator, exported to fp32 ONNX or as a PyTorch checkpoint, into the int8/fp16 file Pix2Pix loads (see Pix2Pix Module)
 
@@ -109,7 +110,7 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 ### Module Categories
 
 - **Sources**: Camera, Image, Mesh, VideoPlayer
-- **Utility**: Blur, Brcosa, Channel, ChromaKey, Crop, Delay, Dither, Edges, Levels, LUT, Matte, Mosaic, Resample, Restore, Sharpen, Transform, VideoMixer
+- **Utility**: Blur, Brcosa, Channel, ChromaKey, Crop, Delay, Dither, Edges, Example, Levels, LUT, Matte, Mosaic, Resample, Restore, Sharpen, Transform, VideoMixer
 - **Control**: Calculator, Constant, Random, Remap, Skeleton
 - **Generative**: Cloudy, Coils, Conway, Crystalline, GridGuys, InkDrops, LetterForms, Protozoa, SpiralGalaxy, Whitney, Yellowtail
 - **Emulation**: DeeSeventySix, ESP32, RuttEtra, SlowscanJam, Twoscilloscope
@@ -135,7 +136,7 @@ Firefox's user agent has no "safari", so it always drew these framebuffers this 
 
 1. Create `js/shaders/mymodule.js` exporting the fragment shader source
 2. Create `js/modules/MyModule.js` extending `Module`, defining `inputs`, `outputs`, `params`, and `process()`; call `registerModule('MyModule', MyModuleClass)` at the end
-3. Give the class a fresh `static uid` (`openssl rand -hex 4`), and each param and port a fresh `id` (`openssl rand -hex 2`). Never copy them from another module, even when starting from its file (see Patch IDs)
+3. Give the class a fresh `static uid` (`openssl rand -hex 4`), and each param and port a fresh `id` (`openssl rand -hex 2`). Never copy them from another module, even when starting from its file (see Patch IDs). `node tools/new-uids.mjs js/modules/MyModule.js` does both for a module copied from another.
 4. Import `'./modules/MyModule.js'` in `js/main.js`
 5. Add the type name to the appropriate category in `MODULE_CATEGORIES` in `js/ui.js`
 
