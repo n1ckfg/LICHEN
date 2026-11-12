@@ -41,7 +41,7 @@ A control value is one number a frame, and a parameter cable applies it after ev
 - **Control signals:** a control output can also publish a loop in `this.controlSignals['portName']`, as `{ samples, sampleRate, z, color }`. `samples` is a `Float32Array` in −1..1. `z` (blanking, XYscope's −1 off and 1 on) and `color` (0xRRGGBB a sample) are optional lanes the same length, or `null`. It should still set a numeric `controlValues` entry for the same port, because a knob cable sees only that.
 - **Control input pins:** an input declared `{ name, type: 'control' }` is drawn green, as is a cable into it, and takes a control output's cable. The cable is stored in `connections`, like a video cable, so the topological sort runs the source first, in the same frame. `this.getControlInput(graph, portIndex)` returns `{ value, signal }`: the source's control value and its control signal, or `null` for the signal if it has none. It returns `null` when nothing is cabled to the pin, or when a video output is.
 
-Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs, and Twoscilloscope's and ESP32's X and Y pins, are the only ones so far (see Latk Module, NAPLPS Module, RuttEtra Module, Skeleton Module, Yellowtail Module and ESP32 Module). Calculator's `a` and `b`, Remap's five pins and Conway's X and Y are control input pins too, but read only the value (see Random, Constant, Calculator and Remap Modules, and Conway Module).
+Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs, and Twoscilloscope's and ESP32's X and Y pins, are the only ones so far (see Latk Module, NAPLPS Module, RuttEtra Module, Skeleton Module, Yellowtail Module and ESP32 Module). Calculator's `a` and `b`, Remap's five pins, and Conway's and InkMarkers' X and Y are control input pins too, but read only the value (see Random, Constant, Calculator and Remap Modules, Conway Module and InkMarkers Module).
 
 The UI renders each param in the `params` object: `{ paramName: { id, value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
@@ -422,7 +422,7 @@ Bake runs only on frames where a drop settles; lift runs whenever a wipe is live
 
 ## InkMarkers Module
 
-The InkMarkers module (`js/modules/InkMarkersModule.js`, `js/modules/inkmarkers/panel.js`, `js/shaders/inkmarkers.js`) is an Emulation source: Copic-style alcohol markers on paper, ported from the Ink Markers Studio sketch (`ink-markers`). It has no inputs and one video output. Strokes are drawn in fullscreen, with the mouse or a pen.
+The InkMarkers module (`js/modules/InkMarkersModule.js`, `js/modules/inkmarkers/panel.js`, `js/shaders/inkmarkers.js`) is an Emulation source: Copic-style alcohol markers on paper, ported from the Ink Markers Studio sketch (`ink-markers`). It has X and Y control input pins and one video output. Strokes are drawn in fullscreen, with the mouse or a pen, or by a pen that X and Y drive (see X and Y).
 
 **Params.**
 
@@ -437,7 +437,17 @@ The InkMarkers module (`js/modules/InkMarkersModule.js`, `js/modules/inkmarkers/
 | `clear` | Clear | trigger | | Wipes the sheet back to bare paper |
 | `reseed` | Seed | trigger | | Randomizes every param but Paper (see Seed) |
 
-Flow and bleed are taken when a stroke starts, so turning them mid-stroke changes the next one. Tip and colour are read as the stroke is drawn, so a cable on R, G or B changes a stroke while it is drawn, as the sketch's colour picker did.
+Flow and bleed are taken when a stroke starts, so turning them mid-stroke changes the next one (but see X and Y). Tip and colour are read as the stroke is drawn, so a cable on R, G or B changes a stroke while it is drawn, as the sketch's colour picker did.
+
+**X and Y.** Two control input pins drive a pen that draws as the mouse does, as Conway's do (see Conway Module). They take 0..1 values, with Y up, so the pen is at `x × width` across and `(1 − y) × height` down:
+- **Pen down:** while either pin is cabled, the pen draws every frame, a line from where it was last frame to where it is now, as a drag does, at the mouse's pressure of 0.5. A pin with nothing cabled in stays at 0.5, the centre. As with a click, the frame it goes down draws nothing until it moves.
+- **Pen up:** with both unplugged, or a value that isn't finite, the stroke ends and is baked into the sheet, and the next one starts afresh.
+- **Flow and Bleed:** a stroke keeps the Flow and Bleed it started with, and the pen can stay down for as long as the pins stay cabled. So when either has moved since, the pen lifts and goes straight back down where it was, and the new values take effect. A cable on either therefore ends a stroke every frame it moves the value.
+- **Values only:** like Conway's, they read a source's value, not its loop. Latk's X and Y draw where the beam is each frame, which jumps around the drawing.
+
+The pin pen and the mouse each keep a stroke of their own, so both can draw at once into the same wet layer. A bake takes in everything wet, so when one stroke ends, the other goes into the sheet as far as it has got, and carries on in the wiped layer. A pen held down for minutes would keep millions of points, so after each pass a stroke keeps only its last two drawn points, all the next pass reads.
+
+Checked in headless Chrome: Constants of 0.25 and 0.75, with X then moved to 0.75, drew a line along y = 120 from x = 160 to 480 on 640 × 480. Unplugging both ended the stroke and baked it. Two values swept at 0.5 and 1 Hz drew a figure of eight in one unbroken line while the mouse drew across it, and turning Flow mid-figure took effect.
 
 **Rendering.** Four framebuffers, which the sketch had as `createGraphics(WEBGL)` layers:
 - **Paper** (`inkMarkersPaperFrag`): FBM paper, drawn when Paper changes, at a fresh `Math.random` seed.
@@ -445,7 +455,7 @@ Flow and bleed are taken when a stroke starts, so turning them mid-stroke change
 - **Sheet** (`accumA`/`accumB`): the finished strokes. When a stroke ends, `inkMarkersBlendFrag` composites it over the sheet into the other buffer, the two swap, and the wet stroke is wiped. Alpha 0 is bare paper.
 - **Output**: the same composite of the wet stroke over the sheet, redrawn only on frames where something changed.
 
-The blend shader is the sketch's: alcohol spread, a multiply layer of 1–3 passes by density, a blurred overlay layer, and darkening at the stroke's edges. Its pixel offsets, and the paper's grain, are given a resolution 1200 px wide, the sketch's canvas, so they keep the same share of the frame. Mouse and pen events only add points to the stroke; `process()` draws them. The sketch's `marker.js` (whose wetness reached no shader), `brush.js` and `texture.js` were unused, and are not ported.
+The blend shader is the sketch's: alcohol spread, a multiply layer of 1–3 passes by density, a blurred overlay layer, and darkening at the stroke's edges. Its pixel offsets, and the paper's grain, are given a resolution 1200 px wide, the sketch's canvas, so they keep the same share of the frame. Mouse, pen and pin events only add points to a stroke; `process()` draws them. The sketch's `marker.js` (whose wetness reached no shader), `brush.js` and `texture.js` were unused, and are not ported.
 
 **Fullscreen interaction.** Double-click the node preview to enter fullscreen. Drag to draw; the wheel changes Size; 1–4 pick the tip, `[` and `]` change Size by 2, C clears, Ctrl/Cmd+S saves a PNG, ESC exits. Pen pressure comes from pointer events, which p5's mouse events don't carry, so the module listens for `pointerdown` and `pointermove` on window, in the capture phase. As in the sketch, a pointer is taken to have pressure when its first reading is neither 0 nor 0.5. A mouse draws at 0.5.
 

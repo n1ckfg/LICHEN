@@ -15,13 +15,16 @@ const TIP_CURVE = [0.8, 0.7, 0.5, 1.2];
 const SKETCH_WIDTH = 1200;
 
 // Copic-style alcohol markers on paper, from the Ink Markers Studio sketch.
-// Strokes are drawn in fullscreen with the mouse or a pen; its toolbar there
-// sets the params, as the dials do.
+// Strokes are drawn in fullscreen with the mouse or a pen, or by the X and Y
+// pins; the toolbar in fullscreen sets the params, as the dials do.
 export class InkMarkersModule extends Module {
   static uid = 'eec28b11';
 
   constructor(glCanvas, id) {
     super('InkMarkers', glCanvas, id);
+    // A pen that draws as the mouse does, at X and Y (0..1, Y up), while
+    // either is cabled; an unplugged one stays at the centre
+    this.inputs = [{ id: '1169', name: 'x', type: 'control' }, { id: '724a', name: 'y', type: 'control' }];
     this.outputs = [{ id: 'b227', name: 'out', type: 'video' }];
     this.params = {
       tip: { id: '822b', value: 0, min: 0, max: 3, step: 1, label: 'Tip', widget: 'dropdown',
@@ -55,13 +58,12 @@ export class InkMarkersModule extends Module {
     this.w = glCanvas.width;
     this.h = glCanvas.height;
 
-    // Strokes not yet baked, oldest first; only the last can still be drawing.
-    // Each is { points, flow, bleed, lastRenderedIndex, ended }.
+    // Strokes not yet baked, oldest first. Each is { points, flow, bleed,
+    // lastRenderedIndex, ended }.
     this.strokes = [];
-    this.active = null;
-    this.lastX = 0;
-    this.lastY = 0;
-    this.lastPressure = 0.5;
+    // The mouse and the X and Y pins each draw their own stroke, at once if need be
+    this.mousePen = { active: null, lastX: 0, lastY: 0, lastPressure: 0.5 };
+    this.cablePen = { active: null, lastX: 0, lastY: 0, lastPressure: 0.5 };
     this._paperType = -1;
     this._pendingClear = true;
     this._dirty = true;
@@ -95,7 +97,7 @@ export class InkMarkersModule extends Module {
 
   hideFullscreenUI() {
     this.panel.hide();
-    this.endStroke();
+    this.endStroke(this.mousePen);
   }
 
   // Frame pixels under a point on the fullscreen canvas, letterboxed to 4:3 as ui.js draws it
@@ -121,27 +123,27 @@ export class InkMarkersModule extends Module {
 
   // Flow and bleed are taken when a stroke starts, as in the sketch; tip and
   // colour are read as it is drawn
-  startStroke(x, y, pressure) {
-    this.endStroke();
-    this.lastX = x;
-    this.lastY = y;
-    this.lastPressure = this._applyPressureCurve(pressure);
-    this.active = {
-      points: [{ x, y, pressure: this.lastPressure, size: this._pointSize(this.lastPressure) }],
+  startStroke(pen, x, y, pressure) {
+    this.endStroke(pen);
+    pen.lastX = x;
+    pen.lastY = y;
+    pen.lastPressure = this._applyPressureCurve(pressure);
+    pen.active = {
+      points: [{ x, y, pressure: pen.lastPressure, size: this._pointSize(pen.lastPressure) }],
       flow: this.params.flow.value,
       bleed: this.params.bleed.value,
       lastRenderedIndex: 0,
       ended: false,
     };
-    this._bleed = this.active.bleed;
-    this.strokes.push(this.active);
+    this._bleed = pen.active.bleed;
+    this.strokes.push(pen.active);
   }
 
-  continueStroke(x, y, pressure) {
-    const s = this.active;
+  continueStroke(pen, x, y, pressure) {
+    const s = pen.active;
     if (!s) return;
     const p = this._applyPressureCurve(pressure);
-    const dx = x - this.lastX, dy = y - this.lastY;
+    const dx = x - pen.lastX, dy = y - pen.lastY;
     const dist = Math.hypot(dx, dy);
     // The sketch's 2 px spacing, at this frame's scale
     const minSpacing = 2 * this.w / SKETCH_WIDTH;
@@ -149,34 +151,57 @@ export class InkMarkersModule extends Module {
       const steps = Math.ceil(dist / minSpacing);
       for (let i = 1; i <= steps; i++) {
         const t = i / steps;
-        const pp = this.lastPressure + (p - this.lastPressure) * t;
-        s.points.push({ x: this.lastX + dx * t, y: this.lastY + dy * t, pressure: pp, size: this._pointSize(pp) });
+        const pp = pen.lastPressure + (p - pen.lastPressure) * t;
+        s.points.push({ x: pen.lastX + dx * t, y: pen.lastY + dy * t, pressure: pp, size: this._pointSize(pp) });
       }
     }
-    this.lastX = x;
-    this.lastY = y;
-    this.lastPressure = p;
+    pen.lastX = x;
+    pen.lastY = y;
+    pen.lastPressure = p;
   }
 
-  endStroke() {
-    if (!this.active) return;
-    this.active.ended = true;
-    this.active = null;
+  endStroke(pen) {
+    if (!pen.active) return;
+    pen.active.ended = true;
+    pen.active = null;
   }
 
   handleMouseDown(mx, my, canvasW, canvasH, button) {
     if (button !== 'left') return;
     const [x, y] = this.framePos(mx, my, canvasW, canvasH);
-    this.startStroke(x, y, this.pressure);
+    this.startStroke(this.mousePen, x, y, this.pressure);
   }
 
   handleMouseDrag(mx, my, canvasW, canvasH) {
     const [x, y] = this.framePos(mx, my, canvasW, canvasH);
-    this.continueStroke(x, y, this.pressure);
+    this.continueStroke(this.mousePen, x, y, this.pressure);
   }
 
   handleMouseUp() {
-    this.endStroke();
+    this.endStroke(this.mousePen);
+  }
+
+  // The X and Y pen: down while either pin is cabled, drawing a line each
+  // frame from where it was to where it is, as a drag does, at the mouse's
+  // pressure. It lifts when both are unplugged. Flow and Bleed are a stroke's
+  // from its start, so when either has moved the pen lifts and goes straight
+  // down again where it was, and they take effect.
+  _penFromInputs(graph) {
+    const pen = this.cablePen;
+    const xIn = this.getControlInput(graph, 0);
+    const yIn = this.getControlInput(graph, 1);
+    const x = (xIn ? xIn.value : 0.5) * this.w;
+    const y = (1 - (yIn ? yIn.value : 0.5)) * this.h;
+    if ((!xIn && !yIn) || !Number.isFinite(x) || !Number.isFinite(y)) {
+      this.endStroke(pen);
+      return;
+    }
+    const s = pen.active;
+    if (s && (s.flow !== this.params.flow.value || s.bleed !== this.params.bleed.value)) {
+      this.startStroke(pen, pen.lastX, pen.lastY, 0.5);
+    }
+    if (!pen.active) this.startStroke(pen, x, y, 0.5);
+    else this.continueStroke(pen, x, y, 0.5);
   }
 
   handleWheel(delta) {
@@ -192,11 +217,15 @@ export class InkMarkersModule extends Module {
     else if ((key === 'c' || key === 'C') && !mod) this.clear();
   }
 
+  // Wipes the sheet; a stroke still being drawn carries on from where its pen is
   clear() {
-    this.strokes = this.active ? [this.active] : [];
-    if (this.active) {
-      this.active.points = [{ x: this.lastX, y: this.lastY, pressure: this.lastPressure, size: this._pointSize(this.lastPressure) }];
-      this.active.lastRenderedIndex = 0;
+    this.strokes = [];
+    for (const pen of [this.mousePen, this.cablePen]) {
+      const s = pen.active;
+      if (!s) continue;
+      s.points = [{ x: pen.lastX, y: pen.lastY, pressure: pen.lastPressure, size: this._pointSize(pen.lastPressure) }];
+      s.lastRenderedIndex = 0;
+      this.strokes.push(s);
     }
     this._pendingClear = true;
   }
@@ -293,6 +322,13 @@ export class InkMarkersModule extends Module {
     this._strokePass(g, s, startIdx, 0.3);
     this.strokeFBO.end();
     s.lastRenderedIndex = s.points.length;
+    // The next pass needs only the last two points drawn, so a stroke the X
+    // and Y pen keeps down for minutes doesn't keep every point
+    const drop = s.lastRenderedIndex - 2;
+    if (drop > 0) {
+      s.points.splice(0, drop);
+      s.lastRenderedIndex -= drop;
+    }
     this._dirty = true;
   }
 
@@ -309,7 +345,9 @@ export class InkMarkersModule extends Module {
     target.end();
   }
 
-  // A finished stroke goes into the sheet, and the wet layer is wiped
+  // A finished stroke goes into the sheet, and the wet layer is wiped. A
+  // stroke still being drawn goes in with it, as far as it has got, and
+  // carries on in the wiped layer.
   _bake(g, s) {
     this._composite(g, this.accumB, this.accumA, s.bleed);
     [this.accumA, this.accumB] = [this.accumB, this.accumA];
@@ -336,13 +374,13 @@ export class InkMarkersModule extends Module {
       this._dirty = true;
     }
 
-    while (this.strokes.length > 0) {
-      const s = this.strokes[0];
+    this._penFromInputs(graph);
+    for (const s of [...this.strokes]) {
       this._renderStroke(g, s);
-      if (!s.ended) break;
+      if (!s.ended) continue;
       // A click with no drag leaves nothing to bake
       if (s.lastRenderedIndex > 0) this._bake(g, s);
-      this.strokes.shift();
+      this.strokes.splice(this.strokes.indexOf(s), 1);
     }
 
     if (!this._dirty) return;
