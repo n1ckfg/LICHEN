@@ -32,7 +32,7 @@ void main() {
 const MODULE_CATEGORIES = {
   'Sources': ['Camera', 'Image', 'Mesh', 'VideoPlayer'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
-  'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Crop', 'Delay', 'Dither', 'Edges', 'Levels', 'LUT', 'Matte', 'Mosaic', 'Resample', 'Restore', 'Sharpen', 'Transform', 'VideoMixer'],
+  'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Crop', 'Delay', 'Dither', 'Edges', 'Example', 'Levels', 'LUT', 'Matte', 'Mosaic', 'Resample', 'Restore', 'Sharpen', 'Transform', 'VideoMixer'],
   'Control': ['Calculator', 'Constant', 'Random', 'Remap', 'Skeleton'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'Displacer', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'Slitscan', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
   'Generative': ['Cloudy', 'Coils', 'Conway', 'Crystalline', 'GridGuys', 'InkDrops', 'LetterForms', 'Protozoa', 'SpiralGalaxy', 'Whitney', 'Yellowtail'],
@@ -70,6 +70,7 @@ const MODULE_COLORS = {
   Delay: color_utility,
   Dither: color_utility,
   Edges: color_utility,
+  Example: color_utility,
   Levels: color_utility,
   LUT: color_utility,
   Matte: color_utility,
