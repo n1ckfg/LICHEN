@@ -2918,8 +2918,16 @@ export class NodeGraphUI {
     return this.pipeline.graph.toJSON();
   }
 
+  // A load replaces every node, so the old ones are disposed first, as a
+  // deleted node is. Otherwise what they hold outlives the patch: a Camera's
+  // stream (and the camera's light), a Monitor's second-screen window, workers,
+  // audio output, DOM panels and GPU buffers. graph.fromJSON() drops them from
+  // the graph before it builds anything, so a load that fails part way loses
+  // them either way. Nodes still fading out after a delete aren't in the graph,
+  // and are disposed when their fade ends.
   fromJSON(data) {
     const glCanvas = this.pipeline.glCanvas;
+    for (const mod of this.pipeline.graph.nodes.values()) mod.dispose();
     this.pipeline.graph.fromJSON(data, (uid, id, savedType) => {
       return createModuleByUid(uid, glCanvas, id, savedType);
     });
