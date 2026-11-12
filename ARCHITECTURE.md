@@ -161,6 +161,8 @@ Checked in headless Chrome at pixel density 2. Every module but Camera and the f
 
 ## Adding a New Module
 
+`node tools/create-module.mjs <Name> [--category <category>]` does all five steps below, starting from `ExampleModule.js` and `example.js`. For `Spiral` it writes `js/modules/SpiralModule.js` and `js/shaders/spiral.js` (a `SpiralGalaxy` would get `spiral-galaxy.js` and `spiralGalaxyFrag`), runs `new-uids.mjs` on the module, imports it in `js/main.js`, and adds it to its category in `MODULE_CATEGORIES` and to `MODULE_COLORS`, in alphabetical order among the category's modules, with the colour most of them use. The category defaults to Effects. It refuses a name that's already a file or a registered type.
+
 1. Create `js/shaders/mymodule.js` exporting the fragment shader source
 2. Create `js/modules/MyModule.js` extending `Module`, defining `inputs`, `outputs`, `params`, and `process()`; call `registerModule('MyModule', MyModuleClass)` at the end
 3. Give the class a fresh `static uid` (`openssl rand -hex 4`), and each param and port a fresh `id` (`openssl rand -hex 2`). Never copy them from another module, even when starting from its file (see Patch IDs). `node tools/new-uids.mjs js/modules/MyModule.js` does both for a module copied from another.
