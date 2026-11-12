@@ -13,8 +13,12 @@ const XY_MAX_COLS = 160;
 
 let nextGeometryId = 0;
 
-// Vertex shader that samples input texture for displacement
-const ruttEtraVert = `
+// Vertex shader that samples input texture for displacement. With withD, the
+// brightness that displaces comes from the d input (uDTex) instead, and the
+// colour still from the input. Uncabled d uses its own program, with no
+// branch, so the input's lines come out as they did before d existed: a
+// select between the two in one shader moved a few edge pixels in Chrome
+const ruttEtraVert = (withD) => `
 precision highp float;
 
 attribute vec3 aPosition;
@@ -24,17 +28,19 @@ uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
 
 uniform sampler2D uInputTex;
+${withD ? 'uniform sampler2D uDTex;' : ''}
 uniform float uDepth;
 uniform float uHalfWidth;    // half of Line Thickness, in px
 
 varying vec3 vColor;
 
 void main() {
-  // Sample input texture for displacement
+  // Sample input texture for colour, and for displacement without d
   vec4 texColor = texture2D(uInputTex, aTexCoord);
+  vec4 dispColor = ${withD ? 'texture2D(uDTex, aTexCoord)' : 'texColor'};
 
   // Calculate brightness
-  float brightness = 0.34 * texColor.r + 0.5 * texColor.g + 0.16 * texColor.b;
+  float brightness = 0.34 * dispColor.r + 0.5 * dispColor.g + 0.16 * dispColor.b;
 
   // Z displacement
   float z = -brightness * uDepth + uDepth * 0.5;
@@ -94,12 +100,17 @@ function mat4Mult(a, b) {
 // brightness and seen in 3D. Its X and Y outputs carry the lines as one loop of
 // XY audio, as Latk's do, to drive Twoscilloscope. That takes most of its time
 // on the CPU, so it is done only while X or Y is cabled to something.
+// A second input, d, displaces the lines by its brightness instead of the
+// input's, so DepthAnything's depth can push them back.
 export class RuttEtraModule extends Module {
   static uid = '4bc92c10';
 
   constructor(glCanvas, id) {
     super('RuttEtra', glCanvas, id);
-    this.inputs = [{ id: '870d', name: 'in', type: 'video' }];
+    this.inputs = [
+      { id: '870d', name: 'in', type: 'video' },
+      { id: 'f6de', name: 'd', type: 'video' },
+    ];
     this.outputs = [
       { id: '0f5b', name: 'out', type: 'video' },
       { id: 'e4df', name: 'x', type: 'control' },
@@ -122,7 +133,8 @@ export class RuttEtraModule extends Module {
 
     // Create p5 shader using our custom vertex shader
     try {
-      this.ruttShader = glCanvas.createShader(ruttEtraVert, ruttEtraFrag);
+      this.ruttShader = glCanvas.createShader(ruttEtraVert(false), ruttEtraFrag);
+      this.ruttDShader = glCanvas.createShader(ruttEtraVert(true), ruttEtraFrag);
       this.gpuMode = true;
     } catch (e) {
       console.error('RuttEtra: Failed to create GPU shader, using fallback', e);
@@ -217,12 +229,14 @@ export class RuttEtraModule extends Module {
 
     if (this.reading) this._pollReadback();
     const inputFBO = this.getInput(graph, 0);
-    const mvp = this._draw(inputFBO, glCanvas);
+    // What the lines are displaced by: d when it is cabled, else the input
+    const dFBO = this.getInput(graph, 1);
+    const mvp = this._draw(inputFBO, dFBO, glCanvas);
     const xy = this._xyCabled(graph);
     // Uncabled, nothing is read back, and the grid goes, so cabling X or Y
     // again starts from a blank loop rather than an old picture
     if (!mvp || !xy) this.grid = null;
-    else if (!this.reading) this._startGrid(inputFBO, glCanvas);
+    else if (!this.reading) this._startGrid(dFBO || inputFBO, glCanvas);
     if (!xy) return;
     // With no lines, the loop is all blank, so the beam rests unlit in the middle
     const pieces = mvp ? this._linePieces(mvp) : [];
@@ -236,8 +250,9 @@ export class RuttEtraModule extends Module {
   }
 
   // Draws the scan lines into the output, and returns the matrix they were
-  // drawn through (projection x model-view, column-major), or null if none were
-  _draw(inputFBO, glCanvas) {
+  // drawn through (projection x model-view, column-major), or null if none were.
+  // With dFBO, the lines are displaced by its brightness instead of the input's
+  _draw(inputFBO, dFBO, glCanvas) {
     if (!inputFBO) {
       this.outputFBO.begin();
       glCanvas.clear();
@@ -279,12 +294,14 @@ export class RuttEtraModule extends Module {
     glCanvas.rotateX(rotX);
     glCanvas.rotateY(rotY);
 
-    // Use our displacement shader
-    glCanvas.shader(this.ruttShader);
-    this.ruttShader.setUniform('uInputTex', inputFBO);
-    this.ruttShader.setUniform('uDepth', depth);
-    this.ruttShader.setUniform('uHalfWidth', this.getParam('lineThickness') * 0.5);
-    this.ruttShader.setUniform('uOpacity', opacity);
+    // Use our displacement shader, displaced by d when it is cabled
+    const shader = dFBO ? this.ruttDShader : this.ruttShader;
+    glCanvas.shader(shader);
+    shader.setUniform('uInputTex', inputFBO);
+    if (dFBO) shader.setUniform('uDTex', dFBO);
+    shader.setUniform('uDepth', depth);
+    shader.setUniform('uHalfWidth', this.getParam('lineThickness') * 0.5);
+    shader.setUniform('uOpacity', opacity);
 
     // Enable additive blending
     glCanvas.blendMode(glCanvas.ADD);
@@ -304,7 +321,8 @@ export class RuttEtraModule extends Module {
     return mvp;
   }
 
-  // Read the brightness under every vertex back from the GPU
+  // Read the brightness under every vertex back from the GPU, from what the
+  // lines are displaced by (d when it is cabled)
   _startGrid(input, glCanvas) {
     const { cols, rows } = this;
     const step = this.lastScanStep;
