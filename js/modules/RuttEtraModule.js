@@ -79,7 +79,8 @@ uniform mat4 uProjectionMatrix;
 uniform sampler2D uInputTex;
 ${withD ? 'uniform sampler2D uDTex;' : ''}${kinect ? `
 uniform vec2 uResolution;    // the displacing buffer's size, in px
-uniform vec4 uIntrinsics;    // principal point (x, y) and focal lengths (z, w), in px` : ''}${method === DEPTH_ANYTHING ? `
+uniform vec4 uIntrinsics;    // principal point (x, y) and focal lengths (z, w), in px
+uniform float uFrameHeight;  // the frame's height, in px` : ''}${method === DEPTH_ANYTHING ? `
 uniform float uShift;        // 1 / (Far/Near - 1)` : ''}
 uniform float uDepth;
 uniform float uHalfWidth;    // half of Line Thickness, in px
@@ -104,11 +105,14 @@ ${kinect ? `${method === KINECT ? `  // Kinect: the brightness is raw depth, sca
   float zk = uDepth * uShift / (brightness + uShift);`}
   vec2 pixelCoord = aTexCoord * uResolution;
   float x = (pixelCoord.x - uIntrinsics.x) * zk / uIntrinsics.z;
-  float y = (pixelCoord.y - uIntrinsics.y) * zk / uIntrinsics.w;
+  // The vertex's z says which edge of the ribbon it belongs to: -1 the top, 1
+  // the bottom. Each edge is unprojected from its own row, half of Line
+  // Thickness of the frame from the line's, so the line is that thick from the front
+  float edgeV = aTexCoord.y + aPosition.z * uHalfWidth / uFrameHeight;
+  float y = (edgeV * uResolution.y - uIntrinsics.y) * zk / uIntrinsics.w;
 
-  // Further is further back, centred on z = 0 as Linear's lines are. The
-  // vertex's z says which edge of the ribbon it belongs to: -1 the top, 1 the bottom
-  vec3 pos = vec3(x, y + aPosition.z * uHalfWidth, -zk + uDepth * 0.5);` : `  // Z displacement
+  // Further is further back, centred on z = 0 as Linear's lines are
+  vec3 pos = vec3(x, y, -zk + uDepth * 0.5);` : `  // Z displacement
   float z = -brightness * uDepth + uDepth * 0.5;
 
   // A vertex sits on its line's centre, and its z says which edge of the
@@ -410,28 +414,54 @@ export class RuttEtraModule extends Module {
     const rotX = this.getParam('rotationX');
     const rotY = this.getParam('rotationY');
 
+    // The buffer's size in px, as X and Y unproject with it too
+    this.dispSize = [dispFBO.width, dispFBO.height];
+    const method = this._method();
+    const intrinsics = method === LINEAR ? null : depthIntrinsics(method, this.dispSize, this.getParam('fov'));
+
     // Render to output FBO
     this.outputFBO.begin();
     glCanvas.clear();
     glCanvas.background(0);
 
+    // Kinect and DepthAnything are seen through the camera they unproject
+    // with, from p5's eye, so from the front each line lies over its own pixels
+    // at any depth. The shader puts a line at z = Max Line Depth / 2 - zk,
+    // around its middle, so moving it Max Line Depth / 2 short of the eye puts
+    // the unprojecting camera at the eye, and the knobs below turn and scale the
+    // lines about their middle. The framebuffer's camera keeps its projection
+    // between frames, so p5's is put back after drawing
+    let eyeZ = 0;
+    if (intrinsics) {
+      const [, , fx, fy] = intrinsics;
+      const [dw, dh] = this.dispSize;
+      eyeZ = glCanvas._renderer._curCamera.eyeZ;
+      // Unturned, a line zk away is zk x Scale + Max Line Depth / 2 x (1 - Scale)
+      // from the eye, so the near plane is a thousandth of the nearest a line
+      // can be. Turned, none is farther than the middle plus Scale times the
+      // farthest corner of the depth range from it
+      const tx = dw / 2 / fx, ty = dh / 2 / fy;
+      const near = Math.max(1e-3 * Math.abs(scale * depth), 0.01);
+      const far = Math.max(depth / 2 + Math.abs(scale * depth) * Math.sqrt(0.25 + tx * tx + ty * ty), near) * 1.01 + 1;
+      glCanvas.perspective(2 * Math.atan(ty), tx / ty, near, far);
+    }
+
     glCanvas.push();
+    if (intrinsics) glCanvas.translate(0, 0, eyeZ - depth / 2);
     glCanvas.scale(scale);
     glCanvas.rotateX(rotX);
     glCanvas.rotateY(rotY);
 
     // Use our displacement shader, displaced by d when it is cabled
     const withD = dispFBO !== inputFBO;
-    const method = this._method();
     const shader = this.ruttShaders[+withD][method];
     glCanvas.shader(shader);
     shader.setUniform('uInputTex', inputFBO);
     if (withD) shader.setUniform('uDTex', dispFBO);
-    // The buffer's size in px, as X and Y unproject with it too
-    this.dispSize = [dispFBO.width, dispFBO.height];
-    if (method !== LINEAR) {
+    if (intrinsics) {
       shader.setUniform('uResolution', this.dispSize);
-      shader.setUniform('uIntrinsics', depthIntrinsics(method, this.dispSize, this.getParam('fov')));
+      shader.setUniform('uIntrinsics', intrinsics);
+      shader.setUniform('uFrameHeight', this.height);
     }
     if (method === DEPTH_ANYTHING) shader.setUniform('uShift', disparityShift(this.getParam('farNear')));
     shader.setUniform('uDepth', depth);
@@ -451,6 +481,7 @@ export class RuttEtraModule extends Module {
 
     glCanvas.blendMode(glCanvas.BLEND);
     glCanvas.pop();
+    if (intrinsics) glCanvas.perspective();
 
     this.outputFBO.end();
     return mvp;
