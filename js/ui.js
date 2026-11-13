@@ -31,7 +31,7 @@ void main() {
 `;
 
 const MODULE_CATEGORIES = {
-  'Sources': ['Camera', 'Image', 'Mesh', 'VideoPlayer'],
+  'Sources': ['Camera', 'Image', 'Mesh', 'Video'],
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Crop', 'Delay', 'Dither', 'Edges', 'Inpainter', 'Levels', 'LUT', 'Matte', 'Mosaic', 'OpticalFlow', 'Resample', 'Restore', 'Sharpen', 'Transform', 'VideoMixer'],
   'Control': ['Calculator', 'Constant', 'Random', 'Remap', 'Skeleton'],
@@ -61,7 +61,7 @@ const MODULE_COLORS = {
   Camera: color_source,
   Image: color_source,
   Mesh: color_source,
-  VideoPlayer: color_source,
+  Video: color_source,
   // - - - UTILITY - - -
   Blur: color_utility,
   Brcosa: color_utility,
@@ -602,7 +602,7 @@ export class NodeGraphUI {
     }
     const isLargePreview = mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail';
     const hasPreview = Boolean(mod.outputFBO) && !isLargePreview;
-    const hasFileBtn = mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
+    const hasFileBtn = mod.type === 'Video' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
       mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh';
     let contentH = 1;
     if (isLargePreview) {
@@ -1152,11 +1152,11 @@ export class NodeGraphUI {
     return null;
   }
 
-  hitTestVideoPlayerBtn(wx, wy) {
+  hitTestFileBtn(wx, wy) {
     const graph = this.pipeline.graph;
     for (const [id, mod] of graph.nodes) {
       if (mod.collapsed) continue;
-      if (mod.type !== 'VideoPlayer' && mod.type !== 'NAPLPS' && mod.type !== 'Image' && mod.type !== 'LUT' &&
+      if (mod.type !== 'Video' && mod.type !== 'NAPLPS' && mod.type !== 'Image' && mod.type !== 'LUT' &&
         mod.type !== 'QTVR' && mod.type !== 'VRML' && mod.type !== 'Latk' && mod.type !== 'Mesh') continue;
       const preview = this._previewRect(mod);
       const btnY = preview
@@ -1980,8 +1980,8 @@ export class NodeGraphUI {
       p.rect(preview.x - 0.5, preview.y - 0.5, PREVIEW_W + 1, PREVIEW_H + 1, 2);
     }
 
-    // File picker button (VideoPlayer, NAPLPS, Image, LUT, QTVR, VRML, Latk, Mesh)
-    if (mod.type === 'VideoPlayer' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
+    // File picker button (Video, NAPLPS, Image, LUT, QTVR, VRML, Latk, Mesh)
+    if (mod.type === 'Video' || mod.type === 'NAPLPS' || mod.type === 'Image' || mod.type === 'LUT' ||
         mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh') {
       const btnY = preview
         ? preview.y + PREVIEW_H + 6
@@ -2213,8 +2213,8 @@ export class NodeGraphUI {
       return;
     }
 
-    // Check VideoPlayer file button
-    const vpHit = this.hitTestVideoPlayerBtn(world.x, world.y);
+    // Check file picker button
+    const vpHit = this.hitTestFileBtn(world.x, world.y);
     if (vpHit !== null) {
       const mod = this.pipeline.graph.nodes.get(vpHit);
       if (mod && mod.pickFile) mod.pickFile();

@@ -112,7 +112,7 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 
 ### Module Categories
 
-- **Sources**: Camera, Image, Mesh, VideoPlayer
+- **Sources**: Camera, Image, Mesh, Video
 - **Utility**: Blur, Brcosa, Channel, ChromaKey, Crop, Delay, Dither, Edges, Example, Inpainter, Levels, LUT, Matte, Mosaic, OpticalFlow, Resample, Restore, Sharpen, Transform, VideoMixer
 - **Control**: Calculator, Constant, Random, Remap, Skeleton
 - **Generative**: Cloudy, Coils, Conway, Crystalline, GridGuys, InkDrops, LetterForms, Protozoa, SpiralGalaxy, Whitney, Yellowtail
@@ -231,7 +231,7 @@ What the runtime can't do, a module can't either. It logs why and stops, and the
 - a Camera with no ffmpeg (`$LICHEN_CAMERA` replaces ffmpeg's input arguments, and Windows needs it)
 - sound, text, strokes, lights, and `createGraphics(WEBGL)`
 
-A patch doesn't keep files picked in a module's panel, so Image, VideoPlayer, QTVR, VRML and NAPLPS show what they would in a freshly opened app before a file is picked.
+A patch doesn't keep files picked in a module's panel, so Image, Video, QTVR, VRML and NAPLPS show what they would in a freshly opened app before a file is picked.
 
 ## GRASS Module
 
@@ -394,11 +394,11 @@ Checked in headless Chrome with its fake camera: the menus listed the device and
 
 The Image module (`js/modules/ImageModule.js`) is a source that loads a still image file and outputs it as video.
 
-**File loading:** Uses the same hidden `<input type="file">` pattern as NAPLPS and VideoPlayer, accepting any image format the browser supports (`accept="image/*"`). The node's "Load Image…" button triggers the picker via `pickFile()`. On load, `p5.loadImage()` decodes the file into a `p5.Image` stored as `this.img`.
+**File loading:** Uses the same hidden `<input type="file">` pattern as NAPLPS and Video, accepting any image format the browser supports (`accept="image/*"`). The node's "Load Image…" button triggers the picker via `pickFile()`. On load, `p5.loadImage()` decodes the file into a `p5.Image` stored as `this.img`.
 
 **Parameters:** `width` and `height` are set to the image's native pixel dimensions on load. The user can then adjust them via the knobs; `process()` redraws the image into the `p5.Graphics` buffer at the current param dimensions, centered on a black background, every frame.
 
-**Rendering path:** The 2D `p5.Graphics` buffer is mapped to the module's WebGL `outputFBO` via the passthrough shader, identical to Camera and VideoPlayer.
+**Rendering path:** The 2D `p5.Graphics` buffer is mapped to the module's WebGL `outputFBO` via the passthrough shader, identical to Camera and Video.
 
 ## Mesh Module
 
@@ -1134,7 +1134,7 @@ Sampling ahead moves the picture the other way, as in After Effects. Where the m
 
 ## LUT Module
 
-The LUT module (`js/modules/LUTModule.js`, `js/modules/lut/clf.js`, `js/shaders/lut.js`) applies a colour transform loaded from a Common LUT Format file (`.clf`). It reads Academy/ASC CLF v2 and v3 and SMPTE ST 2136-1. "Load LUT…" opens a file picker, and the button then shows the loaded file's name. `mix` blends from the input (0) to the fully transformed image (1). As with Image and VideoPlayer, the file itself is not saved in patches.
+The LUT module (`js/modules/LUTModule.js`, `js/modules/lut/clf.js`, `js/shaders/lut.js`) applies a colour transform loaded from a Common LUT Format file (`.clf`). It reads Academy/ASC CLF v2 and v3 and SMPTE ST 2136-1. "Load LUT…" opens a file picker, and the button then shows the loaded file's name. `mix` blends from the input (0) to the fully transformed image (1). As with Image and Video, the file itself is not saved in patches.
 
 **Presets.** The LUT drop-down (`preset`) picks between the file loaded with the button and the LUTs bundled in `files/luts/`. Option 0 is that file: it reads "None" and passes the input through until a file is loaded, then takes the file's name, and loading a file switches the menu to it. The other options are the `PRESETS` list in `LUTModule.js`, since a static server can't list a directory. Patches save the preset as its index, so a new file is appended to that list, never inserted. Unlike a loaded file, a preset is restored when a patch loads. A preset is fetched and baked the first time any LUT node selects it (about 70 ms for the bundled 25³ files), and the bake is then shared by every node for the rest of the session. The previous LUT stays on until the new one is ready, and a choice that finishes loading after a newer one is dropped, so a cable sweeping the menu always lands on its latest option.
 

@@ -56,7 +56,7 @@
 // modules (DepthAnything, Pix2Pix, InfrDrawings), whose runtime loads with a
 // <script> tag, sound, and p5 drawing past what the modules here use (text,
 // strokes, lighting, WEBGL createGraphics). A patch doesn't keep files picked
-// in a module's panel, so Image, VideoPlayer, QTVR, VRML and NAPLPS show what
+// in a module's panel, so Image, Video, QTVR, VRML and NAPLPS show what
 // they do in a fresh LICHEN until one is picked: nothing, as there is no panel.
 
 import fs from 'node:fs';

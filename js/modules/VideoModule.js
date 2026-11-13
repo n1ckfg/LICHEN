@@ -2,11 +2,11 @@ import { Module } from './Module.js';
 import { passthroughFrag } from '../shaders/passthrough.js';
 import { registerModule } from '../moduleRegistry.js';
 
-export class VideoPlayerModule extends Module {
+export class VideoModule extends Module {
   static uid = '13e19572';
 
   constructor(glCanvas, id) {
-    super('VideoPlayer', glCanvas, id);
+    super('Video', glCanvas, id);
     this.outputs = [{ id: '45af', name: 'out', type: 'video' }];
     this.params = {
       speed: { id: '2e8f', value: 1, min: 0.1, max: 4, step: 0.1, label: 'Speed' },
@@ -67,4 +67,4 @@ export class VideoPlayerModule extends Module {
   }
 }
 
-registerModule('VideoPlayer', VideoPlayerModule);
+registerModule('Video', VideoModule);
