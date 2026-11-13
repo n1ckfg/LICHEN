@@ -56,7 +56,7 @@ The UI renders each param in the `params` object: `{ paramName: { id, value, min
 
 Checked in headless Chromium on a Raspberry Pi. Every knob param of every module, set one range past each end, ran three frames with no exception and no control output that wasn't finite. A typed value saved and loaded as typed.
 
-A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Calculator `op`, Camera `device`, `resolution`, `fps` and `mirror`, Crop `mode`, DepthAnything `size`, `colormap` and `invert`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, ESP32 `color` and `grid`, FunctionGenerator `curve`, InfrDrawings `model` and `mode`, InkMarkers `tip` and `paper`, Inpainter `view`, LUT `preset`, Matte `matte`, OpticalFlow `view`, Oscillator `waveform` and `direction`, Panorama `projection`, Pix2Pix `model` and `mode`, QTVR `projection`, Resample `mode`, Restore `model`, `size` and `clamp`, RuttEtra `format` and `method`, Sharpen `posterize`, Skeleton `trace` and `hold`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The menu reads `valueLabels` when it opens, so a module may change its options at runtime, as Camera and DepthAnything do. It should set `max` to match. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
+A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Calculator `op`, Camera `device`, `resolution`, `fps` and `mirror`, Crop `mode`, DepthAnything `size`, `colormap` and `invert`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, ESP32 `color` and `grid`, FunctionGenerator `curve`, InfrDrawings `model` and `mode`, InkMarkers `tip` and `paper`, Inpainter `view`, LUT `preset`, Matte `matte`, NTSC `tape`, `phase`, `crawl`, `color` and `headSwitch`, OpticalFlow `view`, Oscillator `waveform` and `direction`, Panorama `projection`, Pix2Pix `model` and `mode`, QTVR `projection`, Resample `mode`, Restore `model`, `size` and `clamp`, RuttEtra `format` and `method`, Sharpen `posterize`, Skeleton `trace` and `hold`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The menu reads `valueLabels` when it opens, so a module may change its options at runtime, as Camera and DepthAnything do. It should set `max` to match. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
 
 A param that sets `widget: 'trigger'` is drawn as a momentary button instead of a knob. It uses the same row as a drop-down: an inlet dot, then the label, then a button where the drop-down's box would be. Declare it as `{ value: 0, min: 0, max: 1, step: 1, label, widget: 'trigger' }`. Clicking the button calls `mod.fireTrigger(name)`. That records the time in `mod.triggeredAt[name]` and then calls `mod.onTrigger(name)`, which modules override to act on the trigger. A control cable fires it too. `ProcessingPipeline` fires the trigger on the cable's rising edge, when the value it applies crosses the param's midpoint (0.5) from below. The button still fires on a click while a cable is connected, since firing never touches the value. Its text is `mod.triggerText(name)`, which is empty by default and cut short with an ellipsis when it is too long. It is drawn fully lit on the first frame after it fires, however slow that frame is, then fades back over 250 ms. As with the drop-down, dragging the unconnected dot does nothing. A trigger's value is saved like any other param, but it only records where the last cable left it.
 
@@ -71,7 +71,7 @@ A param that sets `widget: 'trigger'` is drawn as a momentary button instead of 
 
 The seed is kept on `mod.seed`. A node whose `mod.seed` is set saves it as `seed` in the patch JSON, and duplicating a node copies it. On load, `fromJSON` restores the saved seed and the saved param values, and does not re-resolve the seed, because knobs may have moved since it was drawn. A patch saved before seeds existed loads with `mod.seed = null`.
 
-A module adopts this by adding `random` to its params. It may call `this.randomize()` at the end of its constructor, and may add a trigger param with `onTrigger()` calling `this.randomize()` and `triggerText()` returning `this.seed`. Cloudy, Coils, Crystalline, InkDrops, Protozoa and SpiralGalaxy all do all three, each with the trigger named `reseed` and labelled Seed, last in its params. The seed sets params only. Anything a module draws from `Math.random` stays unseeded.
+A module adopts this by adding `random` to its params. It may call `this.randomize()` at the end of its constructor, and may add a trigger param with `onTrigger()` calling `this.randomize()` and `triggerText()` returning `this.seed`. Cloudy, Coils, Crystalline, InkDrops, Protozoa and SpiralGalaxy all do all three, each with the trigger named `reseed` and labelled Seed, last in its params. NTSC has the random params and the Seed trigger but starts at ntsc-wasm's defaults, since a fresh node should look like a plain broadcast. The seed sets params only. Anything a module draws from `Math.random` stays unseeded.
 
 Each node header has a collapse toggle in the upper right ("−" when expanded, "+" when collapsed). A module whose type name matches an entry's `name` in `js/historical-info.json` also gets a "?" button to the left of the collapse toggle, so adding an entry named after a module is enough to give it one. A module can point at an entry with another name by setting `this.historicalInfo = 'Name'` in its constructor, as the Sandin modules share `Sandin`; that name then shows the button even with no entry. `NodeGraphUI._infoName(mod)` resolves the name: `historicalInfo` when set, else the type when an entry has it, else `null` for no button. The button opens an info popup (2× the node's size, centered on the node, dismissed by any click outside it). The popup's heading is the entry's `title` followed by its `year` in parentheses (the title falls back to the resolved name when the entry or its title is missing; the year is omitted when absent), and its text is the entry's `body`.
 
@@ -116,7 +116,7 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 - **Utility**: Blur, Brcosa, Channel, ChromaKey, Crop, Delay, Dither, Edges, Example, Inpainter, Levels, LUT, Matte, Mosaic, OpticalFlow, Resample, Restore, Sharpen, Transform, VideoMixer
 - **Control**: Calculator, Constant, Random, Remap, Skeleton
 - **Generative**: Cloudy, Coils, Conway, Crystalline, GridGuys, InkDrops, LetterForms, Protozoa, SpiralGalaxy, Whitney, Yellowtail
-- **Emulation**: DeeSeventySix, ESP32, InkMarkers, RuttEtra, SlowscanJam, Twoscilloscope
+- **Emulation**: DeeSeventySix, ESP32, InkMarkers, NTSC, RuttEtra, SlowscanJam, Twoscilloscope
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, GRASS, Oscillator, SyncGenerator, ValueScrambler
 - **Effects**: BooleanLogic, BufferSmear, Cyberlace, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
 - **img2img**: DepthAnything, InfrDrawings, Pix2Pix
@@ -1542,6 +1542,74 @@ Fill, Min Length and Hold were checked the same way:
 - **Main thread:** Skeleton's share of a frame has a median of 0.5–0.7 ms and a 95th percentile under 1 ms.
 - **Tracing:** in the worker, a trace takes 3–4 ms at 128 cells. At 256 cells it takes 3.4 ms for Latk's lines and 6–7 ms for the test mask's thick strokes. At 512 cells it takes about 9 ms for Latk's lines and 36 ms for the thick strokes, since thinning peels a shape one cell at a time from each side. At 1024 cells, a picture of thick shapes (a 20 px ring, a 30 px bar and a 100 px disc) took about 370 ms, against 50 ms at 512 and 7 ms at 256.
 - **Rate:** there is a new trace every frame wherever one takes under a frame, 27 a second for thick strokes at 512 cells, and under 3 a second for thick shapes at 1024. The main thread never waits for one.
+
+## NTSC Module
+
+The NTSC module (`js/modules/NTSCModule.js`, `js/shaders/ntsc.js`, `js/modules/ntsc/ring-pattern.js`) passes its input through an NTSC composite video signal, and optionally a VHS deck. It is a port of [ntsc-wasm](https://github.com/Nedifinita/ntsc-wasm) by noxylva, a Go/WebAssembly descendant of ntscQT and composite-video-simulator, to fragment shaders.
+
+**Licence.** ntsc-wasm is under the GNU AGPL v3. These three files are ported from it and stay under the AGPL v3 or later, each saying so in an SPDX header. The rest of LICHEN is GPL v3 or later, and GPL v3 section 13 allows combining the two. The AGPL adds one condition to those files: anyone who serves them to users over a network must offer those users their source. A static page already does that, since its JavaScript is its source.
+
+**The raster.** Every pass works on a raster of 480 lines. The width keeps the frame's shape (640 at 4:3, 853 at 16:9, held to 16–2048), and each sample is one tick of ntsc-wasm's 14.318 MHz clock, four times the colour subcarrier, so a cycle of the subcarrier is four samples. ntsc-wasm works on the picture's own pixels at whatever size it is given. Fixing the lines keeps the dot pattern and the head switching, which assumes 480 lines, the same at any frame size. At the default 640×480 the raster is the frame, sample for sample. Buffers hold Y, I and Q on ntsc-wasm's 0–255 scale, in float, read with NEAREST filtering. The result is turned to RGB in an 8-bit buffer and scaled to the output with linear filtering. Without float framebuffers (WebGL 1), the module passes its input through and says so in the console.
+
+**Signal path**, per frame, as in ntsc-wasm's `compositeLayer`:
+1. **Lines.** A one-texel-wide pass works out what happens to each line this frame: edge wave, chroma phase noise, chroma loss and head switching.
+2. **Encode.** RGB to YIQ, with I and Q taken from Bleed X and Bleed Y samples back.
+3. **Band limits.** The encoder's I goes to 1.3 MHz and Q to 0.6 MHz.
+4. **Ringing**, if Ringing isn't 1 or Pattern is on.
+5. **Modulate.** I and Q are put on the subcarrier in the luma, at Subcarrier/50 of their size, with the line's phase set by Phase. Then come pre-emphasis, video noise and head switching.
+6. **Decode.** The set's decoder separates luma and chroma, and adds chroma noise and phase noise.
+7. **VHS**, with Tape on:
+   - edge wave, and the tape's luma and chroma band limits (SP 2.4 MHz / 320 kHz, LP 1.9 MHz / 300 kHz, EP 1.4 MHz / 280 kHz)
+   - luma peaking, and the chroma comb's line delay
+   - Sharpen
+   - modulation and decoding again, for the deck's composite output
+8. **The set.** Its 2.6 MHz chroma low-pass zeroes lost lines; then a 1-2-1 chroma blur and YIQ to RGB.
+
+**Filters.** ntsc-wasm's low-passes are one-pole IIR filters run along each line, usually three in a row. A fragment shader can't run a recursion along a line, so each is applied as its exact impulse response, a³(k+1)(k+2)/2 · (1−a)^k for three stages, truncated where it holds all but 1e-4. That is up to 160 taps (EP chroma). Each starts at the filter's reset level, as ntsc-wasm's do, and the output is read the filter's delay ahead, as ntsc-wasm's is.
+
+**Params:**
+
+| Param | Range | Default | |
+| --- | --- | --- | --- |
+| Tape | Off, SP, LP, EP | Off | Record to and play from a VHS deck at that speed |
+| Subcarrier | 0–100 | 50 | Strength of the subcarrier in the luma: how strong dot crawl and cross-colour are. The decoder divides it back out, so colour stays the same |
+| Phase | 0°, 90°, 180°, 270° | 180° | How the subcarrier's phase shifts from line to line, which sets the dots' pattern |
+| Crawl | Off, On | On | Each frame starts the subcarrier half a cycle on from the last, as NTSC does, so the dots crawl |
+| Set | Mono, Color | Color | Mono is a black-and-white set: no decoder, and the subcarrier stays in the picture as dots |
+| Preemph | 0–8 | 0 | Composite pre-emphasis, a high-frequency boost cut at 1 MHz. It boosts the subcarrier too, so it saturates colour |
+| Ringing | 0–3 | 1 | ntsc-wasm's first ringing: plus a tenth of (Ringing − 1) times each component's central difference. 1 is none |
+| Pattern | Off, 1–5 | Off | ntsc-wasm's second ringing: the measured ring pattern to that power. Replaces Ringing |
+| Bleed X, Bleed Y | 0–20 | 0 | Chroma's offset from the luma, in samples and lines |
+| Noise | 0–100 | 2 | Luma noise, low-passed along the line |
+| Chroma Noise | 0–500 | 0 | White noise on I and Q |
+| Phase Noise | 0–100 | 0 | Hue wander from line to line, in hundredths of π |
+| Chroma Loss | 0–100% | 0 | Share of lines that lose their colour (ntsc-wasm counts lines per 100000) |
+| Sharpen | 0–5 | 1.5 | VHS playback sharpening |
+| Edge Wave | 0–10 | 0 | VHS lines wavering sideways by up to that many samples, smoothed down the field |
+| Head Switch | Off, On | Off | The VHS head-switching tear in the bottom lines |
+| Seed | trigger | | Draws the params from a fresh seed (see Seeded Randomization) |
+
+Sharpen, Edge Wave and Head Switch are VHS controls in ntsc-wasm, but Head Switch works with Tape off too, as it does there.
+
+**Pattern ringing.** ntsc-wasm multiplies each line's spectrum by the ring pattern (720 measured values, from ntscQT), stretched over the spectrum and raised to the power. Its FFT only takes a power-of-two length, though, and returns nothing for any other, so Ringing 2 only works on lines 256 or 512 wide. Here the same filter is a convolution: `_ringKernel()` takes the real part of the pattern's inverse DFT at the raster's width and keeps 97 taps either side. At powers 1–5, at 640 or 853 wide, that holds over 99.7% of the kernel's energy. It is scaled so the kept taps sum to 1, and wraps round the line as the FFT's does. It is passed as `vec4 uKernel[49]` and recomputed only when the width or power changes.
+
+**Noise.** Random numbers come from a hash of sample, line, frame and a per-node salt, not ntsc-wasm's XorWow stream, so they change every frame. Head switching's small per-field jitter uses `Math.random()`. Both are unseeded, as module randomness is.
+
+**Departures from ntsc-wasm**, each where the Go differs from ntscQT and composite-video-simulator, or from itself:
+- **Signed random numbers.** Go's `NextInt()` is signed, and `%` keeps the sign. So noise drawn as `NextInt() % (2n+1) − n` runs from −3n to n and darkens on average. The chroma loss test `NextInt() % 100000 < loss` is true on every negative draw, so any loss above 0 takes the colour from about half the lines. Here the noises run −n to n and a line is lost with probability loss.
+- **Filters on each line start at their reset level.** ntsc-wasm makes some filters once a field and carries their state from the end of one line into the next. The next line's left edge then picks up the last line's right edge, most visibly in VHS chroma. Here each line starts from blanking.
+- **The VHS chroma comb averages two lines.** ntsc-wasm's loop writes each line back before the next reads it, so a line averages with the already-averaged line above. That makes a decay down the whole field, where ntscQT and composite-video-simulator average the two lines.
+- **Colour bleed is a shift.** ntsc-wasm shifts in place in the order it reads, and both fields run at once, so a vertical bleed copies lines repeatedly.
+- **Float, not integer.** ntsc-wasm truncates to integers after nearly every step. On the test card that averages about 1 level darker, with 95% of values within 4.
+- **Head switching stays on its field.** ntsc-wasm adds the field to a start line whose parity it doesn't control, so one field's pass can shift the other field's lines.
+- **Fewer controls.** Dropped: pre-emphasis cut (fixed at 1 MHz); the chroma low-pass switches (all on, as by default); S-Video out (always composite); head switching speed; PAL (`OutputNTSC` off); Black Line Cut; Precise noise; and the scanline phase offset, which Crawl drives. ntsc-wasm's frequency noise settings are dropped because nothing reads them.
+
+**Checked** in headless Chrome against a NumPy port of ntsc-wasm's signal path, on a 640×480 test card of colour bars, stripes 2–12 pixels wide, red text on blue, a hue sweep and a grey ramp:
+- **Against the port.** With the departures above made in the port too, and the noises at 0, the module's raster matched on every pixel within 1 level. That held at defaults, Ringing 0.4 with Preemph 2.5, all four phases, and SP, LP and EP.
+- **Against ntsc-wasm's own semantics,** the differences come from the departures: carrying filter state across lines changes 3% of pixels (6% on SP), at the left edges, and the recursive comb changes 20% on SP.
+- **The rest.** Crawl alternates frames, a 16:9 frame gets an 853×480 raster, Seed draws and saves, and the export to node-gles3 (with Pattern on) matched Chrome within 7 levels after 60 frames.
+
+**Cost.** On an M2 Max, 0.1–0.2 ms a frame at defaults or with EP, about 0.4–0.7 ms with Pattern 5, and about 1.3 ms with everything on.
 
 ## RuttEtra Module
 

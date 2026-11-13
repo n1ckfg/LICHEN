@@ -135,5 +135,11 @@
 		"year": 1981,
 		"title": "<a href='https://en.wikipedia.org/wiki/Lucas%E2%80%93Kanade_method'>Lucas-Kanade Optical Flow</a>",
 		"body": "Bruce D. Lucas and Takeo Kanade's least-squares image registration (IJCAI 1981), run coarse to fine on a Gaussian pyramid after Jean-Yves Bouguet's pyramidal implementation (Intel, 2000). Based on the lk-optical-flow sketch by Nick Fox-Gieg."
+	},
+	{
+		"name": "NTSC",
+		"year": 1953,
+		"title": "<a href='https://en.wikipedia.org/wiki/NTSC'>NTSC Color Television</a>",
+		"body": "The second NTSC's compatible colour standard, approved by the FCC in December 1953, carried colour on a 3.58 MHz subcarrier inside the black-and-white signal, so old sets still showed the picture. Ported from <a href='https://github.com/Nedifinita/ntsc-wasm'>ntsc-wasm</a> by noxylva (AGPL v3), after ntscQT and composite-video-simulator."
 	}
 ]

@@ -33,6 +33,7 @@ import './modules/DelayModule.js';
 import './modules/CyberlaceModule.js';
 import './modules/ESP32Module.js';
 import './modules/InkMarkersModule.js';
+import './modules/NTSCModule.js';
 import './modules/FilmGrainModule.js';
 import './modules/GameBoyModule.js';
 import './modules/GlitchModule.js';
