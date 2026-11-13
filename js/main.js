@@ -194,7 +194,7 @@ const sketch = (p) => {
   };
 
   p.keyPressed = () => {
-    // When a GRASS, Conway, InkDrops, InkMarkers, Twoscilloscope or ChromaKey module is fullscreened it owns all keyboard input
+    // When a GRASS, Conway, InkDrops, InkMarkers, Panorama, Twoscilloscope or ChromaKey module is fullscreened it owns all keyboard input
     if (ui.fullscreenMonitor !== null) {
       const fsmod = pipeline.graph.nodes.get(ui.fullscreenMonitor);
       if (fsmod && fsmod.type === 'GRASS') {
@@ -248,6 +248,16 @@ const sketch = (p) => {
       if (fsmod && fsmod.type === 'InkDrops') {
         // ESC exits fullscreen; C clears the sheet back to bare paper
         if (p.key === 'Escape') {
+          ui.fullscreenMonitor = null;
+        } else {
+          fsmod.handleKey(p.key, p.keyCode, p);
+        }
+        return false;
+      }
+      if (fsmod && fsmod.type === 'Panorama') {
+        // ESC exits fullscreen; W, A, S, D, Q and E move the viewpoint while held
+        if (p.key === 'Escape') {
+          fsmod.releaseKeys();
           ui.fullscreenMonitor = null;
         } else {
           fsmod.handleKey(p.key, p.keyCode, p);
@@ -314,6 +324,13 @@ const sketch = (p) => {
       input.click();
       return false;
     }
+  };
+
+  // A fullscreen Panorama moves only while its keys are held
+  p.keyReleased = () => {
+    if (ui.fullscreenMonitor === null) return;
+    const fsmod = pipeline.graph.nodes.get(ui.fullscreenMonitor);
+    if (fsmod && fsmod.type === 'Panorama') fsmod.handleKeyUp(p.key);
   };
 };
 
