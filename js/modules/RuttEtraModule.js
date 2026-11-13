@@ -1,6 +1,7 @@
 import { Module } from './Module.js';
 import { vertSrc } from '../shaders/vert.js';
 import { passthroughFrag } from '../shaders/passthrough.js';
+import { turboToDepthFrag } from '../shaders/depth-anything.js';
 import { registerModule } from '../moduleRegistry.js';
 import { PixelReadback } from './slowscanjam/PixelReadback.js';
 import { polylinePieces, XYOutputs } from './latk/strokes.js';
@@ -10,6 +11,11 @@ const MAX_DT = 0.1;          // clamp long stalls so a tab switch doesn't jump t
 // Points per scan line on X and Y. Below a Line Separation of 4 a line has more
 // vertices than this, and every few are used: the loop's samples are far sparser
 const XY_MAX_COLS = 160;
+// Depth Method Kinect's focal length, in px of the buffer that displaces, on
+// both axes. Its principal point is the buffer's centre
+const KINECT_FOCAL = 285.6;
+const ORBIT_RATE = 0.01;     // Latk's and Mesh's drag rate, radians per pixel
+const ZOOM_RATE = 0.001;     // and their wheel: Scale x exp(-delta x ZOOM_RATE)
 
 let nextGeometryId = 0;
 
@@ -17,8 +23,11 @@ let nextGeometryId = 0;
 // brightness that displaces comes from the d input (uDTex) instead, and the
 // colour still from the input. Uncabled d uses its own program, with no
 // branch, so the input's lines come out as they did before d existed: a
-// select between the two in one shader moved a few edge pixels in Chrome
-const ruttEtraVert = (withD) => `
+// select between the two in one shader moved a few edge pixels in Chrome.
+// With kinect, the brightness is raw depth, and each vertex is unprojected
+// through a pinhole camera's intrinsics, as a Kinect's depth is, instead of
+// being pushed straight back. Without it, the source is as it was before
+const ruttEtraVert = (withD, kinect) => `
 precision highp float;
 
 attribute vec3 aPosition;
@@ -28,7 +37,9 @@ uniform mat4 uModelViewMatrix;
 uniform mat4 uProjectionMatrix;
 
 uniform sampler2D uInputTex;
-${withD ? 'uniform sampler2D uDTex;' : ''}
+${withD ? 'uniform sampler2D uDTex;' : ''}${kinect ? `
+uniform vec2 uResolution;    // the displacing buffer's size, in px
+uniform vec4 uIntrinsics;    // principal point (x, y) and focal lengths (z, w), in px` : ''}
 uniform float uDepth;
 uniform float uHalfWidth;    // half of Line Thickness, in px
 
@@ -42,12 +53,22 @@ void main() {
   // Calculate brightness
   float brightness = 0.34 * dispColor.r + 0.5 * dispColor.g + 0.16 * dispColor.b;
 
-  // Z displacement
+${kinect ? `  // Kinect: the brightness is raw depth, scaled by Max Line Depth, and the
+  // vertex's pixel is unprojected through the intrinsics. p5's y runs down,
+  // as the texture's rows do, so y isn't flipped
+  float zk = brightness * uDepth;
+  vec2 pixelCoord = aTexCoord * uResolution;
+  float x = (pixelCoord.x - uIntrinsics.x) * zk / uIntrinsics.z;
+  float y = (pixelCoord.y - uIntrinsics.y) * zk / uIntrinsics.w;
+
+  // Further is further back, centred on z = 0 as Linear's lines are. The
+  // vertex's z says which edge of the ribbon it belongs to: -1 the top, 1 the bottom
+  vec3 pos = vec3(x, y + aPosition.z * uHalfWidth, -zk + uDepth * 0.5);` : `  // Z displacement
   float z = -brightness * uDepth + uDepth * 0.5;
 
   // A vertex sits on its line's centre, and its z says which edge of the
   // ribbon it belongs to: -1 the top, 1 the bottom
-  vec3 pos = vec3(aPosition.x, aPosition.y + aPosition.z * uHalfWidth, z);
+  vec3 pos = vec3(aPosition.x, aPosition.y + aPosition.z * uHalfWidth, z);`}
 
   vColor = texColor.rgb;
 
@@ -101,7 +122,9 @@ function mat4Mult(a, b) {
 // XY audio, as Latk's do, to drive Twoscilloscope. That takes most of its time
 // on the CPU, so it is done only while X or Y is cabled to something.
 // A second input, d, displaces the lines by its brightness instead of the
-// input's, so DepthAnything's depth can push them back.
+// input's, so DepthAnything's depth can push them back. Depth Format reads
+// what displaces as DepthAnything's Grey or Turbo, and Depth Method pushes the
+// lines straight back (Linear) or unprojects them as a Kinect's depth (Kinect).
 export class RuttEtraModule extends Module {
   static uid = '4bc92c10';
 
@@ -122,6 +145,18 @@ export class RuttEtraModule extends Module {
       lineThickness: { id: 'b956', value: 2.0, min: 0.5, max: 10, step: 0.5, label: 'Line Thickness' },
       opacity: { id: '48fe', value: 1.0, min: 0, max: 1, step: 0.05, label: 'Brightness' },
       depth: { id: '74b6', value: 80, min: 0, max: 300, step: 1, label: 'Max Line Depth' },
+      // How what displaces holds depth: as brightness (Grey), or in
+      // DepthAnything's Turbo colours, which are read back to depth first
+      format: {
+        id: 'ed57', value: 0, min: 0, max: 1, step: 1, label: 'Depth Format',
+        widget: 'dropdown', valueLabels: ['Grey', 'Turbo'],
+      },
+      // Linear pushes each vertex straight back. Kinect unprojects it through
+      // a pinhole camera, so further things spread wider
+      method: {
+        id: '5ed1', value: 0, min: 0, max: 1, step: 1, label: 'Depth Method',
+        widget: 'dropdown', valueLabels: ['Linear', 'Kinect'],
+      },
       rotationX: { id: 'dab3', value: 0.3, min: -1.5, max: 1.5, step: 0.05, label: 'Rotation X' },
       rotationY: { id: 'aea2', value: 0, min: -1.5, max: 1.5, step: 0.05, label: 'Rotation Y' },
       // Loops a second on X and Y. A lower rate gives the lines more samples
@@ -133,8 +168,9 @@ export class RuttEtraModule extends Module {
 
     // Create p5 shader using our custom vertex shader
     try {
-      this.ruttShader = glCanvas.createShader(ruttEtraVert(false), ruttEtraFrag);
-      this.ruttDShader = glCanvas.createShader(ruttEtraVert(true), ruttEtraFrag);
+      // [withD][kinect]. p5 compiles each the first time it is bound
+      this.ruttShaders = [false, true].map((withD) => [false, true].map((kinect) =>
+        glCanvas.createShader(ruttEtraVert(withD, kinect), ruttEtraFrag)));
       this.gpuMode = true;
     } catch (e) {
       console.error('RuttEtra: Failed to create GPU shader, using fallback', e);
@@ -150,6 +186,12 @@ export class RuttEtraModule extends Module {
     this.lastScanStep = -1;
     this.geometry = null;
 
+    // Depth Format Turbo: what displaces, read back to depth as grey
+    this.turboShader = glCanvas.createShader(vertSrc, turboToDepthFrag);
+    this.turboFBO = null;
+    // The displacing buffer's size, which Kinect unprojects with
+    this.dispSize = [this.width, this.height];
+
     // X and Y: the vertices' brightness is read back from the GPU, so the
     // lines on X and Y are a frame or two behind the video's
     this.gridShader = glCanvas.createShader(vertSrc, ruttEtraGridFrag);
@@ -159,6 +201,10 @@ export class RuttEtraModule extends Module {
     this.grid = null;         // the latest grid read: { cols, rows, step, pixels }
     this.xy = new XYOutputs(SAMPLE_RATE);
     this.lastTime = performance.now() / 1000;
+
+    // The last pointer position of a fullscreen drag, or null
+    this.dragX = null;
+    this.dragY = null;
   }
 
   _buildGeometry(scanStep) {
@@ -229,14 +275,18 @@ export class RuttEtraModule extends Module {
 
     if (this.reading) this._pollReadback();
     const inputFBO = this.getInput(graph, 0);
-    // What the lines are displaced by: d when it is cabled, else the input
-    const dFBO = this.getInput(graph, 1);
-    const mvp = this._draw(inputFBO, dFBO, glCanvas);
+    // What the lines are displaced by: d when it is cabled, else the input,
+    // read back to depth first if it is in Turbo
+    let dispFBO = this.getInput(graph, 1) || inputFBO;
+    if (inputFBO && this.gpuMode && Math.round(this.getParam('format')) === 1) {
+      dispFBO = this._turboToDepth(dispFBO, glCanvas);
+    }
+    const mvp = this._draw(inputFBO, dispFBO, glCanvas);
     const xy = this._xyCabled(graph);
     // Uncabled, nothing is read back, and the grid goes, so cabling X or Y
     // again starts from a blank loop rather than an old picture
     if (!mvp || !xy) this.grid = null;
-    else if (!this.reading) this._startGrid(dFBO || inputFBO, glCanvas);
+    else if (!this.reading) this._startGrid(dispFBO, glCanvas);
     if (!xy) return;
     // With no lines, the loop is all blank, so the beam rests unlit in the middle
     const pieces = mvp ? this._linePieces(mvp) : [];
@@ -249,10 +299,29 @@ export class RuttEtraModule extends Module {
     return graph.connections.some(fromXY) || graph.controlConnections.some(fromXY);
   }
 
+  // Turbo colours to grey depth, in a buffer the size of the one they came in
+  _turboToDepth(src, glCanvas) {
+    const { width, height, density } = src;
+    if (!this.turboFBO) {
+      this.turboFBO = this.createFramebuffer({ width, height, density });
+    } else if (this.turboFBO.width !== width || this.turboFBO.height !== height) {
+      this.turboFBO.resize(width, height);
+    }
+    if (this.turboFBO.density !== density) this.turboFBO.pixelDensity(density);
+    this.turboFBO.begin();
+    glCanvas.clear();
+    glCanvas.shader(this.turboShader);
+    this.turboShader.setUniform('tex0', src);
+    this.renderQuad();
+    this.turboFBO.end();
+    return this.turboFBO;
+  }
+
   // Draws the scan lines into the output, and returns the matrix they were
   // drawn through (projection x model-view, column-major), or null if none were.
-  // With dFBO, the lines are displaced by its brightness instead of the input's
-  _draw(inputFBO, dFBO, glCanvas) {
+  // The lines are displaced by dispFBO's brightness: the input's, d's, or
+  // either read back from Turbo
+  _draw(inputFBO, dispFBO, glCanvas) {
     if (!inputFBO) {
       this.outputFBO.begin();
       glCanvas.clear();
@@ -295,10 +364,18 @@ export class RuttEtraModule extends Module {
     glCanvas.rotateY(rotY);
 
     // Use our displacement shader, displaced by d when it is cabled
-    const shader = dFBO ? this.ruttDShader : this.ruttShader;
+    const withD = dispFBO !== inputFBO;
+    const kinect = Math.round(this.getParam('method')) === 1;
+    const shader = this.ruttShaders[+withD][+kinect];
     glCanvas.shader(shader);
     shader.setUniform('uInputTex', inputFBO);
-    if (dFBO) shader.setUniform('uDTex', dFBO);
+    if (withD) shader.setUniform('uDTex', dispFBO);
+    // The buffer's size in px, as X and Y unproject with it too
+    this.dispSize = [dispFBO.width, dispFBO.height];
+    if (kinect) {
+      shader.setUniform('uResolution', this.dispSize);
+      shader.setUniform('uIntrinsics', [this.dispSize[0] / 2, this.dispSize[1] / 2, KINECT_FOCAL, KINECT_FOCAL]);
+    }
     shader.setUniform('uDepth', depth);
     shader.setUniform('uHalfWidth', this.getParam('lineThickness') * 0.5);
     shader.setUniform('uOpacity', opacity);
@@ -322,7 +399,7 @@ export class RuttEtraModule extends Module {
   }
 
   // Read the brightness under every vertex back from the GPU, from what the
-  // lines are displaced by (d when it is cabled)
+  // lines are displaced by (d when it is cabled, read back from Turbo if need be)
   _startGrid(input, glCanvas) {
     const { cols, rows } = this;
     const step = this.lastScanStep;
@@ -358,7 +435,7 @@ export class RuttEtraModule extends Module {
   // Each scan line through its vertices' centres, as pieces in px of the canvas
   // for the X and Y outputs (see latk/strokes.js). Each vertex is pushed back
   // as ruttEtraVert pushes it, by the latest grid's brightness and the current
-  // Max Line Depth, then goes through mvp. Clip space y = -1 is the top of the
+  // Max Line Depth and Depth Method, then goes through mvp. Clip space y = -1 is the top of the
   // output, since p5's framebuffer camera flips y. A line breaks where it goes
   // behind the camera or past its depth range, and is cut at the canvas edge.
   _linePieces(m) {
@@ -366,6 +443,8 @@ export class RuttEtraModule extends Module {
     const { cols, rows, step, pixels } = this.grid;
     const w = this.width, h = this.height;
     const depth = this.getParam('depth');
+    const kinect = Math.round(this.getParam('method')) === 1;
+    const [dw, dh] = this.dispSize;
     const stride = Math.ceil(cols / XY_MAX_COLS);
     const pieces = [];
     const flush = (run) => {
@@ -377,12 +456,20 @@ export class RuttEtraModule extends Module {
       let run = [];
       for (let c = 0; c < cols + stride - 1; c += stride) {
         const col = Math.min(c, cols - 1);
-        const x = col * step - w / 2;
-        const z = -pixels[(row * cols + col) * 4] / 255 * depth + depth * 0.5;
-        const cx = m[0] * x + m[4] * y + m[8] * z + m[12];
-        const cy = m[1] * x + m[5] * y + m[9] * z + m[13];
-        const cz = m[2] * x + m[6] * y + m[10] * z + m[14];
-        const cw = m[3] * x + m[7] * y + m[11] * z + m[15];
+        let x = col * step - w / 2;
+        let z = -pixels[(row * cols + col) * 4] / 255 * depth + depth * 0.5;
+        let yv = y;
+        if (kinect) {
+          // As ruttEtraVert's Kinect: unprojected through the intrinsics
+          const zk = pixels[(row * cols + col) * 4] / 255 * depth;
+          x = ((col * step) / w * dw - dw / 2) * zk / KINECT_FOCAL;
+          yv = ((row * step) / h * dh - dh / 2) * zk / KINECT_FOCAL;
+          z = -zk + depth * 0.5;
+        }
+        const cx = m[0] * x + m[4] * yv + m[8] * z + m[12];
+        const cy = m[1] * x + m[5] * yv + m[9] * z + m[13];
+        const cz = m[2] * x + m[6] * yv + m[10] * z + m[14];
+        const cw = m[3] * x + m[7] * yv + m[11] * z + m[15];
         if (cw > 0 && cz >= -cw && cz <= cw) {
           run.push({ x: (cx / cw + 1) * 0.5 * w, y: (cy / cw + 1) * 0.5 * h });
         } else {
@@ -393,6 +480,41 @@ export class RuttEtraModule extends Module {
       flush(run);
     }
     return pieces;
+  }
+
+  // ---------------------------------------------------------------- fullscreen
+
+  // Dragging orbits, as in Latk and Mesh, by turning the Rotation Y and
+  // Rotation X knobs. The lines follow the pointer: dragging right pushes
+  // their right side back, and dragging down brings their top forward
+  handleMouseDown(mx, my, canvasW, canvasH, button) {
+    this.dragX = mx;
+    this.dragY = my;
+  }
+
+  handleMouseDrag(mx, my, canvasW, canvasH) {
+    if (this.dragX === null) return;
+    this.setParam('rotationY', this.params.rotationY.value + (mx - this.dragX) * ORBIT_RATE);
+    this.setParam('rotationX', this.params.rotationX.value - (my - this.dragY) * ORBIT_RATE);
+    this.dragX = mx;
+    this.dragY = my;
+  }
+
+  handleMouseUp() {
+    this.dragX = null;
+    this.dragY = null;
+  }
+
+  // The wheel zooms by turning the Scale knob: down, as in Mesh, moves away
+  handleWheel(delta) {
+    this.setParam('scale', this.params.scale.value * Math.exp(-delta * ZOOM_RATE));
+  }
+
+  // A double-click goes back to the home view, the knobs' defaults
+  handleDoubleClick() {
+    this.setParam('scale', 1);
+    this.setParam('rotationX', 0.3);
+    this.setParam('rotationY', 0);
   }
 
   // The scan lines are a grid over the frame, so it is built again
@@ -408,6 +530,8 @@ export class RuttEtraModule extends Module {
     this.readback.dispose();
     if (this.gridFBO) this.gridFBO.remove();
     this.gridFBO = null;
+    if (this.turboFBO) this.turboFBO.remove();
+    this.turboFBO = null;
     super.dispose();
   }
 }

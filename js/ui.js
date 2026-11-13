@@ -2045,9 +2045,9 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      // Conway / InkDrops / InkMarkers / QTVR / VRML / Latk / Mesh / ChromaKey / Transform / Crop: handle the click instead of exiting fullscreen
+      // Conway / InkDrops / InkMarkers / QTVR / VRML / Latk / Mesh / RuttEtra / ChromaKey / Transform / Crop: handle the click instead of exiting fullscreen
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' || mod.type === 'InkMarkers' ||
-                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'ChromaKey' ||
+                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'ChromaKey' ||
                   mod.type === 'Transform' || mod.type === 'Crop')) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
@@ -2452,11 +2452,11 @@ export class NodeGraphUI {
   }
 
   mouseDragged(mx, my, event) {
-    // Conway: handle mouse drawing in fullscreen (QTVR / VRML / Latk / Mesh: turn the view; Transform: move, or turn with Alt; Crop: draw the box)
+    // Conway: handle mouse drawing in fullscreen (QTVR / VRML / Latk / Mesh / RuttEtra: turn the view; Transform: move, or turn with Alt; Crop: draw the box)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'Transform' || mod.type === 'Crop')) {
+                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop')) {
         mod.handleMouseDrag(mx, my, this.p.width, this.p.height, Boolean(event && event.altKey));
         return;
       }
@@ -2514,7 +2514,7 @@ export class NodeGraphUI {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'Transform' || mod.type === 'Crop')) {
+                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop')) {
         mod.handleMouseUp();
         return;
       }
@@ -2672,11 +2672,11 @@ export class NodeGraphUI {
   }
 
   mouseWheel(delta) {
-    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML / Latk / Mesh: zoom; Transform: scale)
+    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML / Latk / Mesh / RuttEtra: zoom; Transform: scale)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'Transform')) {
+                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform')) {
         mod.handleWheel(delta);
         return;
       }
@@ -2697,10 +2697,10 @@ export class NodeGraphUI {
     // (i.e. the first click exited it), don't immediately re-enter.
     if (performance.now() - this._fullscreenExitTime < 400) return;
 
-    // Latk / Mesh: a double-click in fullscreen resets the camera
+    // Latk / Mesh / RuttEtra: a double-click in fullscreen resets the camera
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Latk' || mod.type === 'Mesh')) {
+      if (mod && (mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra')) {
         mod.handleDoubleClick();
       }
       // The graph is hidden, so a double-click mustn't reach its nodes
