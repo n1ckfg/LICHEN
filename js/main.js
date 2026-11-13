@@ -64,6 +64,7 @@ import './modules/ChromaKeyModule.js';
 import './modules/CropModule.js';
 import './modules/DitherModule.js';
 import './modules/EdgesModule.js';
+import './modules/InpainterModule.js';
 import './modules/LevelsModule.js';
 import './modules/LUTModule.js';
 import './modules/MatteModule.js';
