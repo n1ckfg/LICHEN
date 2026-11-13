@@ -11,23 +11,63 @@ const MAX_DT = 0.1;          // clamp long stalls so a tab switch doesn't jump t
 // Points per scan line on X and Y. Below a Line Separation of 4 a line has more
 // vertices than this, and every few are used: the loop's samples are far sparser
 const XY_MAX_COLS = 160;
-// Depth Method Kinect's focal length, in px of the buffer that displaces, on
-// both axes. Its principal point is the buffer's centre
-const KINECT_FOCAL = 285.6;
+// Depth Method's options
+const LINEAR = 0;
+const KINECT = 1;
+const DEPTH_ANYTHING = 2;
+// Depth Method Kinect's focal length: the Kinect v1 SDK's nominal depth focal
+// length (NUI_CAMERA_DEPTH_NOMINAL_FOCAL_LENGTH_IN_PIXELS), which is for a
+// 320 x 240 depth image, a horizontal FOV of 58.5 degrees. The buffer that
+// displaces is the frame's size, so it is scaled to it on each axis
+const KINECT_FOCAL = 285.63;
+const KINECT_SIZE = [320, 240];
 const ORBIT_RATE = 0.01;     // Latk's and Mesh's drag rate, radians per pixel
 const ZOOM_RATE = 0.001;     // and their wheel: Scale x exp(-delta x ZOOM_RATE)
 
 let nextGeometryId = 0;
+
+// The pinhole camera a Depth Method unprojects the buffer that displaces
+// through, as [cx, cy, fx, fy] in that buffer's px, with the principal point at
+// its centre. Kinect's is the Kinect v1's, scaled to the buffer. DepthAnything's
+// is the camera the input came from, whose horizontal FOV is the FOV knob: the
+// depth model keeps no trace of it. Its pixels are taken as square
+export function depthIntrinsics(method, [dw, dh], hfovDeg) {
+  if (method === KINECT) {
+    return [dw / 2, dh / 2, KINECT_FOCAL * dw / KINECT_SIZE[0], KINECT_FOCAL * dh / KINECT_SIZE[1]];
+  }
+  const f = (dw / 2) / Math.tan(hfovDeg * Math.PI / 360);
+  return [dw / 2, dh / 2, f, f];
+}
+
+// How far along its ray a vertex is unprojected, from the brightness that
+// displaces it. Kinect's brightness is raw depth. DepthAnything's is inverse
+// depth, normalized so the frame's farthest point is 0 and its nearest 1, so
+// depth is 1 / (brightness + shift), scaled here so the farthest point is at
+// Max Line Depth. The shift is 1 / (Far/Near - 1): the map's normalizing
+// leaves no other trace of how much farther the far end is than the near
+export function depthDistance(method, brightness, maxDepth, shift) {
+  return method === DEPTH_ANYTHING ? maxDepth * shift / (brightness + shift) : brightness * maxDepth;
+}
+
+// Far/Near to the shift above. A ratio of 1 or less would make it infinite
+// or negative, so it is held just above 1
+function disparityShift(farNear) {
+  return 1 / Math.max(farNear - 1, 1e-3);
+}
 
 // Vertex shader that samples input texture for displacement. With withD, the
 // brightness that displaces comes from the d input (uDTex) instead, and the
 // colour still from the input. Uncabled d uses its own program, with no
 // branch, so the input's lines come out as they did before d existed: a
 // select between the two in one shader moved a few edge pixels in Chrome.
-// With kinect, the brightness is raw depth, and each vertex is unprojected
-// through a pinhole camera's intrinsics, as a Kinect's depth is, instead of
-// being pushed straight back. Without it, the source is as it was before
-const ruttEtraVert = (withD, kinect) => `
+// With method Kinect, the brightness is raw depth, and each vertex is
+// unprojected through a pinhole camera's intrinsics, as a Kinect's depth is,
+// instead of being pushed straight back. With DepthAnything, the brightness is
+// inverse depth (see depthDistance()), unprojected the same way. With Linear,
+// the source is as it was before either
+const ruttEtraVert = (withD, method) => {
+  const kinect = method !== LINEAR;
+  return `
 precision highp float;
 
 attribute vec3 aPosition;
@@ -39,7 +79,8 @@ uniform mat4 uProjectionMatrix;
 uniform sampler2D uInputTex;
 ${withD ? 'uniform sampler2D uDTex;' : ''}${kinect ? `
 uniform vec2 uResolution;    // the displacing buffer's size, in px
-uniform vec4 uIntrinsics;    // principal point (x, y) and focal lengths (z, w), in px` : ''}
+uniform vec4 uIntrinsics;    // principal point (x, y) and focal lengths (z, w), in px` : ''}${method === DEPTH_ANYTHING ? `
+uniform float uShift;        // 1 / (Far/Near - 1)` : ''}
 uniform float uDepth;
 uniform float uHalfWidth;    // half of Line Thickness, in px
 
@@ -53,10 +94,14 @@ void main() {
   // Calculate brightness
   float brightness = 0.34 * dispColor.r + 0.5 * dispColor.g + 0.16 * dispColor.b;
 
-${kinect ? `  // Kinect: the brightness is raw depth, scaled by Max Line Depth, and the
+${kinect ? `${method === KINECT ? `  // Kinect: the brightness is raw depth, scaled by Max Line Depth, and the
   // vertex's pixel is unprojected through the intrinsics. p5's y runs down,
   // as the texture's rows do, so y isn't flipped
-  float zk = brightness * uDepth;
+  float zk = brightness * uDepth;` : `  // DepthAnything: the brightness is inverse depth, nearest 1 and farthest 0,
+  // so the farthest is at Max Line Depth, and the vertex's pixel is unprojected
+  // through the intrinsics. p5's y runs down, as the texture's rows do, so y
+  // isn't flipped
+  float zk = uDepth * uShift / (brightness + uShift);`}
   vec2 pixelCoord = aTexCoord * uResolution;
   float x = (pixelCoord.x - uIntrinsics.x) * zk / uIntrinsics.z;
   float y = (pixelCoord.y - uIntrinsics.y) * zk / uIntrinsics.w;
@@ -75,6 +120,7 @@ ${kinect ? `  // Kinect: the brightness is raw depth, scaled by Max Line Depth, 
   gl_Position = uProjectionMatrix * uModelViewMatrix * vec4(pos, 1.0);
 }
 `;
+};
 
 const ruttEtraFrag = `
 precision highp float;
@@ -124,7 +170,8 @@ function mat4Mult(a, b) {
 // A second input, d, displaces the lines by its brightness instead of the
 // input's, so DepthAnything's depth can push them back. Depth Format reads
 // what displaces as DepthAnything's Grey or Turbo, and Depth Method pushes the
-// lines straight back (Linear) or unprojects them as a Kinect's depth (Kinect).
+// lines straight back (Linear), or unprojects them as a Kinect's depth (Kinect)
+// or as DepthAnything's inverse depth (DepthAnything).
 export class RuttEtraModule extends Module {
   static uid = '4bc92c10';
 
@@ -152,11 +199,16 @@ export class RuttEtraModule extends Module {
         widget: 'dropdown', valueLabels: ['Grey', 'Turbo'],
       },
       // Linear pushes each vertex straight back. Kinect unprojects it through
-      // a pinhole camera, so further things spread wider
+      // a pinhole camera, so further things spread wider, and DepthAnything
+      // does too, reading the brightness as inverse depth
       method: {
-        id: '5ed1', value: 0, min: 0, max: 1, step: 1, label: 'Depth Method',
-        widget: 'dropdown', valueLabels: ['Linear', 'Kinect'],
+        id: '5ed1', value: 0, min: 0, max: 2, step: 1, label: 'Depth Method',
+        widget: 'dropdown', valueLabels: ['Linear', 'Kinect', 'DepthAnything'],
       },
+      // Depth Method DepthAnything: the horizontal FOV of the camera the input
+      // came from, and how many times farther its farthest point is than its nearest
+      fov: { id: '2c59', value: 60, min: 20, max: 120, step: 1, label: 'FOV' },
+      farNear: { id: '19b5', value: 4, min: 1.1, max: 20, step: 0.1, label: 'Far/Near' },
       rotationX: { id: 'dab3', value: 0.3, min: -1.5, max: 1.5, step: 0.05, label: 'Rotation X' },
       rotationY: { id: 'aea2', value: 0, min: -1.5, max: 1.5, step: 0.05, label: 'Rotation Y' },
       // Loops a second on X and Y. A lower rate gives the lines more samples
@@ -168,9 +220,9 @@ export class RuttEtraModule extends Module {
 
     // Create p5 shader using our custom vertex shader
     try {
-      // [withD][kinect]. p5 compiles each the first time it is bound
-      this.ruttShaders = [false, true].map((withD) => [false, true].map((kinect) =>
-        glCanvas.createShader(ruttEtraVert(withD, kinect), ruttEtraFrag)));
+      // [withD][method]. p5 compiles each the first time it is bound
+      this.ruttShaders = [false, true].map((withD) => [LINEAR, KINECT, DEPTH_ANYTHING].map((method) =>
+        glCanvas.createShader(ruttEtraVert(withD, method), ruttEtraFrag)));
       this.gpuMode = true;
     } catch (e) {
       console.error('RuttEtra: Failed to create GPU shader, using fallback', e);
@@ -189,7 +241,7 @@ export class RuttEtraModule extends Module {
     // Depth Format Turbo: what displaces, read back to depth as grey
     this.turboShader = glCanvas.createShader(vertSrc, turboToDepthFrag);
     this.turboFBO = null;
-    // The displacing buffer's size, which Kinect unprojects with
+    // The displacing buffer's size, which Kinect and DepthAnything unproject with
     this.dispSize = [this.width, this.height];
 
     // X and Y: the vertices' brightness is read back from the GPU, so the
@@ -293,6 +345,11 @@ export class RuttEtraModule extends Module {
     this.xy.publish(this, pieces, this.width, this.height, dt, this.params.loopHz.value);
   }
 
+  // Depth Method, rounded to an option as the menu's box does
+  _method() {
+    return Math.min(DEPTH_ANYTHING, Math.max(LINEAR, Math.round(this.getParam('method'))));
+  }
+
   // X or Y cabled to a pin or a knob
   _xyCabled(graph) {
     const fromXY = (c) => c.fromId === this.id && this.outputs[c.fromPort]?.type === 'control';
@@ -365,17 +422,18 @@ export class RuttEtraModule extends Module {
 
     // Use our displacement shader, displaced by d when it is cabled
     const withD = dispFBO !== inputFBO;
-    const kinect = Math.round(this.getParam('method')) === 1;
-    const shader = this.ruttShaders[+withD][+kinect];
+    const method = this._method();
+    const shader = this.ruttShaders[+withD][method];
     glCanvas.shader(shader);
     shader.setUniform('uInputTex', inputFBO);
     if (withD) shader.setUniform('uDTex', dispFBO);
     // The buffer's size in px, as X and Y unproject with it too
     this.dispSize = [dispFBO.width, dispFBO.height];
-    if (kinect) {
+    if (method !== LINEAR) {
       shader.setUniform('uResolution', this.dispSize);
-      shader.setUniform('uIntrinsics', [this.dispSize[0] / 2, this.dispSize[1] / 2, KINECT_FOCAL, KINECT_FOCAL]);
+      shader.setUniform('uIntrinsics', depthIntrinsics(method, this.dispSize, this.getParam('fov')));
     }
+    if (method === DEPTH_ANYTHING) shader.setUniform('uShift', disparityShift(this.getParam('farNear')));
     shader.setUniform('uDepth', depth);
     shader.setUniform('uHalfWidth', this.getParam('lineThickness') * 0.5);
     shader.setUniform('uOpacity', opacity);
@@ -443,8 +501,10 @@ export class RuttEtraModule extends Module {
     const { cols, rows, step, pixels } = this.grid;
     const w = this.width, h = this.height;
     const depth = this.getParam('depth');
-    const kinect = Math.round(this.getParam('method')) === 1;
+    const method = this._method();
     const [dw, dh] = this.dispSize;
+    const intrinsics = method === LINEAR ? null : depthIntrinsics(method, this.dispSize, this.getParam('fov'));
+    const shift = disparityShift(this.getParam('farNear'));
     const stride = Math.ceil(cols / XY_MAX_COLS);
     const pieces = [];
     const flush = (run) => {
@@ -459,11 +519,12 @@ export class RuttEtraModule extends Module {
         let x = col * step - w / 2;
         let z = -pixels[(row * cols + col) * 4] / 255 * depth + depth * 0.5;
         let yv = y;
-        if (kinect) {
-          // As ruttEtraVert's Kinect: unprojected through the intrinsics
-          const zk = pixels[(row * cols + col) * 4] / 255 * depth;
-          x = ((col * step) / w * dw - dw / 2) * zk / KINECT_FOCAL;
-          yv = ((row * step) / h * dh - dh / 2) * zk / KINECT_FOCAL;
+        if (intrinsics) {
+          // As ruttEtraVert's Kinect and DepthAnything: unprojected through the intrinsics
+          const [cx, cy, fx, fy] = intrinsics;
+          const zk = depthDistance(method, pixels[(row * cols + col) * 4] / 255, depth, shift);
+          x = ((col * step) / w * dw - cx) * zk / fx;
+          yv = ((row * step) / h * dh - cy) * zk / fy;
           z = -zk + depth * 0.5;
         }
         const cx = m[0] * x + m[4] * yv + m[8] * z + m[12];
