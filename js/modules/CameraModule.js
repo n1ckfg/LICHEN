@@ -1,5 +1,6 @@
 import { Module } from './Module.js';
-import { passthroughFrag } from '../shaders/passthrough.js';
+import { vertSrc } from '../shaders/vert.js';
+import { passthroughFrag, passthroughMirrorFrag } from '../shaders/passthrough.js';
 import { registerModule } from '../moduleRegistry.js';
 
 // What the Resolution and Frame Rate menus offer, where the device reaches.
@@ -26,6 +27,10 @@ export class CameraModule extends Module {
       device: { id: '3eb9', value: 0, min: 0, max: 0, step: 1, label: 'Device', widget: 'dropdown', valueLabels: ['Default'] },
       resolution: { id: '1fdc', value: 0, min: 0, max: 0, step: 1, label: 'Resolution', widget: 'dropdown', valueLabels: ['Default'] },
       fps: { id: '3342', value: 0, min: 0, max: 0, step: 1, label: 'Frame Rate', widget: 'dropdown', valueLabels: ['Default'] },
+      // Flips the picture left to right, as a selfie view shows it. A plain
+      // param, saved by index: unlike the menus above, its options are the same
+      // on every machine.
+      mirror: { id: '13b3', value: 0, min: 0, max: 1, step: 1, label: 'Mirror', widget: 'dropdown', valueLabels: ['Off', 'On'] },
     };
     // What the menus ask for, by meaning rather than index, since the options
     // differ from machine to machine. This is what a patch saves (saveState).
@@ -37,6 +42,7 @@ export class CameraModule extends Module {
     this.capture = null;
     this.captureReady = false;
     this.createShader(passthroughFrag);
+    this.mirrorShader = glCanvas.createShader(vertSrc, passthroughMirrorFrag);
     this.createOutputFBO();
     this._buildMenus();
 
@@ -205,10 +211,12 @@ export class CameraModule extends Module {
     this._checkMenus();
     if (!this.capture || !this.captureReady) return;
     if (this.capture.loadedmetadata === false) return;
+    // A cable on Mirror rounds to an option, as the menu's box does
+    const shader = Math.round(this.params.mirror.value) === 1 ? this.mirrorShader : this.shader;
     this.outputFBO.begin();
     glCanvas.clear();
-    glCanvas.shader(this.shader);
-    this.shader.setUniform('tex0', this.capture);
+    glCanvas.shader(shader);
+    shader.setUniform('tex0', this.capture);
     this.renderQuad();
     this.outputFBO.end();
   }
@@ -238,6 +246,7 @@ export class CameraModule extends Module {
     this.disposed = true;
     mediaDevices()?.removeEventListener?.('devicechange', this._onDeviceChange);
     this._closeCapture();
+    this.mirrorShader = null;
     super.dispose();
   }
 }

@@ -86,6 +86,7 @@ import './modules/InfrDrawingsModule.js';
 import './modules/Pix2PixModule.js';
 // - - - FORMATS - - -
 import './modules/NAPLPSModule.js';
+import './modules/PanoramaModule.js';
 import './modules/QTVRModule.js';
 import './modules/VRMLModule.js';
 // - - - OUTPUT - - -

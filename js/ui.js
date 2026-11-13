@@ -39,7 +39,7 @@ const MODULE_CATEGORIES = {
   'Generative': ['Cloudy', 'Coils', 'Conway', 'Crystalline', 'GridGuys', 'InkDrops', 'LetterForms', 'Protozoa', 'SpiralGalaxy', 'Whitney', 'Yellowtail'],
   'Emulation': ['DeeSeventySix', 'ESP32', 'InkMarkers', 'RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
   'img2img': ['DepthAnything', 'InfrDrawings', 'Pix2Pix'],
-  'Formats': ['Latk', 'NAPLPS', 'QTVR', 'VRML'],
+  'Formats': ['Latk', 'NAPLPS', 'Panorama', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
 };
 
@@ -143,6 +143,7 @@ const MODULE_COLORS = {
   // - - - FORMATS - - -
   Latk: color_formats,
   NAPLPS: color_formats,
+  Panorama: color_formats,
   QTVR: color_formats,
   VRML: color_formats,
   // - - - OUTPUT - - -
@@ -2046,9 +2047,9 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      // Conway / InkDrops / InkMarkers / QTVR / VRML / Latk / Mesh / RuttEtra / ChromaKey / Transform / Crop: handle the click instead of exiting fullscreen
+      // Conway / InkDrops / InkMarkers / QTVR / Panorama / VRML / Latk / Mesh / RuttEtra / ChromaKey / Transform / Crop: handle the click instead of exiting fullscreen
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' || mod.type === 'InkMarkers' ||
-                  mod.type === 'QTVR' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'ChromaKey' ||
+                  mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'ChromaKey' ||
                   mod.type === 'Transform' || mod.type === 'Crop')) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
@@ -2453,10 +2454,10 @@ export class NodeGraphUI {
   }
 
   mouseDragged(mx, my, event) {
-    // Conway: handle mouse drawing in fullscreen (QTVR / VRML / Latk / Mesh / RuttEtra: turn the view; Transform: move, or turn with Alt; Crop: draw the box)
+    // Conway: handle mouse drawing in fullscreen (QTVR / Panorama / VRML / Latk / Mesh / RuttEtra: turn the view; Transform: move, or turn with Alt; Crop: draw the box)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'VRML' ||
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
                   mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop')) {
         mod.handleMouseDrag(mx, my, this.p.width, this.p.height, Boolean(event && event.altKey));
         return;
@@ -2514,7 +2515,7 @@ export class NodeGraphUI {
     // Conway: handle mouse release in fullscreen
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'VRML' ||
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
                   mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop')) {
         mod.handleMouseUp();
         return;
@@ -2673,10 +2674,10 @@ export class NodeGraphUI {
   }
 
   mouseWheel(delta) {
-    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / VRML / Latk / Mesh / RuttEtra: zoom; Transform: scale)
+    // Conway: handle scroll wheel for cell size in fullscreen (QTVR / Panorama / VRML / Latk / Mesh / RuttEtra: zoom; Transform: scale)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'VRML' ||
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
                   mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform')) {
         mod.handleWheel(delta);
         return;
