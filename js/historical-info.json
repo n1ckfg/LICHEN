@@ -140,6 +140,6 @@
 		"name": "NTSC",
 		"year": 1953,
 		"title": "<a href='https://en.wikipedia.org/wiki/NTSC'>NTSC Color Television</a>",
-		"body": "Emulation of the NTSC analog color video signal, ported from <a href='https://github.com/https://github.com/undef-i/ntsc-wasm'>ntsc-wasm</a> by <a href='https://nedifinita.com/'>noxylva</a>."
+		"body": "Emulation of the NTSC analog color video signal, ported from <a href='https://github.com/undef-i/ntsc-wasm'>ntsc-wasm</a> by <a href='https://nedifinita.com/'>noxylva</a>."
 	}
 ]
