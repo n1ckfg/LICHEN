@@ -133,7 +133,7 @@ export class InpainterModule extends Module {
           s.setUniform('uCoarseSize', coarse ? sizes[k + 1] : sizes[k]);
           s.setUniform('uHasCoarse', coarse ? 1 : 0);
         });
-        for (let i = 0, n = Math.min(steps << k, globalThis.__cap ?? 64); i < n; i++) {
+        for (let i = 0; i < steps; i++) {
           const src = cur;
           this._pass(this.smoothShader, next, (s) => {
             s.setUniform('tex0', pulled[k]);
