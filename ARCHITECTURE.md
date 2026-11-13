@@ -56,7 +56,7 @@ The UI renders each param in the `params` object: `{ paramName: { id, value, min
 
 Checked in headless Chromium on a Raspberry Pi. Every knob param of every module, set one range past each end, ran three frames with no exception and no control output that wasn't finite. A typed value saved and loaded as typed.
 
-A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Calculator `op`, Camera `device`, `resolution`, `fps` and `mirror`, Crop `mode`, DepthAnything `size`, `colormap` and `invert`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, ESP32 `color` and `grid`, FunctionGenerator `curve`, InfrDrawings `model` and `mode`, InkMarkers `tip` and `paper`, Inpainter `view`, LUT `preset`, Matte `matte`, Oscillator `waveform` and `direction`, Panorama `projection`, Pix2Pix `model` and `mode`, QTVR `projection`, Resample `mode`, Restore `model`, `size` and `clamp`, RuttEtra `format` and `method`, Sharpen `posterize`, Skeleton `trace` and `hold`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The menu reads `valueLabels` when it opens, so a module may change its options at runtime, as Camera and DepthAnything do. It should set `max` to match. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
+A param that also sets `widget: 'dropdown'` is drawn as a drop-down menu instead of a knob. Every named-mode param uses one: AdderMultiplier `mode`, Blur `mode`, Calculator `op`, Camera `device`, `resolution`, `fps` and `mirror`, Crop `mode`, DepthAnything `size`, `colormap` and `invert`, Displacer `xChannel`, `yChannel` and `edges`, Dither `mode` and `color`, Edges `mode`, ESP32 `color` and `grid`, FunctionGenerator `curve`, InfrDrawings `model` and `mode`, InkMarkers `tip` and `paper`, Inpainter `view`, LUT `preset`, Matte `matte`, OpticalFlow `view`, Oscillator `waveform` and `direction`, Panorama `projection`, Pix2Pix `model` and `mode`, QTVR `projection`, Resample `mode`, Restore `model`, `size` and `clamp`, RuttEtra `format` and `method`, Sharpen `posterize`, Skeleton `trace` and `hold`, Slitscan `axis`, SlowscanJam `blend`, `effect` and `sync`, SyncGenerator `mode`, Twoscilloscope `view`, `effect` and `sound`, VideoMixer `mode`, VideoToasting `effect` and Whitney `sketch`. Its `valueLabels` are the menu's options, and `min`/`max`/`step` should still run `0`…`valueLabels.length - 1` in steps of 1. It is still a plain numeric param, so it saves, loads and duplicates like a knob does. The menu reads `valueLabels` when it opens, so a module may change its options at runtime, as Camera and DepthAnything do. It should set `max` to match. The row shows a small inlet dot where the knob would be, then the label, then a box with the selected option. An option too long for the box is cut short with an ellipsis; the menu itself grows to show it in full. Clicking the box opens the menu, which is a **DOM overlay** (`.param-dropdown`, styled in `css/style.css`). `NodeGraphUI._updateDropdownMenu()` keeps it pinned under the box through pan and zoom every frame, and opens it upward when there is no room below. Choose an option with a click, or with the arrow keys and Enter; Escape or any click outside closes it. The menu catches keys with a capture-phase `keydown` listener on `window`, which runs before p5's own handler, so Backspace/Delete can't delete the node while it is open. A control cable plugs into the inlet dot as it would into a knob and drives the value through the usual `min + cv × (max − min)` scaling, so a module has to round the value itself, the same way the box does: `Math.round` in JS, or `x < k + 0.5` thresholds in GLSL (not `Math.floor`). While a cable is connected the box shows the live option and won't open. With no cable, the dot is only a cable target: dragging it does not change the value.
 
 A param that sets `widget: 'trigger'` is drawn as a momentary button instead of a knob. It uses the same row as a drop-down: an inlet dot, then the label, then a button where the drop-down's box would be. Declare it as `{ value: 0, min: 0, max: 1, step: 1, label, widget: 'trigger' }`. Clicking the button calls `mod.fireTrigger(name)`. That records the time in `mod.triggeredAt[name]` and then calls `mod.onTrigger(name)`, which modules override to act on the trigger. A control cable fires it too. `ProcessingPipeline` fires the trigger on the cable's rising edge, when the value it applies crosses the param's midpoint (0.5) from below. The button still fires on a click while a cable is connected, since firing never touches the value. Its text is `mod.triggerText(name)`, which is empty by default and cut short with an ellipsis when it is too long. It is drawn fully lit on the first frame after it fires, however slow that frame is, then fades back over 250 ms. As with the drop-down, dragging the unconnected dot does nothing. A trigger's value is saved like any other param, but it only records where the last cable left it.
 
@@ -113,7 +113,7 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 ### Module Categories
 
 - **Sources**: Camera, Image, Mesh, VideoPlayer
-- **Utility**: Blur, Brcosa, Channel, ChromaKey, Crop, Delay, Dither, Edges, Example, Inpainter, Levels, LUT, Matte, Mosaic, Resample, Restore, Sharpen, Transform, VideoMixer
+- **Utility**: Blur, Brcosa, Channel, ChromaKey, Crop, Delay, Dither, Edges, Example, Inpainter, Levels, LUT, Matte, Mosaic, OpticalFlow, Resample, Restore, Sharpen, Transform, VideoMixer
 - **Control**: Calculator, Constant, Random, Remap, Skeleton
 - **Generative**: Cloudy, Coils, Conway, Crystalline, GridGuys, InkDrops, LetterForms, Protozoa, SpiralGalaxy, Whitney, Yellowtail
 - **Emulation**: DeeSeventySix, ESP32, InkMarkers, RuttEtra, SlowscanJam, Twoscilloscope
@@ -1027,6 +1027,61 @@ The Inpainter module (`js/modules/InpainterModule.js`, `js/shaders/inpainter.js`
 **Cost.** Every level takes Smooth + 2 passes, about 11 levels at the default frame, and at this size the draws, not the pixels, take the time. In headless Chrome on an M2 Max, a frame took 2.1 ms at Smooth 4 and 3.5 ms at Smooth 8, nearly the same at density 1 and 2.
 
 **Checked** in headless Chrome, at pixel density 1 and 2. The input was a colour pattern with four holes: a hard disc, a soft-edged disc, a line 6 pixels wide and a corner box against the frame's edge. Against an exact sparse solve of the same equation (SciPy), the hole pixels' mean error was 15 levels at Smooth 0 (plain pull-push), 6 at 4, 4.5 at 8 and 3.6 at 16. Known pixels matched the input on every value, and Mask matched the threshold on every pixel. A Transform turned 30° and scaled 0.5 × 0.6 filled the 70% of the frame round it, with its opaque pixels unchanged. A frame resized to 1280 × 720 kept working, and a patch saves and loads again as the same JSON. Two things were tried and dropped: weighting a coarse texel by its share known (Σw / 4) doubled the error, and giving level k 2^k times Smooth's steps cost as much as raising Smooth for the same accuracy.
+
+## OpticalFlow Module
+
+The OpticalFlow module (`js/modules/OpticalFlowModule.js`, `js/shaders/optical-flow.js`) measures dense optical flow between consecutive frames of its input: for every pixel, how far it moved since the last frame. It is pyramidal Lucas-Kanade, ported from the lk-optical-flow sketch, all in fragment shaders. Flow is in pixels of the logical frame, +x right and +y down, and says where a pixel came from: `curr(x) ≈ prev(x − f)`.
+
+**Pipeline, each frame:**
+1. **Pyramid.** The input's luma is blurred by a separable 5-tap Gaussian into level 0, and each level after it is a 2×2 box of the one before, to five levels. Level 0 is the logical frame at density 1, so the work doesn't grow 4× on a retina display. The pyramid is always built to five levels, so changing Levels never finds the previous frame's pyramid short a level. The current and previous pyramids swap each frame instead of the previous one being rebuilt.
+2. **Gradients.** Each level used gets the current frame's central-difference `Ix`, `Iy` once, with its luma alongside in the same texel.
+3. **LK, coarse to fine.** From the coarsest level used down to level 0, each level starts from the coarser level's flow, scaled by the two levels' size ratio. Each pass matches the window round a pixel against the previous frame shifted by that pixel's flow so far, the same shift for the whole window (Bouguet). It solves the Gaussian-weighted 2×2 system `A d = b` and adds `d`. Iterations runs this pass that many times a level, each from the last, with the window shifted again.
+4. **Smooth** mixes level 0's flow with last frame's result: `mix(now, last, smooth)`.
+5. **View** draws the output, and the input is copied to keep for Warp.
+
+The first frame, and the first after a resize, is compared with itself, so it shows no motion.
+
+**Params:**
+
+| Param | Range | Default | |
+| --- | --- | --- | --- |
+| View | drop-down | Arrows | See below |
+| Levels | 1–5 | 4 | Pyramid levels used. Motion much beyond about 2^Levels pixels a frame is missed |
+| Window | 3–15, odd | 9 | LK window, in texels of each level |
+| Range | 1–100 px | 15 | Speed shown at full colour, and the ±full scale of Vectors |
+| Spacing | 8–64 px | 16 | Distance between arrows |
+| Texture | 0–8 | 0.5 | Grey levels a texel luma must change by in a window's flattest direction for its motion to be solved |
+| Iterations | 1–5 | 2 | LK passes a level |
+| Smooth | 0–0.99 | 0 | Temporal smoothing of the flow |
+
+**Views:**
+
+| View | Shows |
+| --- | --- |
+| Color | Hue by direction, saturation by speed (full at Range). Still areas are grey |
+| Magnitude | A heat ramp of speed |
+| Arrows | One arrow a Spacing cell over the input, coloured as Color, two cells long at Range |
+| Warp | The previous frame pulled along the flow, `prev(x − f)`, mixed 65/35 with the current frame. Where the flow is right this matches the current frame |
+| Vectors | x in red, y in green, encoded as Displacer reads them: 128 is still, 0 and 255 are −Range and +Range (127/128 of it). Blue is 128 |
+
+**Into Displacer.** Cable Vectors to Displacer's `map`, with X From Red, Y From Green, and X Max and Y Max equal to Range. With the current frame in `in`, Displacer then outputs `curr(x + f)`, which is the previous frame again; with −Range it pushes the picture on along its motion. In the check below, the previous frame came back within 0.11 levels on average.
+
+**Arrows on the GPU.** The sketch read the flow back with `loadPixels()` and drew arrows with p5 lines, which stalls the GPU every frame and can't export (strokes aren't in node-gles3's runtime). Here the view shader draws them. An arrow is capped at two cells long, so a pixel tests only the arrows of the 5×5 cells round its own, against three segments each, antialiased to one device pixel.
+
+**Changes from the sketch:**
+- **Window shifted as a whole.** The sketch corrected `It` by the prior flow to first order (`It + Ix·pf.x + Iy·pf.y`), which falls apart for the large priors the pyramid hands down. Warping each window pixel by its own prior, the obvious fix, doesn't converge either: a window then solves for its pixels' mean residual, so noise in the prior field survives every iteration. Shifting the window by its centre's flow, as Bouguet does, converges.
+- **Smallest eigenvalue, not the determinant.** The sketch solved where `det(A) > 1e-4`. That test is in absolute units, so at full resolution on smooth texture no window passed and level 0 never refined anything (Levels 1 gave exactly zero everywhere). The module divides `A` and `b` by the window's weights and solves where `A`'s smaller eigenvalue exceeds (Texture / 255)², which also rejects edges, whose motion along the edge is unknowable. Below the threshold the coarser level's flow stands.
+- **Half float.** Working buffers are half float where the context can draw to them (as in Blur and Inpainter). Otherwise they are 8 bits with signed values offset to 128, which the sketch used throughout: gradients at ±0.5 full scale, flow at ±50 px, so 0.39 px steps. Flow is held to a quarter of each level's longer side, or ±50 px in 8 bits.
+- **Not in the sketch:** Iterations, Texture, Smooth, Vectors, and the size ratio between levels (the sketch doubled, which is off when a level's size is odd).
+
+**Checked** in headless Chrome at pixel density 1 and 2, on a procedural texture moved rigidly by a known amount each frame, with a flat grey patch and with ±2 levels of noise. Flow was read back from Vectors at Range 32, so 0.25 px steps, away from the borders and the patch:
+- **Defaults, with noise.** Translations of (1, 0), (3, 2), (12, 7) and (−20, 10) px came back with median error 0–0.25 px, and 94%, 93%, 87% and 85% of pixels within 0.5 px at density 1 (97%, 96%, 91% and 88% at density 2). Without noise, at one iteration a level, (−20, 10) had median error 0.9 px and 37% within 0.5 px; at 2 iterations 88%.
+- **Texture.** At Texture 0, noise made up flow inside the flat patch, wrong by a median 3–31 px, more than the motion itself. At 0.5 the patch read as still, which is all a textureless area can say. On this deliberately smooth texture, Levels 1 solves little at Texture 0.5. Real footage is busier at level 0.
+- **8 bits.** The 8-bit fallback came within 0.5 px on 80–98% of pixels.
+- **Rotation.** The field turned round the point where rotation and translation cancel, where it should.
+- **Elsewhere.** A resize to 1280×720 reallocated the buffers and stayed as accurate (99.5% within 0.5 px). A patch saves its params by id. Exported to node-gles3 with SpiralGalaxy as the source, after 60 frames at a fixed 30 fps the output matched Chrome's within 16 levels, and within 8 on all but 0.03% of pixels.
+
+**Cost.** On an M2 Max at defaults, about 0.5 ms a frame at 640×480; Window 15 costs about 2 ms. LK is 2–3 fetches per window texel per iteration, so cost grows with Window², Iterations and the frame's area.
 
 ## VideoToasting Module
 

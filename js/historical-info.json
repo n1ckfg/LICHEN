@@ -129,5 +129,11 @@
 		"year": 2022,
 		"title": "<a href='https://github.com/carolineec/informative-drawings'>Informative-Drawings</a>",
 		"body": "Unpaired method for creating line drawings from photographs by <a href='https://people.csail.mit.edu/cmchan/'>Caroline Chan</a>, model conversion by <a href='https://huggingface.co/rocca/informative-drawings-line-art-onnx/'>Joe Rocca</a>"
+	},
+	{
+		"name": "OpticalFlow",
+		"year": 1981,
+		"title": "<a href='https://en.wikipedia.org/wiki/Lucas%E2%80%93Kanade_method'>Lucas-Kanade Optical Flow</a>",
+		"body": "Bruce D. Lucas and Takeo Kanade's least-squares image registration (IJCAI 1981), run coarse to fine on a Gaussian pyramid after Jean-Yves Bouguet's pyramidal implementation (Intel, 2000). Based on the lk-optical-flow sketch by Nick Fox-Gieg."
 	}
 ]
