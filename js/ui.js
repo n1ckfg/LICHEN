@@ -166,25 +166,33 @@ const DROPDOWN_W = 92;
 const DROPDOWN_H = 14;
 
 // - - - Retro look (see docs/RETRO_NODES.md) - - -
-// Win95-style chrome: flat ButtonFace gray, 2px nested bevels, sunken wells.
+// Win95-style chrome: flat faces, 2px nested bevels, sunken wells, in
+// LICHEN's dark navy colours. The bevel edges are the faces' tints and shades.
 // The fonts are @font-face aliases in css/style.css, since p5 quotes a
 // family name with a space in it, which would break a CSS font stack.
 const UI_FONT = 'LichenUI';     // MS Sans Serif-alike, for labels and buttons
 const UI_MONO = 'LichenMono';   // Fixedsys-alike, for live value readouts
-const FACE = [192, 192, 192];   // ButtonFace #C0C0C0
-const LIGHT = [223, 223, 223];  // inner highlight #DFDFDF
-const SHADOW = [128, 128, 128]; // inner shadow #808080
-const NAVY = [0, 0, 128];       // highlight / value colour #000080
-const CTRL = [0, 128, 0];       // a param driven by a control cable, on gray
+const FACE = [30, 30, 50];      // node body
+const BUTTON = [60, 60, 90];    // button face
+const HILITE = [120, 120, 165]; // outer highlight
+const LIGHT = [80, 80, 118];    // inner highlight
+const SHADOW = [14, 14, 26];    // inner shadow
+const DARK = [0, 0, 0];         // outer shadow
+const ACCENT = [100, 200, 255]; // knob arcs and inlets
+const SELECT = [58, 90, 138];   // highlight behind selected text
+const CTRL = [100, 255, 130];   // a param driven by a control cable
+const INK = 200;                // button text
+const LABEL = 170;              // param labels
+const VALUE = 130;              // value readouts
 const CABLE_VIDEO = [100, 180, 255];
 const CABLE_CONTROL = [100, 255, 130];
 const CABLE_PENDING = [255, 255, 100];
 
 // Edge colours of a 2px nested bevel: [outer top-left, outer bottom-right, inner top-left, inner bottom-right]
 const BEVELS = {
-  raised: [255, 0, LIGHT, SHADOW],  // a node or button at rest
-  pressed: [0, 255, SHADOW, LIGHT], // the same, pushed in
-  field: [SHADOW, 255, 0, LIGHT],   // a well: text box, knob, preview screen
+  raised: [HILITE, DARK, LIGHT, SHADOW],  // a node or button at rest
+  pressed: [DARK, HILITE, SHADOW, LIGHT], // the same, pushed in
+  field: [SHADOW, HILITE, DARK, LIGHT],   // a well: text box, knob, preview screen
 };
 
 // A 2px bevel around x, y, w, h, drawn with filled 1px rects so it stays crisp
@@ -216,8 +224,8 @@ function frame(p, x, y, w, h, col) {
 }
 
 // A push button: face, bevel and centred label. A pressed button's label moves
-// down and right a pixel, and a disabled one's is etched gray, as in Win95.
-function pushButton(p, x, y, w, h, label, { pressed = false, disabled = false, face = FACE, ink = 0, size = 9 } = {}) {
+// down and right a pixel, and a disabled one's is etched and dim, as in Win95.
+function pushButton(p, x, y, w, h, label, { pressed = false, disabled = false, face = BUTTON, ink = INK, size = 9 } = {}) {
   p.noStroke();
   p.fill(face);
   p.rect(x, y, w, h);
@@ -227,9 +235,9 @@ function pushButton(p, x, y, w, h, label, { pressed = false, disabled = false, f
   const tx = x + w / 2 + (pressed ? 1 : 0);
   const ty = y + h / 2 + (pressed ? 1 : 0);
   if (disabled) {
-    p.fill(255);
+    p.fill(DARK);
     p.text(label, tx + 1, ty + 1);
-    p.fill(SHADOW);
+    p.fill(110);
   } else {
     p.fill(ink);
   }
@@ -241,7 +249,7 @@ function inlet(p, x, y, col) {
   p.noStroke();
   p.fill(SHADOW);
   p.rect(x - 4, y - 4, 8, 8);
-  p.fill(255);
+  p.fill(HILITE);
   p.rect(x - 3, y - 3, 7, 7);
   p.fill(col);
   p.rect(x - 3, y - 3, 6, 6);
@@ -968,12 +976,12 @@ export class NodeGraphUI {
       fontSize: (9 * this.zoom) + 'px',
       fontFamily: '"Lucida Console", Monaco, "Courier New", monospace',
       textAlign: 'right',
-      background: '#fff',
-      color: '#000',
+      background: '#1a1a2a',
+      color: '#fff',
       border: 'none',
       borderRadius: '0',
       // Sunken text field
-      boxShadow: 'inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf',
+      boxShadow: 'inset 1px 1px #0e0e1a, inset -1px -1px #7878a5, inset 2px 2px #000, inset -2px -2px #505076',
       padding: '0 3px',
       outline: 'none',
       zIndex: '1000',
@@ -1116,14 +1124,14 @@ export class NodeGraphUI {
       position: 'absolute',
       left: screenX + 'px',
       top: screenY + 'px',
-      background: '#c0c0c0',
+      background: '#1a1a2a',
       border: 'none',
       borderRadius: '0',
       padding: '4px',
       zIndex: '1001',
       minWidth: '160px',
       // Raised window bevel
-      boxShadow: 'inset 1px 1px #fff, inset -1px -1px #000, inset 2px 2px #dfdfdf, inset -2px -2px #808080',
+      boxShadow: 'inset 1px 1px #7878a5, inset -1px -1px #000, inset 2px 2px #505076, inset -2px -2px #0e0e1a',
     });
 
     const input = document.createElement('input');
@@ -1134,11 +1142,11 @@ export class NodeGraphUI {
       padding: '6px 8px',
       fontSize: '12px',
       fontFamily: '"Microsoft Sans Serif", "MS Sans Serif", Tahoma, Geneva, sans-serif',
-      background: '#fff',
-      color: '#000',
+      background: '#252535',
+      color: '#fff',
       border: 'none',
       borderRadius: '0',
-      boxShadow: 'inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf',
+      boxShadow: 'inset 1px 1px #0e0e1a, inset -1px -1px #7878a5, inset 2px 2px #000, inset -2px -2px #505076',
       outline: 'none',
       boxSizing: 'border-box',
     });
@@ -1148,8 +1156,8 @@ export class NodeGraphUI {
       marginTop: '4px',
       maxHeight: '200px',
       overflowY: 'auto',
-      background: '#fff',
-      boxShadow: 'inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf',
+      background: '#12121e',
+      boxShadow: 'inset 1px 1px #0e0e1a, inset -1px -1px #7878a5, inset 2px 2px #000, inset -2px -2px #505076',
       padding: '2px',
     });
 
@@ -1167,8 +1175,8 @@ export class NodeGraphUI {
     const updateSelection = () => {
       const items = resultsList.children;
       for (let i = 0; i < items.length; i++) {
-        items[i].style.color = i === selectedIndex ? '#fff' : '#000';
-        items[i].style.background = i === selectedIndex ? '#000080' : 'transparent';
+        items[i].style.color = i === selectedIndex ? '#fff' : '#aaa';
+        items[i].style.background = i === selectedIndex ? '#3a5a8a' : 'transparent';
       }
     };
 
@@ -1182,8 +1190,8 @@ export class NodeGraphUI {
           cursor: 'pointer',
           fontSize: '11px',
           fontFamily: '"Microsoft Sans Serif", "MS Sans Serif", Tahoma, Geneva, sans-serif',
-          color: i === selectedIndex ? '#fff' : '#000',
-          background: i === selectedIndex ? '#000080' : 'transparent',
+          color: i === selectedIndex ? '#fff' : '#aaa',
+          background: i === selectedIndex ? '#3a5a8a' : 'transparent',
           borderRadius: '0',
         });
         item.addEventListener('mouseenter', () => {
@@ -1774,7 +1782,7 @@ export class NodeGraphUI {
       }
     }
 
-    // Body: flat ButtonFace with a 2px nested bevel
+    // Body: a flat face with a 2px nested bevel
     p.noStroke();
     p.fill(FACE);
     p.rect(mod.x, mod.y, MODULE_WIDTH, h);
@@ -1785,7 +1793,7 @@ export class NodeGraphUI {
       const paramNames = Object.keys(mod.params);
       for (let i = 0; i < paramNames.length; i++) {
         const pos = this.getParamKnobPos(mod, i);
-        inlet(p, pos.x, pos.y, this._isControlled(id, paramNames[i]) ? CABLE_CONTROL : NAVY);
+        inlet(p, pos.x, pos.y, this._isControlled(id, paramNames[i]) ? CABLE_CONTROL : ACCENT);
       }
     }
 
@@ -1836,12 +1844,12 @@ export class NodeGraphUI {
     const btnY = mod.y + HEADER_HEIGHT / 2;
     const captionButton = (cx) => {
       p.noStroke();
-      p.fill(FACE);
+      p.fill(BUTTON);
       p.rect(cx - 6, btnY - 6, 12, 12);
       bevel(p, cx - 6, btnY - 6, 12, 12, 'raised');
     };
     captionButton(btnX);
-    p.fill(0);
+    p.fill(INK);
     p.rect(btnX - 3, btnY - 1, 6, 2);
     if (mod.collapsed) {
       p.rect(btnX - 1, btnY - 3, 2, 6);
@@ -1851,7 +1859,7 @@ export class NodeGraphUI {
     if (hasInfo) {
       const infoX = mod.x + MODULE_WIDTH - 28;
       captionButton(infoX);
-      p.fill(0);
+      p.fill(INK);
       p.textSize(9);
       p.textStyle(p.BOLD);
       p.textAlign(p.CENTER, p.CENTER);
@@ -1869,7 +1877,7 @@ export class NodeGraphUI {
     // Chiseled groove under the title bar
     p.fill(SHADOW);
     p.rect(mod.x + 3, mod.y + HEADER_HEIGHT - 2, MODULE_WIDTH - 6, 1);
-    p.fill(255);
+    p.fill(LIGHT);
     p.rect(mod.x + 3, mod.y + HEADER_HEIGHT - 1, MODULE_WIDTH - 6, 1);
 
     // Params
@@ -1885,11 +1893,11 @@ export class NodeGraphUI {
 
       if (isDropdown(param) || isTrigger(param)) {
         // Control inlet where the knob would be: a cable can still drive the menu or fire the trigger
-        inlet(p, kx, ky, controlled ? CABLE_CONTROL : NAVY);
+        inlet(p, kx, ky, controlled ? CABLE_CONTROL : ACCENT);
 
         // Label
         p.noStroke();
-        p.fill(0);
+        p.fill(LABEL);
         p.textSize(9);
         p.textAlign(p.LEFT, p.CENTER);
         p.text(param.label || name, kx + KNOB_RADIUS + 6, ky);
@@ -1900,7 +1908,7 @@ export class NodeGraphUI {
           // Button, flashing each time it fires: fully lit and pushed in on the first frame after, then fading over 250 ms
           const fired = mod.triggeredAt[name] ?? -Infinity;
           const flash = fired > this._prevDrawTime ? 1 : Math.max(0, 1 - (this._drawTime - fired) / 250);
-          const face = p.lerpColor(p.color(...FACE), p.color(255, 255, 255), flash);
+          const face = p.lerpColor(p.color(...BUTTON), p.color(...ACCENT), flash);
           p.textSize(8);
           pushButton(p, r.x, r.y, r.w, r.h, fitText(p, mod.triggerText(name) ?? '', r.w - 10),
             { pressed: flash > 0.5, face, size: 8 });
@@ -1908,20 +1916,20 @@ export class NodeGraphUI {
           continue;
         }
 
-        // Combo box: sunken white field with the selected option, and a drop button at its right
+        // Combo box: sunken field with the selected option, and a drop button at its right
         const menu = this._dropdownMenu;
         const open = menu && menu.nodeId === id && menu.paramName === name;
         p.noStroke();
-        p.fill(controlled ? FACE : 255);
+        p.fill(controlled ? 30 : 50);
         p.rect(r.x, r.y, r.w, r.h);
         bevel(p, r.x, r.y, r.w, r.h, 'field');
         if (controlled) frame(p, r.x + 2, r.y + 2, r.w - 15, r.h - 4, CTRL);
-        // The open menu's box shows its option selected, white on navy
+        // The open menu's box shows its option selected, white on the highlight
         if (open) {
-          p.fill(NAVY);
+          p.fill(SELECT);
           p.rect(r.x + 3, r.y + 3, r.w - 17, r.h - 6);
         }
-        p.fill(open ? 255 : 0);
+        p.fill(open ? 255 : controlled ? 130 : INK);
         p.textSize(8);
         p.textAlign(p.LEFT, p.CENTER);
         const option = param.valueLabels[Math.round(param.value)] ?? '';
@@ -1929,18 +1937,18 @@ export class NodeGraphUI {
 
         // Drop button with its caret
         const bx = r.x + r.w - 13, by = r.y + 2, bw = 11, bh = r.h - 4;
-        p.fill(FACE);
+        p.fill(BUTTON);
         p.rect(bx, by, bw, bh);
         bevel(p, bx, by, bw, bh, 'raised');
         const cx = r.x + r.w - 8;
-        p.fill(controlled ? SHADOW : 0);
+        p.fill(controlled ? 100 : LABEL);
         p.triangle(cx - 3, ky - 1.5, cx + 3, ky - 1.5, cx, ky + 2);
         continue;
       }
 
       // Knob: a round sunken well, its value as an arc
       p.noStroke();
-      p.fill(255);
+      p.fill(controlled ? 30 : 50);
       p.ellipse(kx, ky, KNOB_RADIUS * 2);
       p.noFill();
       p.strokeWeight(1);
@@ -1950,7 +1958,7 @@ export class NodeGraphUI {
       } else {
         p.stroke(...SHADOW);
         p.arc(kx, ky, KNOB_RADIUS * 2 - 1, KNOB_RADIUS * 2 - 1, p.PI * 0.75, p.PI * 1.75);
-        p.stroke(255);
+        p.stroke(...HILITE);
         p.arc(kx, ky, KNOB_RADIUS * 2 - 1, KNOB_RADIUS * 2 - 1, -p.PI * 0.25, p.PI * 0.75);
       }
 
@@ -1959,7 +1967,7 @@ export class NodeGraphUI {
       const norm = Math.max(0, Math.min(1, (param.value - param.min) / (param.max - param.min)));
       const startAngle = -p.PI * 0.75;
       const endAngle = startAngle + norm * p.PI * 1.5;
-      p.stroke(...(controlled ? CTRL : NAVY));
+      p.stroke(...(controlled ? CTRL : ACCENT));
       p.strokeWeight(2);
       p.arc(kx, ky, KNOB_RADIUS * 2 - 4, KNOB_RADIUS * 2 - 4, startAngle, endAngle);
 
@@ -1967,7 +1975,7 @@ export class NodeGraphUI {
       const optLabel = param.valueLabels && param.valueLabels[Math.round(param.value)];
       const displayVal = optLabel ? optLabel : (param.step >= 1 ? param.value.toFixed(0) : param.value.toFixed(2));
       p.noStroke();
-      p.fill(...(controlled ? CTRL : NAVY));
+      p.fill(VALUE);
       p.textFont(UI_MONO);
       p.textSize(optLabel ? 8 : 9);
       const valW = p.textWidth(displayVal);
@@ -1976,7 +1984,7 @@ export class NodeGraphUI {
       p.textFont(UI_FONT);
 
       // Label
-      p.fill(0);
+      p.fill(LABEL);
       p.textSize(9);
       p.textAlign(p.LEFT, p.CENTER);
       const maxLabelW = (MODULE_WIDTH - 8 - valW - 4) - (16 + KNOB_RADIUS + 6);
@@ -2014,7 +2022,7 @@ export class NodeGraphUI {
 
       // FPS display
       p.noStroke();
-      p.fill(0);
+      p.fill(150);
       p.textFont(UI_MONO);
       p.textSize(10);
       p.textAlign(p.LEFT, p.TOP);
@@ -2025,11 +2033,11 @@ export class NodeGraphUI {
       const fsBtnY = py + MONITOR_PREVIEW_H + 20;
       pushButton(p, mod.x + 10, fsBtnY, MODULE_WIDTH - 20, 20, 'Fullscreen');
 
-      // Record button: latched in, maroon, while recording
+      // Record button: latched in, red, while recording
       const btnY = py + MONITOR_PREVIEW_H + 44;
       const isRec = mod.isRecording && mod.isRecording();
       pushButton(p, mod.x + 10, btnY, MODULE_WIDTH - 20, 20, isRec ? 'Stop Recording' : 'Record',
-        isRec ? { pressed: true, face: [128, 0, 0], ink: 255 } : {});
+        isRec ? { pressed: true, face: [180, 40, 40], ink: 255 } : {});
 
       // Screenshot button
       const shotBtnY = py + MONITOR_PREVIEW_H + 68;
@@ -2101,7 +2109,7 @@ export class NodeGraphUI {
       const pos = this.getInputPortPos(mod, i);
       portPin(p, pos.x, pos.y, mod.inputs[i].type === 'control' ? CABLE_CONTROL : [68, 136, 255],
         isHoveredPort('input', i), connected.has(`${id}:i${i}`));
-      p.fill(0);
+      p.fill(180);
       p.textSize(8);
       p.textAlign(p.CENTER, p.TOP);
       p.text(mod.inputs[i].name, pos.x, pos.y + PORT_RADIUS + 2);
@@ -2112,7 +2120,7 @@ export class NodeGraphUI {
       const pos = this.getOutputPortPos(mod, i);
       portPin(p, pos.x, pos.y, mod.outputs[i].type === 'control' ? CABLE_CONTROL : [255, 136, 68],
         isHoveredPort('output', i), connected.has(`${id}:o${i}`));
-      p.fill(0);
+      p.fill(180);
       p.textSize(8);
       p.textAlign(p.CENTER, p.BOTTOM);
       p.text(mod.outputs[i].name, pos.x, pos.y - PORT_RADIUS - 2);

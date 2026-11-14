@@ -55,8 +55,8 @@ function el(tag, css, text, className) {
 // The look comes from the retro-* classes in css/style.css, shared with the
 // node graph and the other modules' fullscreen tools
 const BUTTON_CSS = 'flex: 1 1 calc(50% - 3px); padding: 6px 8px; font-size: 12px;';
-// A palette swatch's frame: sunken when not chosen, black with a white ring when chosen
-const SWATCH_OFF = '#808080 #fff #fff #808080';
+// A palette swatch's frame: sunken when not chosen, white with a black ring when chosen
+const SWATCH_OFF = '#0e0e1a #7878a5 #7878a5 #0e0e1a';
 
 export class InkMarkersPanel {
   constructor(mod) {
@@ -84,8 +84,8 @@ export class InkMarkersPanel {
 
     const section = (title) => {
       // Sections part with a chiseled groove
-      const s = el('div', 'margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #808080; box-shadow: 0 1px #fff;');
-      s.appendChild(el('div', 'font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #000; margin-bottom: 6px;', title));
+      const s = el('div', 'margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #0e0e1a; box-shadow: 0 1px #505076;');
+      s.appendChild(el('div', 'font-size: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; color: #888; margin-bottom: 6px;', title));
       root.appendChild(s);
       return s;
     };
@@ -113,7 +113,7 @@ export class InkMarkersPanel {
       input.type = 'range';
       input.min = p.min; input.max = p.max; input.step = p.step;
       input.oninput = () => this.mod.setParam(param, parseFloat(input.value));
-      const out = el('span', "width: 34px; text-align: right; color: #000080; font-family: 'Lucida Console', Monaco, 'Courier New', monospace;");
+      const out = el('span', "width: 34px; text-align: right; color: #888; font-family: 'Lucida Console', Monaco, 'Courier New', monospace;");
       row.appendChild(input);
       row.appendChild(out);
       s.appendChild(row);
@@ -133,11 +133,11 @@ export class InkMarkersPanel {
     const current = el('div', 'display: flex; align-items: center; gap: 8px; margin-bottom: 8px;');
     this._indicator = el('div', `
       width: 40px; height: 40px; cursor: pointer; flex-shrink: 0; box-sizing: border-box;
-      border: 2px solid; border-color: #808080 #fff #fff #808080; box-shadow: inset 1px 1px #000, inset -1px -1px #dfdfdf;
+      border: 2px solid; border-color: #0e0e1a #7878a5 #7878a5 #0e0e1a; box-shadow: inset 1px 1px #000, inset -1px -1px #505076;
     `);
     this._indicator.title = 'Color wheel';
     this._indicator.onclick = () => this._toggleWheel();
-    this._hexLabel = el('span', "font: 12px 'Lucida Console', Monaco, 'Courier New', monospace; color: #000;");
+    this._hexLabel = el('span', "font: 12px 'Lucida Console', Monaco, 'Courier New', monospace; color: #aaa;");
     current.appendChild(this._indicator);
     current.appendChild(this._hexLabel);
     colorSection.appendChild(current);
@@ -240,8 +240,8 @@ export class InkMarkersPanel {
       this._hexLabel.textContent = hex;
       this._swatches.forEach((sw, i) => {
         const on = PALETTE[i] === hex;
-        sw.style.borderColor = on ? '#000' : SWATCH_OFF;
-        sw.style.boxShadow = on ? 'inset 0 0 0 1px #fff' : 'none';
+        sw.style.borderColor = on ? '#fff' : SWATCH_OFF;
+        sw.style.boxShadow = on ? 'inset 0 0 0 1px #000' : 'none';
       });
       // Set from somewhere other than the wheel: move the wheel's marker to it
       if (!this._wheelRgb || rgbToHex(this._wheelRgb) !== hex) {

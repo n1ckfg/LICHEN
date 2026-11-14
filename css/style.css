@@ -1,4 +1,5 @@
-/* Retro look, after docs/RETRO_NODES.md: Win95 / MagicWB chrome over a dithered desktop */
+/* Retro look, after docs/RETRO_NODES.md: Win95 / MagicWB chrome over a dithered
+   desktop, in LICHEN's dark navy colours */
 
 /* One-word aliases for the system fonts nearest the period's bitmap faces.
    The node graph's canvas text uses them by name, since p5 quotes a family
@@ -17,16 +18,23 @@
 }
 
 :root {
-  --face: #c0c0c0;
-  --light: #dfdfdf;
-  --shadow: #808080;
-  --navy: #000080;
+  --face: #141428;      /* panels and windows */
+  --button: #3c3c5a;
+  --button-hover: #48486c;
+  --field: #1a1a2a;     /* sunken wells */
+  --hilite: #7878a5;    /* outer highlight */
+  --light: #505076;     /* inner highlight */
+  --shadow: #0e0e1a;    /* inner shadow */
+  --select: #3a5a8a;    /* highlight behind selected text, and captions */
+  --accent: #64c8ff;
+  --ink: #eee;
+  --dim: #888;
   --ui-font: 'Microsoft Sans Serif', 'MS Sans Serif', Tahoma, Geneva, sans-serif;
   --mono-font: 'Lucida Console', Monaco, 'Courier New', monospace;
-  /* 2px nested bevels: outer #fff / #000, inner #dfdfdf / #808080 */
-  --bevel-raised: inset 1px 1px #fff, inset -1px -1px #000, inset 2px 2px var(--light), inset -2px -2px var(--shadow);
-  --bevel-pressed: inset 1px 1px #000, inset -1px -1px #fff, inset 2px 2px var(--shadow), inset -2px -2px var(--light);
-  --bevel-field: inset 1px 1px var(--shadow), inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px var(--light);
+  /* 2px nested bevels: outer hilite / black, inner light / shadow */
+  --bevel-raised: inset 1px 1px var(--hilite), inset -1px -1px #000, inset 2px 2px var(--light), inset -2px -2px var(--shadow);
+  --bevel-pressed: inset 1px 1px #000, inset -1px -1px var(--hilite), inset 2px 2px var(--shadow), inset -2px -2px var(--light);
+  --bevel-field: inset 1px 1px var(--shadow), inset -1px -1px var(--hilite), inset 2px 2px #000, inset -2px -2px var(--light);
 }
 
 * {
@@ -38,9 +46,9 @@
 html, body {
   overflow: hidden;
   font-family: var(--ui-font);
-  /* Desktop: a 2x2 checkerboard dither of two close grays, fixed to the screen */
-  background-color: #808080;
-  background-image: repeating-conic-gradient(#7b7b7b 0% 25%, #878787 0% 50%);
+  /* Desktop: a 2x2 checkerboard dither of two close navies, fixed to the screen */
+  background-color: #1a1a2e;
+  background-image: repeating-conic-gradient(#17172a 0% 25%, #1d1d33 0% 50%);
   background-size: 4px 4px;
 }
 
@@ -55,7 +63,7 @@ canvas {
   background: var(--face);
   /* Outer bevel as a border, so scrolled content never covers it */
   border: 1px solid;
-  border-color: #fff #000 #000 #fff;
+  border-color: var(--hilite) #000 #000 var(--hilite);
   border-radius: 0;
   box-shadow: inset 1px 1px var(--light), inset -1px -1px var(--shadow);
   padding: 7px;
@@ -66,7 +74,7 @@ canvas {
   transition: opacity 0.15s ease;
 }
 
-/* Win95 scrollbars: a dithered track and a raised gray thumb */
+/* Win95 scrollbars: a dithered track and a raised thumb */
 #module-palette::-webkit-scrollbar,
 .info-popup::-webkit-scrollbar,
 .module-search-popup div::-webkit-scrollbar {
@@ -76,15 +84,15 @@ canvas {
 #module-palette::-webkit-scrollbar-track,
 .info-popup::-webkit-scrollbar-track,
 .module-search-popup div::-webkit-scrollbar-track {
-  background-color: var(--light);
-  background-image: repeating-conic-gradient(var(--face) 0% 25%, #fff 0% 50%);
+  background-color: var(--field);
+  background-image: repeating-conic-gradient(var(--face) 0% 25%, #252540 0% 50%);
   background-size: 2px 2px;
 }
 
 #module-palette::-webkit-scrollbar-thumb,
 .info-popup::-webkit-scrollbar-thumb,
 .module-search-popup div::-webkit-scrollbar-thumb {
-  background: var(--face);
+  background: var(--button);
   border-radius: 0;
   box-shadow: var(--bevel-raised);
 }
@@ -101,7 +109,7 @@ canvas {
   #module-palette,
   .info-popup,
   .module-search-popup div {
-    scrollbar-color: var(--face) var(--light);
+    scrollbar-color: var(--button) var(--field);
   }
 }
 
@@ -128,10 +136,10 @@ canvas {
   -webkit-user-drag: none;
 }
 
-/* "Modules" heading as an active window's navy caption */
+/* "Modules" heading as an active window's caption */
 #module-palette h3 {
   color: #fff;
-  background: var(--navy);
+  background: var(--select);
   font-size: 11px;
   font-weight: bold;
   letter-spacing: 0.5px;
@@ -144,7 +152,7 @@ canvas {
 }
 
 #module-palette .palette-section-title {
-  color: #000;
+  color: var(--dim);
   font-size: 9px;
   font-weight: bold;
   text-transform: uppercase;
@@ -158,11 +166,11 @@ canvas {
   user-select: none;
   /* Chiseled groove under each section's title */
   border-bottom: 1px solid var(--shadow);
-  box-shadow: 0 1px #fff;
+  box-shadow: 0 1px var(--light);
 }
 
 #module-palette .palette-section-title:hover {
-  color: var(--navy);
+  color: #aaa;
 }
 
 #module-palette .palette-section-title .triangle {
@@ -171,12 +179,12 @@ canvas {
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 6px solid #000;
+  border-top: 6px solid var(--dim);
   transition: transform 0.15s ease;
 }
 
 #module-palette .palette-section-title:hover .triangle {
-  border-top-color: var(--navy);
+  border-top-color: #aaa;
 }
 
 #module-palette .palette-section.collapsed .palette-section-title .triangle {
@@ -198,8 +206,8 @@ canvas {
   width: 100%;
   padding: 4px 8px;
   margin-bottom: 2px;
-  background: var(--face);
-  color: #fff;
+  background: var(--button);
+  color: var(--ink);
   border: none;
   border-radius: 0;
   box-shadow: inset 1px 1px rgba(255, 255, 255, 0.75), inset -1px -1px #000,
@@ -223,7 +231,7 @@ canvas {
 }
 
 #module-palette button:focus-visible {
-  outline: 1px dotted #000;
+  outline: 1px dotted #fff;
   outline-offset: -5px;
 }
 
@@ -246,7 +254,7 @@ canvas {
 }
 
 /* Historical-info popup: DOM overlay so entry bodies can be HTML markup.
-   A Win95 window: gray frame, navy caption, white text pane. */
+   A Win95 window: a frame, a caption and a sunken text pane. */
 .info-popup {
   position: fixed;
   transform-origin: 0 0;
@@ -254,13 +262,13 @@ canvas {
   flex-direction: column;
   background: var(--face);
   border: 1px solid;
-  border-color: #fff #000 #000 #fff;
+  border-color: var(--hilite) #000 #000 var(--hilite);
   border-radius: 0;
   box-shadow: inset 1px 1px var(--light), inset -1px -1px var(--shadow);
   padding: 3px;
   z-index: 150;
   overflow-y: auto;
-  color: #000;
+  color: #d7d7d7;
   font-family: var(--ui-font);
   font-size: 11px;
   line-height: 1.45;
@@ -268,7 +276,7 @@ canvas {
 
 .info-popup .info-popup-title {
   color: #fff;
-  background: var(--navy);
+  background: var(--select);
   font-size: 12px;
   font-weight: bold;
   padding: 2px 5px;
@@ -277,7 +285,7 @@ canvas {
 
 .info-popup .info-popup-body {
   flex: 1 0 auto;
-  background: #fff;
+  background: #18181c;
   box-shadow: var(--bevel-field);
   padding: 7px 8px;
 }
@@ -287,19 +295,15 @@ canvas {
 }
 
 .info-popup .info-popup-title a:hover {
-  color: #ff0;
+  color: #9df;
 }
 
 .info-popup .info-popup-body a {
-  color: #0000ff;
-}
-
-.info-popup .info-popup-body a:visited {
-  color: #800080;
+  color: #6cf;
 }
 
 .info-popup .info-popup-body a:hover {
-  color: #f00;
+  color: #9df;
 }
 
 .info-popup .info-popup-body p {
@@ -317,13 +321,13 @@ canvas {
 }
 
 /* Dropdown param menu: DOM overlay sized in world units, scaled with zoom from js.
-   A combo box's list: white, black rim, navy highlight. */
+   A combo box's list: square, rimmed, a solid highlight. */
 .param-dropdown {
   position: fixed;
   transform-origin: 0 0;
   box-sizing: border-box;
-  background: #fff;
-  border: 1px solid #000;
+  background: rgb(30, 30, 50);
+  border: 1px solid var(--accent);
   border-radius: 0;
   padding: 1px 0;
   z-index: 1000;
@@ -336,18 +340,18 @@ canvas {
   height: 14px;
   line-height: 14px;
   padding: 0 5px;
-  color: #000;
+  color: #aaa;
   white-space: nowrap;
   cursor: pointer;
 }
 
 .param-dropdown .param-dropdown-item.selected {
-  color: var(--navy);
+  color: var(--accent);
   font-weight: bold;
 }
 
 .param-dropdown .param-dropdown-item.highlighted {
-  background: var(--navy);
+  background: var(--select);
   color: #fff;
 }
 
@@ -355,12 +359,12 @@ canvas {
    Conway, Yellowtail, ChromaKey and InkMarkers float their tools over the
    fullscreen picture. They share these classes, so they match the node graph. */
 
-/* A floating tool window: gray panel, raised bevel */
+/* A floating tool window: a flat panel, raised bevel */
 .retro-panel {
   background: var(--face);
-  color: #000;
+  color: var(--ink);
   border: 1px solid;
-  border-color: #fff #000 #000 #fff;
+  border-color: var(--hilite) #000 #000 var(--hilite);
   box-shadow: inset 1px 1px var(--light), inset -1px -1px var(--shadow);
   font-family: var(--ui-font);
 }
@@ -378,8 +382,8 @@ canvas {
 }
 
 .retro-button {
-  background: var(--face);
-  color: #000;
+  background: var(--button);
+  color: var(--ink);
   border: none;
   border-radius: 0;
   box-shadow: var(--bevel-raised);
@@ -391,7 +395,7 @@ canvas {
 }
 
 .retro-button:hover {
-  background: #cbcbcb;
+  background: var(--button-hover);
 }
 
 .retro-button:active {
@@ -403,13 +407,14 @@ canvas {
 /* A latched toggle (the tool or option in use): pushed in, on a dithered face */
 .retro-button.active {
   box-shadow: var(--bevel-pressed);
-  background-color: var(--light);
-  background-image: repeating-conic-gradient(var(--face) 0% 25%, #fff 0% 50%);
+  color: #fff;
+  background-color: var(--select);
+  background-image: repeating-conic-gradient(#33507c 0% 25%, #41649a 0% 50%);
   background-size: 2px 2px;
 }
 
 .retro-button:focus-visible {
-  outline: 1px dotted #000;
+  outline: 1px dotted #fff;
   outline-offset: -5px;
 }
 
@@ -420,9 +425,9 @@ canvas {
   left: 170px;
   z-index: 1000;
   display: none;
-  color: #000;
-  background: #ffffe1;
-  border: 1px solid #000;
+  color: #aaa;
+  background: #1a1a2a;
+  border: 1px solid #444;
   padding: 2px 6px;
   font-family: var(--ui-font);
   font-size: 12px;
@@ -439,14 +444,14 @@ canvas {
 
 .retro-range::-webkit-slider-runnable-track {
   height: 4px;
-  background: #fff;
-  box-shadow: inset 1px 1px var(--shadow), inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px var(--light);
+  background: var(--field);
+  box-shadow: var(--bevel-field);
 }
 
 .retro-range::-moz-range-track {
   height: 4px;
-  background: #fff;
-  box-shadow: inset 1px 1px var(--shadow), inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px var(--light);
+  background: var(--field);
+  box-shadow: var(--bevel-field);
 }
 
 .retro-range::-webkit-slider-thumb {
@@ -456,7 +461,7 @@ canvas {
   margin-top: -8px;
   border: none;
   border-radius: 0;
-  background: var(--face);
+  background: var(--button);
   box-shadow: var(--bevel-raised);
 }
 
@@ -465,12 +470,12 @@ canvas {
   height: 20px;
   border: none;
   border-radius: 0;
-  background: var(--face);
+  background: var(--button);
   box-shadow: var(--bevel-raised);
 }
 
 .retro-range:focus-visible {
-  outline: 1px dotted #000;
+  outline: 1px dotted #fff;
 }
 
 /* ChromaKey's fullscreen eyedropper toolbar */
@@ -503,12 +508,12 @@ canvas {
   height: 30px;
   margin-left: 6px;
   border: 2px solid;
-  border-color: var(--shadow) #fff #fff var(--shadow);
+  border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
   box-shadow: inset 1px 1px #000, inset -1px -1px var(--light);
 }
 
 .chromakey-toolbar .chromakey-count {
-  color: #000;
+  color: #aaa;
   font: 13px var(--mono-font);
   padding: 0 4px;
 }
