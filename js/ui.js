@@ -165,6 +165,125 @@ const PREVIEW_H = 60;
 const DROPDOWN_W = 92;
 const DROPDOWN_H = 14;
 
+// - - - Retro look (see docs/RETRO_NODES.md) - - -
+// Win95-style chrome: flat ButtonFace gray, 2px nested bevels, sunken wells.
+// The fonts are @font-face aliases in css/style.css, since p5 quotes a
+// family name with a space in it, which would break a CSS font stack.
+const UI_FONT = 'LichenUI';     // MS Sans Serif-alike, for labels and buttons
+const UI_MONO = 'LichenMono';   // Fixedsys-alike, for live value readouts
+const FACE = [192, 192, 192];   // ButtonFace #C0C0C0
+const LIGHT = [223, 223, 223];  // inner highlight #DFDFDF
+const SHADOW = [128, 128, 128]; // inner shadow #808080
+const NAVY = [0, 0, 128];       // highlight / value colour #000080
+const CTRL = [0, 128, 0];       // a param driven by a control cable, on gray
+const CABLE_VIDEO = [100, 180, 255];
+const CABLE_CONTROL = [100, 255, 130];
+const CABLE_PENDING = [255, 255, 100];
+
+// Edge colours of a 2px nested bevel: [outer top-left, outer bottom-right, inner top-left, inner bottom-right]
+const BEVELS = {
+  raised: [255, 0, LIGHT, SHADOW],  // a node or button at rest
+  pressed: [0, 255, SHADOW, LIGHT], // the same, pushed in
+  field: [SHADOW, 255, 0, LIGHT],   // a well: text box, knob, preview screen
+};
+
+// A 2px bevel around x, y, w, h, drawn with filled 1px rects so it stays crisp
+function bevel(p, x, y, w, h, style = 'raised') {
+  const [oTL, oBR, iTL, iBR] = BEVELS[style];
+  p.noStroke();
+  p.fill(oBR);
+  p.rect(x, y + h - 1, w, 1);
+  p.rect(x + w - 1, y, 1, h);
+  p.fill(oTL);
+  p.rect(x, y, w - 1, 1);
+  p.rect(x, y, 1, h - 1);
+  p.fill(iBR);
+  p.rect(x + 1, y + h - 2, w - 2, 1);
+  p.rect(x + w - 2, y + 1, 1, h - 2);
+  p.fill(iTL);
+  p.rect(x + 1, y + 1, w - 3, 1);
+  p.rect(x + 1, y + 1, 1, h - 3);
+}
+
+// A 1px frame inside x, y, w, h
+function frame(p, x, y, w, h, col) {
+  p.noStroke();
+  p.fill(col);
+  p.rect(x, y, w, 1);
+  p.rect(x, y + h - 1, w, 1);
+  p.rect(x, y, 1, h);
+  p.rect(x + w - 1, y, 1, h);
+}
+
+// A push button: face, bevel and centred label. A pressed button's label moves
+// down and right a pixel, and a disabled one's is etched gray, as in Win95.
+function pushButton(p, x, y, w, h, label, { pressed = false, disabled = false, face = FACE, ink = 0, size = 9 } = {}) {
+  p.noStroke();
+  p.fill(face);
+  p.rect(x, y, w, h);
+  bevel(p, x, y, w, h, pressed ? 'pressed' : 'raised');
+  p.textSize(size);
+  p.textAlign(p.CENTER, p.CENTER);
+  const tx = x + w / 2 + (pressed ? 1 : 0);
+  const ty = y + h / 2 + (pressed ? 1 : 0);
+  if (disabled) {
+    p.fill(255);
+    p.text(label, tx + 1, ty + 1);
+    p.fill(SHADOW);
+  } else {
+    p.fill(ink);
+  }
+  p.text(label, tx, ty);
+}
+
+// A small sunken socket with a coloured centre: a param's control inlet
+function inlet(p, x, y, col) {
+  p.noStroke();
+  p.fill(SHADOW);
+  p.rect(x - 4, y - 4, 8, 8);
+  p.fill(255);
+  p.rect(x - 3, y - 3, 7, 7);
+  p.fill(col);
+  p.rect(x - 3, y - 3, 6, 6);
+}
+
+// A square port pin: black rim, coloured raised face, and a dot once a cable is plugged in
+function portPin(p, x, y, col, hovered, connected) {
+  const s = PORT_RADIUS * 2 - 2;
+  const x0 = x - s / 2, y0 = y - s / 2;
+  p.noStroke();
+  if (hovered) {
+    p.fill(255, 255, 0);
+    p.rect(x0 - 2, y0 - 2, s + 4, s + 4);
+  }
+  p.fill(0);
+  p.rect(x0, y0, s, s);
+  p.fill(col);
+  p.rect(x0 + 1, y0 + 1, s - 2, s - 2);
+  p.fill(255, 255, 255, 170);
+  p.rect(x0 + 1, y0 + 1, s - 3, 1);
+  p.rect(x0 + 1, y0 + 1, 1, s - 3);
+  p.fill(0, 0, 0, 90);
+  p.rect(x0 + 2, y0 + s - 2, s - 3, 1);
+  p.rect(x0 + s - 2, y0 + 2, 1, s - 3);
+  if (connected) {
+    p.fill(0);
+    p.rect(x - 2, y - 2, 4, 4);
+  }
+}
+
+// A marching-ants rectangle: white under black dashes, legible on any background
+function dashedRect(p, x, y, w, h, weight, dash) {
+  p.noFill();
+  p.strokeWeight(weight);
+  p.stroke(255);
+  p.rect(x, y, w, h);
+  p.drawingContext.setLineDash([dash, dash]);
+  p.stroke(0);
+  p.rect(x, y, w, h);
+  p.drawingContext.setLineDash([]);
+}
+
 // A param with widget: 'dropdown' is drawn as a menu of its valueLabels instead of a knob
 function isDropdown(param) {
   return param.widget === 'dropdown' && Array.isArray(param.valueLabels);
@@ -232,6 +351,11 @@ export class NodeGraphUI {
     this._infoEl = null;      // DOM overlay for the open popup (created lazily)
     this._infoElNode = null;  // node id the overlay's contents were filled from
     this._loadHistoricalInfo();
+    this._mouseWorld = { x: 0, y: 0 }; // pointer in world coords, for header hover
+    // Canvas text doesn't load a web font by itself, so ask for the aliases up front
+    document.fonts?.load(`11px ${UI_FONT}`).catch(() => {});
+    document.fonts?.load(`bold 11px ${UI_FONT}`).catch(() => {});
+    document.fonts?.load(`9px ${UI_MONO}`).catch(() => {});
   }
 
   // Load js/historical-info.json (name -> entry) for the info button popups
@@ -842,12 +966,14 @@ export class NodeGraphUI {
       width: inputW + 'px',
       height: inputH + 'px',
       fontSize: (9 * this.zoom) + 'px',
-      fontFamily: 'monospace',
+      fontFamily: '"Lucida Console", Monaco, "Courier New", monospace',
       textAlign: 'right',
-      background: '#1a1a2a',
-      color: '#fff',
-      border: '1px solid #6cf',
-      borderRadius: '2px',
+      background: '#fff',
+      color: '#000',
+      border: 'none',
+      borderRadius: '0',
+      // Sunken text field
+      boxShadow: 'inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf',
       padding: '0 3px',
       outline: 'none',
       zIndex: '1000',
@@ -990,13 +1116,14 @@ export class NodeGraphUI {
       position: 'absolute',
       left: screenX + 'px',
       top: screenY + 'px',
-      background: '#1a1a2a',
-      border: '1px solid #6cf',
-      borderRadius: '4px',
+      background: '#c0c0c0',
+      border: 'none',
+      borderRadius: '0',
       padding: '4px',
       zIndex: '1001',
       minWidth: '160px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+      // Raised window bevel
+      boxShadow: 'inset 1px 1px #fff, inset -1px -1px #000, inset 2px 2px #dfdfdf, inset -2px -2px #808080',
     });
 
     const input = document.createElement('input');
@@ -1006,11 +1133,12 @@ export class NodeGraphUI {
       width: '100%',
       padding: '6px 8px',
       fontSize: '12px',
-      fontFamily: 'monospace',
-      background: '#252535',
-      color: '#fff',
-      border: '1px solid #444',
-      borderRadius: '3px',
+      fontFamily: '"Microsoft Sans Serif", "MS Sans Serif", Tahoma, Geneva, sans-serif',
+      background: '#fff',
+      color: '#000',
+      border: 'none',
+      borderRadius: '0',
+      boxShadow: 'inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf',
       outline: 'none',
       boxSizing: 'border-box',
     });
@@ -1020,8 +1148,9 @@ export class NodeGraphUI {
       marginTop: '4px',
       maxHeight: '200px',
       overflowY: 'auto',
-      scrollbarWidth: 'thin',
-      scrollbarColor: '#4a4a6a transparent',
+      background: '#fff',
+      boxShadow: 'inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf',
+      padding: '2px',
     });
 
     for (const type of ['mousedown', 'mouseup', 'click', 'dblclick', 'wheel']) {
@@ -1038,8 +1167,8 @@ export class NodeGraphUI {
     const updateSelection = () => {
       const items = resultsList.children;
       for (let i = 0; i < items.length; i++) {
-        items[i].style.color = i === selectedIndex ? '#fff' : '#aaa';
-        items[i].style.background = i === selectedIndex ? '#3a5a8a' : 'transparent';
+        items[i].style.color = i === selectedIndex ? '#fff' : '#000';
+        items[i].style.background = i === selectedIndex ? '#000080' : 'transparent';
       }
     };
 
@@ -1052,10 +1181,10 @@ export class NodeGraphUI {
           padding: '6px 8px',
           cursor: 'pointer',
           fontSize: '11px',
-          fontFamily: 'monospace',
-          color: i === selectedIndex ? '#fff' : '#aaa',
-          background: i === selectedIndex ? '#3a5a8a' : 'transparent',
-          borderRadius: '2px',
+          fontFamily: '"Microsoft Sans Serif", "MS Sans Serif", Tahoma, Geneva, sans-serif',
+          color: i === selectedIndex ? '#fff' : '#000',
+          background: i === selectedIndex ? '#000080' : 'transparent',
+          borderRadius: '0',
         });
         item.addEventListener('mouseenter', () => {
           selectedIndex = i;
@@ -1401,10 +1530,23 @@ export class NodeGraphUI {
     // Track hovered port for highlight
     const mouseWorld = this.screenToWorld(p.mouseX, p.mouseY);
     this._hoveredPort = this.hitTestPort(mouseWorld.x, mouseWorld.y);
+    this._mouseWorld = mouseWorld;
+
+    // Which ports have a cable in, for the dot in a connected pin
+    this._connectedPorts = new Set();
+    for (const c of graph.connections) {
+      this._connectedPorts.add(`${c.fromId}:o${c.fromPort}`);
+      this._connectedPorts.add(`${c.toId}:i${c.toPort}`);
+    }
+    for (const cc of graph.controlConnections) {
+      this._connectedPorts.add(`${cc.fromId}:o${cc.fromPort}`);
+    }
 
     p.push();
     p.translate(this.panX, this.panY);
     p.scale(this.zoom);
+    p.textFont(UI_FONT);
+    p.textStyle(p.NORMAL);
 
     // Draw cables
     for (const conn of graph.connections) {
@@ -1415,7 +1557,7 @@ export class NodeGraphUI {
       const to = this.getInputPortPos(toMod, conn.toPort);
       // A cable into a control input pin is green, as control cables to knobs are
       const isControl = toMod.inputs[conn.toPort]?.type === 'control';
-      this._drawCable(p, from.x, from.y, to.x, to.y, isControl ? [100, 255, 130] : [100, 180, 255]);
+      this._drawCable(p, from.x, from.y, to.x, to.y, isControl ? CABLE_CONTROL : CABLE_VIDEO);
     }
 
     // Draw control cables (green)
@@ -1428,7 +1570,7 @@ export class NodeGraphUI {
       const paramIdx = paramNames.indexOf(cc.paramName);
       if (paramIdx < 0) continue;
       const to = this.getParamKnobPos(toMod, paramIdx);
-      this._drawCable(p, from.x, from.y, to.x, to.y, [100, 255, 130]);
+      this._drawCable(p, from.x, from.y, to.x, to.y, CABLE_CONTROL);
     }
 
     // Draw in-progress cable (drag or click-to-connect)
@@ -1437,10 +1579,10 @@ export class NodeGraphUI {
       const world = this.screenToWorld(p.mouseX, p.mouseY);
       if (activeCable.isInlet) {
         // Inlet cable: draw from mouse to inlet
-        this._drawCable(p, world.x, world.y, activeCable.x, activeCable.y, [255, 255, 100]);
+        this._drawCable(p, world.x, world.y, activeCable.x, activeCable.y, CABLE_PENDING);
       } else {
         // Outlet cable: draw from outlet to mouse
-        this._drawCable(p, activeCable.x, activeCable.y, world.x, world.y, [255, 255, 100]);
+        this._drawCable(p, activeCable.x, activeCable.y, world.x, world.y, CABLE_PENDING);
       }
     }
 
@@ -1470,13 +1612,8 @@ export class NodeGraphUI {
       const y = Math.min(box.startY, box.endY);
       const w = Math.abs(box.endX - box.startX);
       const h = Math.abs(box.endY - box.startY);
-      p.noFill();
-      p.stroke(100, 150, 255, 200);
-      p.strokeWeight(1);
-      p.rect(x, y, w, h);
-      p.fill(100, 150, 255, 30);
-      p.noStroke();
-      p.rect(x, y, w, h);
+      // Dotted rubber band, as a 90s desktop drew it
+      dashedRect(p, x, y, w, h, 1 / this.zoom, 2 / this.zoom);
     }
 
     p.pop();
@@ -1591,7 +1728,11 @@ export class NodeGraphUI {
     const dy = Math.abs(y2 - y1);
     const cpOffset = Math.max(40, dy * 0.5);
     p.noFill();
-    p.stroke(color[0], color[1], color[2], 200);
+    // A black casing keeps the cable legible over the dithered desktop and the gray nodes
+    p.stroke(0);
+    p.strokeWeight(4.5);
+    p.bezier(x1, y1, x1, y1 + cpOffset, x2, y2 - cpOffset, x2, y2);
+    p.stroke(color[0], color[1], color[2]);
     p.strokeWeight(2.5);
     p.bezier(x1, y1, x1, y1 + cpOffset, x2, y2 - cpOffset, x2, y2);
   }
@@ -1600,116 +1741,122 @@ export class NodeGraphUI {
     const h = this.getModuleHeight(mod);
     const col = MODULE_COLORS[mod.type] || [80, 80, 80];
     const isSelected = this.selectedNodes.has(id);
+    // A node being dragged or placed sinks into the desktop
+    const isDragged = this._placingModule === id ||
+      (this.draggingNode !== null && this.dragActive && isSelected);
+    const connected = this._connectedPorts || new Set();
+    const isHoveredPort = (type, i) => this._hoveredPort &&
+      this._hoveredPort.nodeId === id &&
+      this._hoveredPort.portType === type &&
+      this._hoveredPort.portIndex === i;
 
     // Apply opacity for dying nodes
     const prevAlpha = p.drawingContext.globalAlpha;
     p.drawingContext.globalAlpha = opacity;
 
-    // Shadow
-    p.noStroke();
-    p.fill(0, 0, 0, 60);
-    p.rect(mod.x + 3, mod.y + 3, MODULE_WIDTH, h, 6);
+    // Selection: marching ants just outside the frame
+    if (isSelected) {
+      dashedRect(p, mod.x - 4, mod.y - 4, MODULE_WIDTH + 8, h + 8, 2, 4);
+    }
 
-    // Body
-    p.noStroke();
-    p.fill(30, 30, 50);
-    p.rect(mod.x, mod.y, MODULE_WIDTH, h, 6);
-
-    // When collapsed, draw ports first (underneath header)
+    // When collapsed, draw pins first so the frame covers their inner half
+    // and they protrude from the top and bottom edges
     if (mod.collapsed) {
-      // Input ports (top edge)
       for (let i = 0; i < mod.inputs.length; i++) {
         const pos = this.getInputPortPos(mod, i);
-        const isHovered = this._hoveredPort &&
-          this._hoveredPort.nodeId === id &&
-          this._hoveredPort.portType === 'input' &&
-          this._hoveredPort.portIndex === i;
-        p.fill(mod.inputs[i].type === 'control' ? [100, 255, 130] : [68, 136, 255]);
-        p.stroke(isHovered ? [255, 255, 0] : 255);
-        p.strokeWeight(isHovered ? 2.5 : 1.5);
-        p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
+        portPin(p, pos.x, pos.y, mod.inputs[i].type === 'control' ? CABLE_CONTROL : [68, 136, 255],
+          isHoveredPort('input', i), connected.has(`${id}:i${i}`));
       }
-
-      // Output ports (bottom edge)
       for (let i = 0; i < mod.outputs.length; i++) {
         const pos = this.getOutputPortPos(mod, i);
-        const isControlPort = mod.outputs[i].type === 'control';
-        const isHovered = this._hoveredPort &&
-          this._hoveredPort.nodeId === id &&
-          this._hoveredPort.portType === 'output' &&
-          this._hoveredPort.portIndex === i;
-        p.fill(isControlPort ? [100, 255, 130] : [255, 136, 68]);
-        p.stroke(isHovered ? [255, 255, 0] : 255);
-        p.strokeWeight(isHovered ? 2.5 : 1.5);
-        p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
+        portPin(p, pos.x, pos.y, mod.outputs[i].type === 'control' ? CABLE_CONTROL : [255, 136, 68],
+          isHoveredPort('output', i), connected.has(`${id}:o${i}`));
       }
+    }
 
-      // Parameter control connection points (left edge)
+    // Body: flat ButtonFace with a 2px nested bevel
+    p.noStroke();
+    p.fill(FACE);
+    p.rect(mod.x, mod.y, MODULE_WIDTH, h);
+    bevel(p, mod.x, mod.y, MODULE_WIDTH, h, isDragged ? 'pressed' : 'raised');
+
+    // Parameter control connection points (left edge) when collapsed
+    if (mod.collapsed) {
       const paramNames = Object.keys(mod.params);
       for (let i = 0; i < paramNames.length; i++) {
         const pos = this.getParamKnobPos(mod, i);
-        const name = paramNames[i];
-        const controlled = this._isControlled(id, name);
-        p.fill(controlled ? [100, 255, 130] : [100, 200, 255]);
-        p.stroke(255);
-        p.strokeWeight(1);
-        p.ellipse(pos.x, pos.y, 8, 8);
+        inlet(p, pos.x, pos.y, this._isControlled(id, paramNames[i]) ? CABLE_CONTROL : NAVY);
       }
     }
 
-    // Header (rounded bottom corners only when collapsed)
+    // Title bar, inset inside the frame like a window's caption
+    const tbX = mod.x + 3, tbY = mod.y + 3, tbW = MODULE_WIDTH - 6, tbH = HEADER_HEIGHT - 6;
     p.noStroke();
     p.fill(col[0], col[1], col[2]);
-    if (mod.collapsed) {
-      p.rect(mod.x, mod.y, MODULE_WIDTH, HEADER_HEIGHT, 6);
-    } else {
-      p.rect(mod.x, mod.y, MODULE_WIDTH, HEADER_HEIGHT, 6, 6, 0, 0);
-      p.stroke(0, 0, 0, 70);
-      p.strokeWeight(1);
-      p.line(mod.x + 1, mod.y + HEADER_HEIGHT, mod.x + MODULE_WIDTH - 1, mod.y + HEADER_HEIGHT);
-    }
-
-    // Node outer border (drawn after header fill so header corners don't clip the stroke)
-    p.noFill();
-    p.stroke(isSelected ? 255 : 68);
-    p.strokeWeight(isSelected ? 2 : 1);
-    p.rect(mod.x, mod.y, MODULE_WIDTH, h, 6);
+    p.rect(tbX, tbY, tbW, tbH);
 
     // Title (centered, nudged left only if a long name would collide with header buttons)
     const hasInfo = Boolean(this._infoName(mod));
-    p.fill(255);
-    p.noStroke();
     p.textSize(11);
+    p.textStyle(p.BOLD);
     p.textAlign(p.CENTER, p.CENTER);
     const titleRightLimit = hasInfo ? MODULE_WIDTH - 36 : MODULE_WIDTH - 20;
     const titleHalfW = p.textWidth(mod.type) / 2;
     const titleX = mod.x + Math.min(MODULE_WIDTH / 2, titleRightLimit - titleHalfW);
-    p.text(mod.type, titleX, mod.y + HEADER_HEIGHT / 2);
 
-    // Collapse toggle (light gray circle with "-" when expanded, "+" when collapsed)
+    // Grip ridges either side of the title, brighter while the pointer is over the header
+    const mw = this._mouseWorld;
+    const overHeader = mw.x >= mod.x && mw.x <= mod.x + MODULE_WIDTH && mw.y >= mod.y && mw.y <= mod.y + HEADER_HEIGHT;
+    const mix = (a, t) => [0, 1, 2].map(k => col[k] + (a - col[k]) * t);
+    const ridgeDark = mix(0, 0.45);
+    const ridgeLight = mix(255, overHeader ? 0.6 : 0.3);
+    const buttonsLeft = mod.x + (hasInfo ? MODULE_WIDTH - 34 : MODULE_WIDTH - 18);
+    const spans = [
+      [tbX + 4, titleX - titleHalfW - 5],
+      [titleX + titleHalfW + 5, buttonsLeft - 4],
+    ];
+    for (const [x0, x1] of spans) {
+      const rx0 = Math.round(x0), rw = Math.round(x1) - rx0;
+      if (rw < 6) continue;
+      for (let k = 0; k < 4; k++) {
+        const ry = mod.y + 7 + k * 3;
+        p.fill(ridgeDark);
+        p.rect(rx0, ry, rw, 1);
+        p.fill(ridgeLight);
+        p.rect(rx0, ry + 1, rw, 1);
+      }
+    }
+
+    p.fill(255);
+    p.text(mod.type, titleX, mod.y + HEADER_HEIGHT / 2);
+    p.textStyle(p.NORMAL);
+
+    // Caption buttons: collapse toggle ("-" when expanded, "+" when collapsed) and info "?"
     const btnX = mod.x + MODULE_WIDTH - 12;
     const btnY = mod.y + HEADER_HEIGHT / 2;
-    p.fill(180);
-    p.noStroke();
-    p.ellipse(btnX, btnY, 12, 12);
-    p.stroke(50);
-    p.strokeWeight(1.5);
-    p.line(btnX - 3.5, btnY, btnX + 3.5, btnY);
+    const captionButton = (cx) => {
+      p.noStroke();
+      p.fill(FACE);
+      p.rect(cx - 6, btnY - 6, 12, 12);
+      bevel(p, cx - 6, btnY - 6, 12, 12, 'raised');
+    };
+    captionButton(btnX);
+    p.fill(0);
+    p.rect(btnX - 3, btnY - 1, 6, 2);
     if (mod.collapsed) {
-      p.line(btnX, btnY - 3.5, btnX, btnY + 3.5);
+      p.rect(btnX - 1, btnY - 3, 2, 6);
     }
-    p.noStroke();
 
     // Historical-info toggle (only when the module has an entry, see _infoName)
     if (hasInfo) {
       const infoX = mod.x + MODULE_WIDTH - 28;
-      p.fill(180);
-      p.noStroke();
-      p.ellipse(infoX, btnY, 12, 12);
-      p.fill(50);
+      captionButton(infoX);
+      p.fill(0);
       p.textSize(9);
+      p.textStyle(p.BOLD);
       p.textAlign(p.CENTER, p.CENTER);
       p.text('?', infoX, btnY - 0.5);
+      p.textStyle(p.NORMAL);
     }
 
     // Skip remaining content if collapsed
@@ -1718,6 +1865,12 @@ export class NodeGraphUI {
       p.drawingContext.globalAlpha = prevAlpha;
       return;
     }
+
+    // Chiseled groove under the title bar
+    p.fill(SHADOW);
+    p.rect(mod.x + 3, mod.y + HEADER_HEIGHT - 2, MODULE_WIDTH - 6, 1);
+    p.fill(255);
+    p.rect(mod.x + 3, mod.y + HEADER_HEIGHT - 1, MODULE_WIDTH - 6, 1);
 
     // Params
     const paramNames = Object.keys(mod.params);
@@ -1732,14 +1885,11 @@ export class NodeGraphUI {
 
       if (isDropdown(param) || isTrigger(param)) {
         // Control inlet where the knob would be: a cable can still drive the menu or fire the trigger
-        p.fill(controlled ? [100, 255, 130] : [100, 200, 255]);
-        p.stroke(255);
-        p.strokeWeight(1);
-        p.ellipse(kx, ky, 8, 8);
+        inlet(p, kx, ky, controlled ? CABLE_CONTROL : NAVY);
 
         // Label
         p.noStroke();
-        p.fill(170);
+        p.fill(0);
         p.textSize(9);
         p.textAlign(p.LEFT, p.CENTER);
         p.text(param.label || name, kx + KNOB_RADIUS + 6, ky);
@@ -1747,69 +1897,86 @@ export class NodeGraphUI {
         const r = this._dropdownRect(mod, i);
 
         if (isTrigger(param)) {
-          // Button, flashing each time it fires: fully lit on the first frame after, then fading over 250 ms
+          // Button, flashing each time it fires: fully lit and pushed in on the first frame after, then fading over 250 ms
           const fired = mod.triggeredAt[name] ?? -Infinity;
           const flash = fired > this._prevDrawTime ? 1 : Math.max(0, 1 - (this._drawTime - fired) / 250);
-          p.fill(p.lerpColor(p.color(60, 60, 90), p.color(100, 200, 255), flash));
-          p.stroke(controlled ? [100, 255, 130] : 100);
-          p.strokeWeight(1);
-          p.rect(r.x, r.y, r.w, r.h, 3);
-          p.noStroke();
-          p.fill(200);
+          const face = p.lerpColor(p.color(...FACE), p.color(255, 255, 255), flash);
           p.textSize(8);
-          p.textAlign(p.CENTER, p.CENTER);
-          p.text(fitText(p, mod.triggerText(name) ?? '', r.w - 10), r.x + r.w / 2, ky);
+          pushButton(p, r.x, r.y, r.w, r.h, fitText(p, mod.triggerText(name) ?? '', r.w - 10),
+            { pressed: flash > 0.5, face, size: 8 });
+          if (controlled) frame(p, r.x + 2, r.y + 2, r.w - 4, r.h - 4, CTRL);
           continue;
         }
 
-        // Box showing the selected option, outlined while its menu is open
+        // Combo box: sunken white field with the selected option, and a drop button at its right
         const menu = this._dropdownMenu;
         const open = menu && menu.nodeId === id && menu.paramName === name;
-        p.fill(controlled ? 30 : 50);
-        p.stroke(controlled ? [100, 255, 130] : open ? [100, 200, 255] : 100);
-        p.strokeWeight(1);
-        p.rect(r.x, r.y, r.w, r.h, 2);
         p.noStroke();
-        p.fill(controlled ? 130 : 200);
+        p.fill(controlled ? FACE : 255);
+        p.rect(r.x, r.y, r.w, r.h);
+        bevel(p, r.x, r.y, r.w, r.h, 'field');
+        if (controlled) frame(p, r.x + 2, r.y + 2, r.w - 15, r.h - 4, CTRL);
+        // The open menu's box shows its option selected, white on navy
+        if (open) {
+          p.fill(NAVY);
+          p.rect(r.x + 3, r.y + 3, r.w - 17, r.h - 6);
+        }
+        p.fill(open ? 255 : 0);
         p.textSize(8);
+        p.textAlign(p.LEFT, p.CENTER);
         const option = param.valueLabels[Math.round(param.value)] ?? '';
         p.text(fitText(p, option, r.w - 19), r.x + 5, ky); // stop short of the caret
 
-        // Caret
+        // Drop button with its caret
+        const bx = r.x + r.w - 13, by = r.y + 2, bw = 11, bh = r.h - 4;
+        p.fill(FACE);
+        p.rect(bx, by, bw, bh);
+        bevel(p, bx, by, bw, bh, 'raised');
         const cx = r.x + r.w - 8;
-        p.fill(controlled ? 100 : 170);
+        p.fill(controlled ? SHADOW : 0);
         p.triangle(cx - 3, ky - 1.5, cx + 3, ky - 1.5, cx, ky + 2);
         continue;
       }
 
-      // Knob background
-      p.fill(controlled ? 30 : 50);
-      p.stroke(controlled ? [100, 255, 130] : 100);
-      p.strokeWeight(controlled ? 1.5 : 1);
+      // Knob: a round sunken well, its value as an arc
+      p.noStroke();
+      p.fill(255);
       p.ellipse(kx, ky, KNOB_RADIUS * 2);
+      p.noFill();
+      p.strokeWeight(1);
+      if (controlled) {
+        p.stroke(...CTRL);
+        p.ellipse(kx, ky, KNOB_RADIUS * 2 - 1);
+      } else {
+        p.stroke(...SHADOW);
+        p.arc(kx, ky, KNOB_RADIUS * 2 - 1, KNOB_RADIUS * 2 - 1, p.PI * 0.75, p.PI * 1.75);
+        p.stroke(255);
+        p.arc(kx, ky, KNOB_RADIUS * 2 - 1, KNOB_RADIUS * 2 - 1, -p.PI * 0.25, p.PI * 0.75);
+      }
 
       // Knob arc (value indicator)
       // A value typed past the range shows as the end it is past
       const norm = Math.max(0, Math.min(1, (param.value - param.min) / (param.max - param.min)));
       const startAngle = -p.PI * 0.75;
       const endAngle = startAngle + norm * p.PI * 1.5;
-      p.noFill();
-      p.stroke(controlled ? [100, 255, 130] : [100, 200, 255]);
+      p.stroke(...(controlled ? CTRL : NAVY));
       p.strokeWeight(2);
-      p.arc(kx, ky, KNOB_RADIUS * 2 - 2, KNOB_RADIUS * 2 - 2, startAngle, endAngle);
+      p.arc(kx, ky, KNOB_RADIUS * 2 - 4, KNOB_RADIUS * 2 - 4, startAngle, endAngle);
 
       // Value — a param may name its discrete settings via valueLabels
       const optLabel = param.valueLabels && param.valueLabels[Math.round(param.value)];
       const displayVal = optLabel ? optLabel : (param.step >= 1 ? param.value.toFixed(0) : param.value.toFixed(2));
       p.noStroke();
-      p.fill(130);
+      p.fill(...(controlled ? CTRL : NAVY));
+      p.textFont(UI_MONO);
       p.textSize(optLabel ? 8 : 9);
       const valW = p.textWidth(displayVal);
       p.textAlign(p.RIGHT, p.CENTER);
       p.text(displayVal, mod.x + MODULE_WIDTH - 8, ky);
+      p.textFont(UI_FONT);
 
       // Label
-      p.fill(170);
+      p.fill(0);
       p.textSize(9);
       p.textAlign(p.LEFT, p.CENTER);
       const maxLabelW = (MODULE_WIDTH - 8 - valW - 4) - (16 + KNOB_RADIUS + 6);
@@ -1818,12 +1985,17 @@ export class NodeGraphUI {
 
     const preview = this._previewRect(mod);
 
+    // A preview is a black screen sunk into the node
+    const screenWell = (r) => {
+      bevel(p, r.x - 2, r.y - 2, r.w + 4, r.h + 4, 'field');
+      p.fill(0);
+      p.rect(r.x, r.y, r.w, r.h);
+    };
+
     // Monitor preview
     if (mod.type === 'Monitor') {
       const py = preview.y;
-      p.fill(0);
-      p.noStroke();
-      p.rect(preview.x, py, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
+      screenWell(preview);
       if (mod.displayTexture) {
         this._drawPreview(mod, preview);
         // The second-screen window and the recording copy the picture whole, so they need it at full size
@@ -1839,145 +2011,71 @@ export class NodeGraphUI {
           mod._blitToRecordingCanvas(full);
         }
       }
-      p.noFill();
-      p.stroke(60);
-      p.strokeWeight(1);
-      p.rect(preview.x - 0.5, py - 0.5, MONITOR_PREVIEW_W + 1, MONITOR_PREVIEW_H + 1, 2);
 
       // FPS display
       p.noStroke();
-      p.fill(150);
+      p.fill(0);
+      p.textFont(UI_MONO);
       p.textSize(10);
       p.textAlign(p.LEFT, p.TOP);
       p.text(`FPS: ${mod.fps || 0}`, mod.x + 8, py + MONITOR_PREVIEW_H + 4);
+      p.textFont(UI_FONT);
 
       // Fullscreen button
       const fsBtnY = py + MONITOR_PREVIEW_H + 20;
-      p.fill([60, 60, 90]);
-      p.stroke(100);
-      p.strokeWeight(1);
-      p.rect(mod.x + 10, fsBtnY, MODULE_WIDTH - 20, 20, 3);
-      p.noStroke();
-      p.fill(200);
-      p.textSize(9);
-      p.textAlign(p.CENTER, p.CENTER);
-      p.text('Fullscreen', mod.x + MODULE_WIDTH / 2, fsBtnY + 10);
+      pushButton(p, mod.x + 10, fsBtnY, MODULE_WIDTH - 20, 20, 'Fullscreen');
 
-      // Record button
+      // Record button: latched in, maroon, while recording
       const btnY = py + MONITOR_PREVIEW_H + 44;
       const isRec = mod.isRecording && mod.isRecording();
-      p.fill(isRec ? [180, 40, 40] : [60, 60, 90]);
-      p.stroke(isRec ? [220, 80, 80] : 100);
-      p.strokeWeight(1);
-      p.rect(mod.x + 10, btnY, MODULE_WIDTH - 20, 20, 3);
-      p.noStroke();
-      p.fill(200);
-      p.textSize(9);
-      p.textAlign(p.CENTER, p.CENTER);
-      p.text(isRec ? 'Stop Recording' : 'Record', mod.x + MODULE_WIDTH / 2, btnY + 10);
+      pushButton(p, mod.x + 10, btnY, MODULE_WIDTH - 20, 20, isRec ? 'Stop Recording' : 'Record',
+        isRec ? { pressed: true, face: [128, 0, 0], ink: 255 } : {});
 
       // Screenshot button
       const shotBtnY = py + MONITOR_PREVIEW_H + 68;
-      p.fill([60, 60, 90]);
-      p.stroke(100);
-      p.strokeWeight(1);
-      p.rect(mod.x + 10, shotBtnY, MODULE_WIDTH - 20, 20, 3);
-      p.noStroke();
-      p.fill(200);
-      p.textSize(9);
-      p.textAlign(p.CENTER, p.CENTER);
-      p.text('Screenshot', mod.x + MODULE_WIDTH / 2, shotBtnY + 10);
+      pushButton(p, mod.x + 10, shotBtnY, MODULE_WIDTH - 20, 20, 'Screenshot');
 
       // Load and Save buttons (side by side)
       const lsBtnY = py + MONITOR_PREVIEW_H + 92;
       const halfW = (MODULE_WIDTH - 24) / 2;
-
-      // Load button (left)
-      p.fill([60, 60, 90]);
-      p.stroke(100);
-      p.strokeWeight(1);
-      p.rect(mod.x + 10, lsBtnY, halfW, 20, 3);
-      p.noStroke();
-      p.fill(200);
-      p.textSize(9);
-      p.textAlign(p.CENTER, p.CENTER);
-      p.text('Load', mod.x + 10 + halfW / 2, lsBtnY + 10);
-
-      // Save button (right)
-      p.fill([60, 60, 90]);
-      p.stroke(100);
-      p.strokeWeight(1);
-      p.rect(mod.x + 14 + halfW, lsBtnY, halfW, 20, 3);
-      p.noStroke();
-      p.fill(200);
-      p.textSize(9);
-      p.textAlign(p.CENTER, p.CENTER);
-      p.text('Save', mod.x + 14 + halfW + halfW / 2, lsBtnY + 10);
+      pushButton(p, mod.x + 10, lsBtnY, halfW, 20, 'Load');
+      pushButton(p, mod.x + 14 + halfW, lsBtnY, halfW, 20, 'Save');
 
       // Link button (full width below Load/Save)
       const linkBtnY = py + MONITOR_PREVIEW_H + 116;
-      p.fill([60, 60, 90]);
-      p.stroke(100);
-      p.strokeWeight(1);
-      p.rect(mod.x + 10, linkBtnY, MODULE_WIDTH - 20, 20, 3);
-      p.noStroke();
-      p.fill(200);
-      p.textSize(9);
-      p.textAlign(p.CENTER, p.CENTER);
-      p.text('Link', mod.x + MODULE_WIDTH / 2, linkBtnY + 10);
+      pushButton(p, mod.x + 10, linkBtnY, MODULE_WIDTH - 20, 20, 'Link');
     }
 
     // GRASS, Conway and Yellowtail preview (clean video output, same size as Monitor preview)
     if (mod.type === 'GRASS' || mod.type === 'Conway' || mod.type === 'Yellowtail') {
-      p.fill(0);
-      p.noStroke();
-      p.rect(preview.x, preview.y, MONITOR_PREVIEW_W, MONITOR_PREVIEW_H, 2);
+      screenWell(preview);
       if (mod.outputFBO) {
         try {
           this._drawPreview(mod, preview);
         } catch (e) { /* FBO may not be ready yet */ }
       }
-      p.noFill();
-      p.stroke(60);
-      p.strokeWeight(1);
-      p.rect(preview.x - 0.5, preview.y - 0.5, MONITOR_PREVIEW_W + 1, MONITOR_PREVIEW_H + 1, 2);
     }
 
     // GRASS buttons under the preview: Load and Save, then Play, Stop and
-    // Reset. Play is dim with nothing stopped, Stop with nothing running
+    // Reset. Play is grayed out with nothing stopped, Stop with nothing running
     if (mod.type === 'GRASS') {
       const dim = {
         play: !mod.session.hasStopped(),
         stop: !mod.session.isRunning(),
       };
       for (const b of this._grassButtons(mod)) {
-        const off = dim[b.action];
-        p.fill(off ? 45 : 60, off ? 45 : 60, off ? 65 : 90);
-        p.stroke(off ? 75 : 100);
-        p.strokeWeight(1);
-        p.rect(b.x, b.y, b.w, 20, 3);
-        p.noStroke();
-        p.fill(off ? 110 : 200);
-        p.textSize(9);
-        p.textAlign(p.CENTER, p.CENTER);
-        p.text(b.label, b.x + b.w / 2, b.y + 10);
+        pushButton(p, b.x, b.y, b.w, 20, b.label, { disabled: dim[b.action] });
       }
     }
 
     // Module preview thumbnail (for non-Monitor, non-GRASS, non-Conway, non-Yellowtail modules with FBO)
     if (mod.outputFBO && mod.type !== 'Monitor' && mod.type !== 'GRASS' && mod.type !== 'Conway' && mod.type !== 'Yellowtail') {
-      p.fill(0);
-      p.noStroke();
-      p.rect(preview.x, preview.y, PREVIEW_W, PREVIEW_H, 2);
+      screenWell(preview);
       try {
         this._drawPreview(mod, preview);
       } catch (e) {
         // FBO may not be ready yet
       }
-      p.noFill();
-      p.stroke(60);
-      p.strokeWeight(1);
-      p.rect(preview.x - 0.5, preview.y - 0.5, PREVIEW_W + 1, PREVIEW_H + 1, 2);
     }
 
     // File picker button (Video, NAPLPS, Image, LUT, QTVR, VRML, Latk, Mesh)
@@ -1986,14 +2084,7 @@ export class NodeGraphUI {
       const btnY = preview
         ? preview.y + PREVIEW_H + 6
         : mod.y + HEADER_HEIGHT + this._portSection(mod) + paramNames.length * PARAM_ROW_HEIGHT + 6;
-      p.fill(60, 60, 90);
-      p.stroke(100);
-      p.strokeWeight(1);
-      p.rect(mod.x + 10, btnY, MODULE_WIDTH - 20, 20, 3);
-      p.noStroke();
-      p.fill(200);
       p.textSize(9);
-      p.textAlign(p.CENTER, p.CENTER);
       // A loaded LUT, panorama, world or drawing names itself on the button, which still opens the picker
       const btnLabel = mod.type === 'NAPLPS' ? 'Load .nap...' : mod.type === 'Image' ? 'Load Image...'
         : mod.type === 'LUT' ? (mod.lutName ? fitText(p, mod.lutName, MODULE_WIDTH - 32) : 'Load LUT...')
@@ -2002,22 +2093,15 @@ export class NodeGraphUI {
         : mod.type === 'Latk' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .latk...')
         : mod.type === 'Mesh' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .glb...')
         : 'Load Video...';
-      p.text(btnLabel, mod.x + MODULE_WIDTH / 2, btnY + 10);
+      pushButton(p, mod.x + 10, btnY, MODULE_WIDTH - 20, 20, btnLabel);
     }
 
     // Input ports (normal mode)
     for (let i = 0; i < mod.inputs.length; i++) {
       const pos = this.getInputPortPos(mod, i);
-      const isHovered = this._hoveredPort &&
-        this._hoveredPort.nodeId === id &&
-        this._hoveredPort.portType === 'input' &&
-        this._hoveredPort.portIndex === i;
-      p.fill(mod.inputs[i].type === 'control' ? [100, 255, 130] : [68, 136, 255]);
-      p.stroke(isHovered ? [255, 255, 0] : 255);
-      p.strokeWeight(isHovered ? 2.5 : 1.5);
-      p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
-      p.noStroke();
-      p.fill(180);
+      portPin(p, pos.x, pos.y, mod.inputs[i].type === 'control' ? CABLE_CONTROL : [68, 136, 255],
+        isHoveredPort('input', i), connected.has(`${id}:i${i}`));
+      p.fill(0);
       p.textSize(8);
       p.textAlign(p.CENTER, p.TOP);
       p.text(mod.inputs[i].name, pos.x, pos.y + PORT_RADIUS + 2);
@@ -2026,17 +2110,9 @@ export class NodeGraphUI {
     // Output ports (normal mode)
     for (let i = 0; i < mod.outputs.length; i++) {
       const pos = this.getOutputPortPos(mod, i);
-      const isControlPort = mod.outputs[i].type === 'control';
-      const isHovered = this._hoveredPort &&
-        this._hoveredPort.nodeId === id &&
-        this._hoveredPort.portType === 'output' &&
-        this._hoveredPort.portIndex === i;
-      p.fill(isControlPort ? [100, 255, 130] : [255, 136, 68]);
-      p.stroke(isHovered ? [255, 255, 0] : 255);
-      p.strokeWeight(isHovered ? 2.5 : 1.5);
-      p.ellipse(pos.x, pos.y, PORT_RADIUS * 2);
-      p.noStroke();
-      p.fill(180);
+      portPin(p, pos.x, pos.y, mod.outputs[i].type === 'control' ? CABLE_CONTROL : [255, 136, 68],
+        isHoveredPort('output', i), connected.has(`${id}:o${i}`));
+      p.fill(0);
       p.textSize(8);
       p.textAlign(p.CENTER, p.BOTTOM);
       p.text(mod.outputs[i].name, pos.x, pos.y - PORT_RADIUS - 2);

@@ -160,7 +160,8 @@ const sketch = (p) => {
   };
 
   p.draw = () => {
-    p.background(26, 26, 46);
+    // Transparent, so the page's dithered desktop pattern (css/style.css) shows through
+    p.clear();
     pipeline.processFrame();
     ui.draw();
   };

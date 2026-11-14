@@ -1,3 +1,34 @@
+/* Retro look, after docs/RETRO_NODES.md: Win95 / MagicWB chrome over a dithered desktop */
+
+/* One-word aliases for the system fonts nearest the period's bitmap faces.
+   The node graph's canvas text uses them by name, since p5 quotes a family
+   name with a space in it, which would break a font stack. */
+@font-face {
+  font-family: 'LichenUI';
+  src: local('Microsoft Sans Serif'), local('MicrosoftSansSerif'), local('MS Sans Serif'),
+       local('Tahoma'), local('Geneva'), local('Arial'), local('Helvetica'), local('DejaVu Sans'),
+       local('Liberation Sans');
+}
+
+@font-face {
+  font-family: 'LichenMono';
+  src: local('Lucida Console'), local('LucidaConsole'), local('Monaco'), local('Courier New'),
+       local('DejaVu Sans Mono'), local('Liberation Mono');
+}
+
+:root {
+  --face: #c0c0c0;
+  --light: #dfdfdf;
+  --shadow: #808080;
+  --navy: #000080;
+  --ui-font: 'Microsoft Sans Serif', 'MS Sans Serif', Tahoma, Geneva, sans-serif;
+  --mono-font: 'Lucida Console', Monaco, 'Courier New', monospace;
+  /* 2px nested bevels: outer #fff / #000, inner #dfdfdf / #808080 */
+  --bevel-raised: inset 1px 1px #fff, inset -1px -1px #000, inset 2px 2px var(--light), inset -2px -2px var(--shadow);
+  --bevel-pressed: inset 1px 1px #000, inset -1px -1px #fff, inset 2px 2px var(--shadow), inset -2px -2px var(--light);
+  --bevel-field: inset 1px 1px var(--shadow), inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px var(--light);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -6,8 +37,11 @@
 
 html, body {
   overflow: hidden;
-  background: #1a1a2e;
-  font-family: 'Courier New', monospace;
+  font-family: var(--ui-font);
+  /* Desktop: a 2x2 checkerboard dither of two close grays, fixed to the screen */
+  background-color: #808080;
+  background-image: repeating-conic-gradient(#7b7b7b 0% 25%, #878787 0% 50%);
+  background-size: 4px 4px;
 }
 
 canvas {
@@ -18,50 +52,65 @@ canvas {
   position: fixed;
   top: 10px;
   left: 10px;
-  background: rgba(20, 20, 40, 0.95);
-  border: 1px solid #444;
-  border-radius: 6px;
-  padding: 8px;
+  background: var(--face);
+  /* Outer bevel as a border, so scrolled content never covers it */
+  border: 1px solid;
+  border-color: #fff #000 #000 #fff;
+  border-radius: 0;
+  box-shadow: inset 1px 1px var(--light), inset -1px -1px var(--shadow);
+  padding: 7px;
   z-index: 100;
   max-height: calc(100vh - 20px);
   overflow-y: auto;
   width: 160px;
   transition: opacity 0.15s ease;
-  scrollbar-width: thin;
-  scrollbar-color: #4a4a6a transparent;
 }
 
+/* Win95 scrollbars: a dithered track and a raised gray thumb */
 #module-palette::-webkit-scrollbar,
 .info-popup::-webkit-scrollbar,
 .module-search-popup div::-webkit-scrollbar {
-  width: 5px;
+  width: 12px;
 }
 
 #module-palette::-webkit-scrollbar-track,
 .info-popup::-webkit-scrollbar-track,
 .module-search-popup div::-webkit-scrollbar-track {
-  background: transparent;
+  background-color: var(--light);
+  background-image: repeating-conic-gradient(var(--face) 0% 25%, #fff 0% 50%);
+  background-size: 2px 2px;
 }
 
 #module-palette::-webkit-scrollbar-thumb,
 .info-popup::-webkit-scrollbar-thumb,
 .module-search-popup div::-webkit-scrollbar-thumb {
-  background: #4a4a6a;
-  border-radius: 3px;
+  background: var(--face);
+  border-radius: 0;
+  box-shadow: var(--bevel-raised);
 }
 
-#module-palette::-webkit-scrollbar-thumb:hover,
-.info-popup::-webkit-scrollbar-thumb:hover,
-.module-search-popup div::-webkit-scrollbar-thumb:hover {
-  background: #6a6a8a;
+#module-palette::-webkit-scrollbar-thumb:active,
+.info-popup::-webkit-scrollbar-thumb:active,
+.module-search-popup div::-webkit-scrollbar-thumb:active {
+  box-shadow: var(--bevel-pressed);
+}
+
+/* Browsers without the pseudo-elements above (Firefox) take the standard properties.
+   Chrome would let these override the pseudo-elements, so they're kept from it. */
+@supports not selector(::-webkit-scrollbar) {
+  #module-palette,
+  .info-popup,
+  .module-search-popup div {
+    scrollbar-color: var(--face) var(--light);
+  }
 }
 
 #module-palette .palette-banner-link {
   display: block;
-  /* Full-bleed: cancel the palette's 8px padding so the banner meets its edges */
-  width: calc(100% + 16px);
-  margin: -8px -8px 8px -8px;
-  border-radius: 5px 5px 0 0;
+  /* Cancel the palette's padding but leave its inner bevel showing */
+  width: calc(100% + 12px);
+  margin: -6px -6px 8px -6px;
+  border-radius: 0;
   overflow: hidden;
   transition: opacity 0.15s ease;
 }
@@ -74,18 +123,20 @@ canvas {
   display: block;
   width: 100%;
   height: auto;
+  image-rendering: pixelated;
   user-select: none;
   -webkit-user-drag: none;
 }
 
+/* "Modules" heading as an active window's navy caption */
 #module-palette h3 {
-  color: #aaa;
+  color: #fff;
+  background: var(--navy);
   font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
   margin-bottom: 6px;
-  padding-bottom: 4px;
-  border-bottom: 1px solid #333;
+  padding: 2px 4px;
 }
 
 #module-palette .palette-section {
@@ -93,20 +144,25 @@ canvas {
 }
 
 #module-palette .palette-section-title {
-  color: #888;
+  color: #000;
   font-size: 9px;
+  font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 3px;
+  padding: 1px 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 4px;
   user-select: none;
+  /* Chiseled groove under each section's title */
+  border-bottom: 1px solid var(--shadow);
+  box-shadow: 0 1px #fff;
 }
 
 #module-palette .palette-section-title:hover {
-  color: #aaa;
+  color: var(--navy);
 }
 
 #module-palette .palette-section-title .triangle {
@@ -115,12 +171,12 @@ canvas {
   height: 0;
   border-left: 4px solid transparent;
   border-right: 4px solid transparent;
-  border-top: 6px solid #888;
+  border-top: 6px solid #000;
   transition: transform 0.15s ease;
 }
 
 #module-palette .palette-section-title:hover .triangle {
-  border-top-color: #aaa;
+  border-top-color: var(--navy);
 }
 
 #module-palette .palette-section.collapsed .palette-section-title .triangle {
@@ -136,27 +192,39 @@ canvas {
   max-height: 0 !important;
 }
 
+/* Module buttons: raised, in their category's colour (set inline from js) */
 #module-palette button {
   display: block;
   width: 100%;
   padding: 4px 8px;
   margin-bottom: 2px;
-  background: #2a2a4a;
-  color: #eee;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 3px;
-  font-family: 'Courier New', monospace;
+  background: var(--face);
+  color: #fff;
+  border: none;
+  border-radius: 0;
+  box-shadow: inset 1px 1px rgba(255, 255, 255, 0.75), inset -1px -1px #000,
+              inset 2px 2px rgba(255, 255, 255, 0.3), inset -2px -2px rgba(0, 0, 0, 0.4);
+  font-family: var(--ui-font);
   font-size: 11px;
   cursor: pointer;
   text-align: left;
-  transition: filter 0.1s ease, border-color 0.1s ease;
+  transition: filter 0.1s ease;
 }
 
 #module-palette button:hover {
-  background: #3a3a5a;
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.45);
   filter: brightness(1.15);
+}
+
+#module-palette button:active {
+  box-shadow: inset 1px 1px #000, inset -1px -1px rgba(255, 255, 255, 0.75),
+              inset 2px 2px rgba(0, 0, 0, 0.4), inset -2px -2px rgba(255, 255, 255, 0.3);
+  padding: 5px 7px 3px 9px;
+}
+
+#module-palette button:focus-visible {
+  outline: 1px dotted #000;
+  outline-offset: -5px;
 }
 
 #fullscreen-monitor {
@@ -177,40 +245,61 @@ canvas {
   object-fit: contain;
 }
 
-/* Historical-info popup: DOM overlay so entry bodies can be HTML markup */
+/* Historical-info popup: DOM overlay so entry bodies can be HTML markup.
+   A Win95 window: gray frame, navy caption, white text pane. */
 .info-popup {
   position: fixed;
   transform-origin: 0 0;
-  background: rgba(24, 24, 28, 0.96);
-  border: 1px solid #c8c8c8;
-  border-radius: 6px;
-  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  background: var(--face);
+  border: 1px solid;
+  border-color: #fff #000 #000 #fff;
+  border-radius: 0;
+  box-shadow: inset 1px 1px var(--light), inset -1px -1px var(--shadow);
+  padding: 3px;
   z-index: 150;
   overflow-y: auto;
-  color: #d7d7d7;
-  font-family: 'Courier New', monospace;
+  color: #000;
+  font-family: var(--ui-font);
   font-size: 11px;
   line-height: 1.45;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  scrollbar-width: thin;
-  scrollbar-color: #4a4a6a transparent;
 }
 
 .info-popup .info-popup-title {
   color: #fff;
+  background: var(--navy);
   font-size: 12px;
   font-weight: bold;
-  margin-bottom: 6px;
+  padding: 2px 5px;
+  margin-bottom: 3px;
 }
 
-.info-popup .info-popup-title a,
+.info-popup .info-popup-body {
+  flex: 1 0 auto;
+  background: #fff;
+  box-shadow: var(--bevel-field);
+  padding: 7px 8px;
+}
+
+.info-popup .info-popup-title a {
+  color: #fff;
+}
+
+.info-popup .info-popup-title a:hover {
+  color: #ff0;
+}
+
 .info-popup .info-popup-body a {
-  color: #6cf;
+  color: #0000ff;
 }
 
-.info-popup .info-popup-title a:hover,
+.info-popup .info-popup-body a:visited {
+  color: #800080;
+}
+
 .info-popup .info-popup-body a:hover {
-  color: #9df;
+  color: #f00;
 }
 
 .info-popup .info-popup-body p {
@@ -227,37 +316,38 @@ canvas {
   height: auto;
 }
 
-/* Dropdown param menu: DOM overlay sized in world units, scaled with zoom from js */
+/* Dropdown param menu: DOM overlay sized in world units, scaled with zoom from js.
+   A combo box's list: white, black rim, navy highlight. */
 .param-dropdown {
   position: fixed;
   transform-origin: 0 0;
   box-sizing: border-box;
-  background: rgb(30, 30, 50);
-  border: 1px solid rgb(100, 200, 255);
-  border-radius: 2px;
-  padding: 2px 0;
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 0;
+  padding: 1px 0;
   z-index: 1000;
   user-select: none;
-  font-family: sans-serif;
+  font-family: var(--ui-font);
   font-size: 9px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .param-dropdown .param-dropdown-item {
   height: 14px;
   line-height: 14px;
   padding: 0 5px;
-  color: #aaa;
+  color: #000;
   white-space: nowrap;
   cursor: pointer;
 }
 
 .param-dropdown .param-dropdown-item.selected {
-  color: rgb(100, 200, 255);
+  color: var(--navy);
+  font-weight: bold;
 }
 
 .param-dropdown .param-dropdown-item.highlighted {
-  background: #3a5a8a;
+  background: var(--navy);
   color: #fff;
 }
 
