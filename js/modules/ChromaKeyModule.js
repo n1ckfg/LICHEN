@@ -62,12 +62,12 @@ export class ChromaKeyModule extends Module {
 
   _createFullscreenUI() {
     this._uiContainer = document.createElement('div');
-    this._uiContainer.className = 'chromakey-toolbar';
+    this._uiContainer.className = 'chromakey-toolbar retro-panel';
 
     this._toolBtns = {};
     for (const tool of TOOLS) {
       const btn = document.createElement('button');
-      btn.className = 'chromakey-tool';
+      btn.className = 'chromakey-tool retro-button';
       btn.title = tool.title;
       btn.innerHTML = eyedropperIcon(tool.mark);
       btn.onclick = () => { this.tool = tool.name; this._updateUI(); };
@@ -90,7 +90,7 @@ export class ChromaKeyModule extends Module {
     }
 
     this._infoEl = document.createElement('div');
-    this._infoEl.className = 'chromakey-hint';
+    this._infoEl.className = 'chromakey-hint retro-hint';
     this._infoEl.textContent = 'Click to pick the colour to remove · + removes more colours · − keeps colours · ESC to exit';
 
     document.body.appendChild(this._uiContainer);

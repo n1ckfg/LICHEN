@@ -141,11 +141,16 @@ export class CropModule extends Module {
     const y0 = dy + Math.min(b.y0, b.y1) / g.height * dh;
     const x1 = dx + Math.max(b.x0, b.x1) / g.width * dw;
     const y1 = dy + Math.max(b.y0, b.y1) / g.height * dh;
+    // Marching ants, white under black dashes, like the node graph's rubber band
     p.push();
     p.noFill();
-    p.stroke(255);
     p.strokeWeight(2);
+    p.stroke(255);
     p.rect(x0, y0, x1 - x0, y1 - y0);
+    p.drawingContext.setLineDash([4, 4]);
+    p.stroke(0);
+    p.rect(x0, y0, x1 - x0, y1 - y0);
+    p.drawingContext.setLineDash([]);
     p.pop();
   }
 }

@@ -432,32 +432,13 @@ export class YellowtailModule extends Module {
   _createFullscreenUI() {
     this._uiContainer = document.createElement('div');
     this._uiContainer.id = `yellowtail-ui-${this.id}`;
-    this._uiContainer.style.cssText = `
-      position: fixed;
-      top: 12px;
-      left: 170px;
-      z-index: 1000;
-      display: none;
-      flex-direction: column;
-      gap: 6px;
-    `;
-
-    const btnStyle = `
-      background: #222;
-      color: #eee;
-      border: 1px solid #444;
-      padding: 6px 14px;
-      font: 13px monospace;
-      cursor: pointer;
-      border-radius: 4px;
-    `;
+    // Styled in css/style.css, as the node graph is
+    this._uiContainer.className = 'retro-toolbar retro-panel';
 
     const createBtn = (label, onClick) => {
       const btn = document.createElement('button');
       btn.textContent = label;
-      btn.style.cssText = btnStyle;
-      btn.onmouseenter = () => btn.style.background = '#333';
-      btn.onmouseleave = () => btn.style.background = '#222';
+      btn.className = 'retro-button';
       btn.onclick = (e) => { e.stopPropagation(); onClick(); };
       return btn;
     };
@@ -467,15 +448,7 @@ export class YellowtailModule extends Module {
     this._uiContainer.appendChild(this._btnClear);
 
     this._infoEl = document.createElement('div');
-    this._infoEl.style.cssText = `
-      position: fixed;
-      bottom: 12px;
-      left: 170px;
-      z-index: 1000;
-      color: #888;
-      font: 12px monospace;
-      display: none;
-    `;
+    this._infoEl.className = 'retro-hint';
     this._infoEl.textContent = 'Click and drag to draw · ESC to exit';
 
     document.body.appendChild(this._uiContainer);
