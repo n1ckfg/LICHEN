@@ -113,12 +113,12 @@ With a fullscreen Monitor on a Restore M and nothing else in the patch, the page
 ### Module Categories
 
 - **Sources**: Camera, Image, Mesh, Video
-- **Utility**: Blur, Brcosa, Channel, ChromaKey, Crop, Delay, Dither, Edges, Example, Inpainter, Levels, LUT, Matte, Mosaic, OpticalFlow, Resample, Restore, Sharpen, Transform, VideoMixer
+- **Utility**: Blur, Brcosa, Channel, ChromaKey, Crop, Delay, Displacer, Dither, Edges, Example, Inpainter, Levels, LUT, Matte, Mosaic, OpticalFlow, Resample, Restore, Sharpen, Slitscan, Transform, VideoMixer
 - **Control**: Calculator, Constant, Random, Remap, Skeleton
 - **Generative**: Cloudy, Coils, Conway, Crystalline, GridGuys, InkDrops, LetterForms, Protozoa, SpiralGalaxy, Whitney, Yellowtail
 - **Emulation**: DeeSeventySix, ESP32, InkMarkers, NTSC, RuttEtra, SlowscanJam, Twoscilloscope
 - **Sandin**: AdderMultiplier, ColorEncoder, Comparator, Differentiator, FunctionGenerator, GRASS, Oscillator, SyncGenerator, ValueScrambler
-- **Effects**: BooleanLogic, BufferSmear, Cyberlace, Displacer, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, Slitscan, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
+- **Effects**: BooleanLogic, BufferSmear, Cyberlace, FilmGrain, GameBoy, Glitch, HSFlow, HyperCard, LuminanceDelay, Maelstrom, PixelVision, SpatialSlice, TimeTunnel, TVLines, UnrealBloom, VHSC, VideoToasting
 - **img2img**: DepthAnything, InfrDrawings, Pix2Pix
 - **Formats**: Latk, NAPLPS, Panorama, QTVR, VRML
 - **Output**: Monitor
@@ -396,7 +396,9 @@ The Image module (`js/modules/ImageModule.js`) is a source that loads a still im
 
 **File loading:** Uses the same hidden `<input type="file">` pattern as NAPLPS and Video, accepting any image format the browser supports (`accept="image/*"`). The node's "Load Image…" button triggers the picker via `pickFile()`. On load, `p5.loadImage()` decodes the file into a `p5.Image` stored as `this.img`.
 
-**Parameters:** `width` and `height` are set to the image's native pixel dimensions on load. The user can then adjust them via the knobs; `process()` redraws the image into the `p5.Graphics` buffer at the current param dimensions, centered on a black background, every frame.
+**Parameters:** `width` and `height` are set to the image's native pixel dimensions on load. The user can then adjust them via the knobs; `process()` redraws the image into the `p5.Graphics` buffer at the current param dimensions, centered, every frame. The area around it is black, unless the image has an alpha channel.
+
+**Alpha:** on load, `_hasAlpha()` reads the image's pixels once and sets `hasAlpha` when any is less than fully opaque. Such an image is drawn over a cleared buffer instead of a black one, so its transparency, and the area around it, reach the output's alpha. An opaque image comes out as before.
 
 **Rendering path:** The 2D `p5.Graphics` buffer is mapped to the module's WebGL `outputFBO` via the passthrough shader, identical to Camera and Video.
 

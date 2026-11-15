@@ -14,6 +14,7 @@ export class ImageModule extends Module {
     };
     this.img = null;
     this.imgReady = false;
+    this.hasAlpha = false;
     this.createShader(passthroughFrag);
     this.createOutputFBO();
     this._createFileInput();
@@ -40,6 +41,7 @@ export class ImageModule extends Module {
     const p = this.glCanvas._pInst;
     p.loadImage(url, (img) => {
       this.img = img;
+      this.hasAlpha = this._hasAlpha(img);
 
       // Set width/height params to the image's native dimensions
       this.params.width.value = img.width;
@@ -54,13 +56,26 @@ export class ImageModule extends Module {
     });
   }
 
+  // Whether any pixel of the image is less than fully opaque. Only such an
+  // image is drawn over a clear buffer; an opaque one keeps its black surround
+  _hasAlpha(img) {
+    img.loadPixels();
+    const px = img.pixels;
+    for (let i = 3; i < px.length; i += 4) {
+      if (px[i] < 255) return true;
+    }
+    return false;
+  }
+
   process(graph, glCanvas) {
     if (!this.imgReady || !this.img || !this.pg) return;
 
-    // Redraw the image into pg at the user-specified dimensions, centered
+    // Redraw the image into pg at the user-specified dimensions, centered,
+    // over black, or over transparency when the image has an alpha channel
     const w = this.params.width.value;
     const h = this.params.height.value;
-    this.pg.background(0);
+    if (this.hasAlpha) this.pg.clear();
+    else this.pg.background(0);
     this.pg.image(this.img,
       (this.pg.width - w) / 2, (this.pg.height - h) / 2,
       w, h);
