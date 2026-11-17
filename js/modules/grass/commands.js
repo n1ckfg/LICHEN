@@ -7,6 +7,12 @@ export class CommandRegistry {
     this.commands = new Map();
     // Minimum abbreviation lengths (e.g., P for PRINT)
     this.minLengths = new Map();
+    // Commands that also run when their whole name is used as a value in an
+    // expression (PI, ANYARGS), unless a variable has that name
+    this.valueNames = new Set();
+    // Set to a function returning true for exact names only ($AB=1, as RT/1
+    // had it); abbreviations then go to macros and variables
+    this.exactOnly = null;
   }
 
   // Register a command
@@ -27,6 +33,7 @@ export class CommandRegistry {
     if (this.commands.has(upper)) {
       return { handler: this.commands.get(upper), name: upper };
     }
+    if (this.exactOnly && this.exactOnly()) return null;
 
     // Prefix match — find all commands that start with this prefix
     const matches = [];

@@ -5,11 +5,19 @@ import { tokenize } from './tokenizer.js';
 import { parse } from './parser.js';
 import { CommandRegistry } from './commands.js';
 import { splitMacroLines } from './script.js';
+import { formatValue } from './numfmt.js';
 import { registerGraphicsCommands } from './builtins/graphics.js';
 import { registerIOCommands } from './builtins/io.js';
 import { registerMathCommands } from './builtins/math.js';
 import { registerControlCommands } from './builtins/control.js';
 import { registerSystemCommands } from './builtins/system.js';
+
+// Commands whose handlers get their arguments as AST nodes, to set variables
+const RAW_ARG_COMMANDS = new Set(['INPUT', 'STRING']);
+
+// A WHILE run here and now (not one line a turn) stops with an error after
+// this many turns, so a loop that never ends can't hang the page
+const WHILE_MAX_TURNS = 100000;
 
 export class Interpreter {
   constructor(env, framebuffer, palette, spriteStore, terminal, repl, scheduler) {
@@ -22,6 +30,9 @@ export class Interpreter {
     this.scheduler = scheduler;
     this.commands = new CommandRegistry();
     this.currentTask = null; // Set during scheduled execution
+    this.blockDepth = 0;     // WHILE blocks being run (see evalWhile)
+    // $AB=1: command names must be typed whole (RT/1's abbreviation switch)
+    this.commands.exactOnly = () => this.env.devices.get('$AB') === 1;
 
     // Register all builtin commands
     registerGraphicsCommands(this);
@@ -55,6 +66,12 @@ export class Interpreter {
   execTopLevel(source) {
     if (String(source).trimStart().startsWith('.')) return null; // a comment
     const ast = parse(tokenize(source));
+    // A line that opens with WHILE runs as a middleground macro of that one
+    // line, so its loop goes a turn at a time and ESC can stop it
+    const first = ast && ast.type === 'Sequence' ? ast.stmts[0] : ast;
+    if (first && first.type === 'WhileStmt') {
+      return this.scheduler.addTask('MG', 'WHILE', [String(source).trim()], [], null);
+    }
     if (ast && ast.type === 'Command' && !this.commands.resolve(ast.name) &&
         !(ast.switches || []).some(s => s === 'B' || s === 'F')) {
       let name = null;
@@ -86,7 +103,7 @@ export class Interpreter {
         return node.value;
 
       case 'VarRef':
-        return this.env.get(node.name);
+        return this.evalVarRef(node);
 
       case 'ArrayRef':
         return this.evalArrayRef(node);
@@ -112,6 +129,12 @@ export class Interpreter {
       case 'IfStmt':
         return this.evalIf(node);
 
+      case 'WhileStmt':
+        return this.evalWhile(node);
+
+      case 'IncDec':
+        return this.evalIncDec(node);
+
       case 'Paren':
         return this.eval(node.expr);
 
@@ -121,6 +144,16 @@ export class Interpreter {
       default:
         throw new Error(`Unknown AST node type: ${node.type}`);
     }
+  }
+
+  // A name used as a value. PI and ANYARGS run as commands there, unless a
+  // variable has that name
+  evalVarRef(node) {
+    const upper = node.name.toUpperCase();
+    if (this.commands.valueNames.has(upper) && !this.env.has(node.name)) {
+      return this.commands.commands.get(upper)([], [], this);
+    }
+    return this.env.get(node.name);
   }
 
   evalAssign(node) {
@@ -160,6 +193,7 @@ export class Interpreter {
     // Check if it's a registered command/function
     const cmd = this.commands.resolve(node.name);
     if (cmd) {
+      if (RAW_ARG_COMMANDS.has(cmd.name)) return cmd.handler(node.indices, [], this);
       const args = node.indices.map(i => this.eval(i));
       return cmd.handler(args, [], this);
     }
@@ -189,7 +223,7 @@ export class Interpreter {
     switch (node.op) {
       case '+':
         return (typeof left === 'string' || typeof right === 'string')
-          ? String(left) + String(right)
+          ? formatValue(left) + formatValue(right)
           : left + right;
       case '-': return left - right;
       case '*': return left * right;
@@ -201,8 +235,8 @@ export class Interpreter {
         return Math.floor(left) % Math.floor(right);
       case '%': // random between [left, right), fractions included
         return left + Math.random() * (right - left);
-      case '&': // string concatenation
-        return String(left) + String(right);
+      case '&': // string concatenation, numbers as PRINT shows them
+        return formatValue(left) + formatValue(right);
       case '=': case '==': return (left == right) ? 1 : 0;
       case '!=': case '<>': return (left != right) ? 1 : 0;
       case '<':  return (left < right) ? 1 : 0;
@@ -237,8 +271,8 @@ export class Interpreter {
     // Try registered commands first
     const cmd = this.commands.resolve(name);
     if (cmd) {
-      // Special handling for INPUT — pass raw AST nodes for variable names
-      if (cmd.name === 'INPUT') {
+      // INPUT and STRING get raw AST nodes, for the variables they set
+      if (RAW_ARG_COMMANDS.has(cmd.name)) {
         return cmd.handler(node.args, switches, this);
       }
       // Commands whose arguments are all names: COMPILE TRIANGLES,CT
@@ -317,6 +351,57 @@ export class Interpreter {
     return 0;
   }
 
+  // WHILE condition,{ lines }ENDWHILE. RT/1 ran WHILE as IF and ENDWHILE as
+  // SKIP 0 (CMDS.C, COMP.C), with the braces making their lines one line. So
+  // a WHILE that opens a macro's line does one turn of the loop and goes back
+  // to that line, which is one line run each time round: .B and .F macros
+  // carry on between turns and ESC stops it. A WHILE anywhere else (after a
+  // ; or IF, inside another WHILE's braces, typed at the prompt with no
+  // macro) runs its loop through here and now. GOTO or SKIP in the braces
+  // leaves the loop
+  evalWhile(node) {
+    const task = this.currentTask;
+    const mib = task ? null : this.env.currentMIB();
+    if (node.first && this.blockDepth === 0 && (task || (mib && mib.lines.length))) {
+      if (!this.eval(node.condition)) return 0;
+      this.runBlock(node.block);
+      if (task) this.scheduler.skip(task, 0);
+      else mib.pc -= 1;
+      throw new Error('SKIP');
+    }
+    let turns = 0;
+    while (this.eval(node.condition)) {
+      if (++turns > WHILE_MAX_TURNS) throw new Error(`WHILE ran ${WHILE_MAX_TURNS} times without ending`);
+      this.runBlock(node.block);
+    }
+    return 0;
+  }
+
+  // The lines inside a WHILE's braces, run in order as one line of the macro
+  runBlock(source) {
+    this.blockDepth++;
+    try {
+      for (const raw of splitMacroLines(source)) {
+        const line = raw.trim();
+        if (line === '' || line.startsWith('.')) continue;
+        const execLine = line.replace(/^\d+\w*(\s+|$)/, '');
+        if (execLine.trim() !== '') this.eval(parse(tokenize(execLine)));
+      }
+    } finally {
+      this.blockDepth--;
+    }
+  }
+
+  // ++NAME, --NAME: change the variable by 1 and give its new value
+  evalIncDec(node) {
+    const old = this.env.get(node.name);
+    if (typeof old !== 'number') throw new Error(`${node.delta > 0 ? '++' : '--'} needs a number: ${node.name}`);
+    const value = old + node.delta;
+    this.env.set(node.name, value);
+    this.syncDeviceVar(node.name, value);
+    return value;
+  }
+
   // Invoke a macro by name
   invokeMacro(name, argNodes, switches) {
     const body = this.env.get(name);
@@ -358,6 +443,9 @@ export class Interpreter {
     // .F task that called it
     const prevTask = this.currentTask;
     this.currentTask = null;
+    // and its WHILEs loop by its own lines, though called from inside a block
+    const prevDepth = this.blockDepth;
+    this.blockDepth = 0;
 
     try {
       while (mib.pc < lines.length && steps < maxSteps) {
@@ -394,6 +482,7 @@ export class Interpreter {
       }
     } finally {
       this.currentTask = prevTask;
+      this.blockDepth = prevDepth;
       this.env.popMIB();
     }
 

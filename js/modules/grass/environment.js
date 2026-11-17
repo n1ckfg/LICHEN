@@ -56,10 +56,18 @@ export class Environment {
     this.devices.set('$MN', 0);
     this.devices.set('$SC', 0);
 
-    // Timers
+    // Timers: each counts down by 1 a frame (60 a second) to 0. $TK counts
+    // frames up from 0 (RT/1's TICKER.ASM)
     for (let i = 0; i <= 9; i++) {
       this.devices.set(`$Z${i}`, 0);
     }
+    this.devices.set('$TK', 0);
+
+    // The last key typed, as its character code (RT/1); $K1 is the knob
+    this.devices.set('$CH', 0);
+
+    // 1: command names must be typed whole, no abbreviations (RT/1)
+    this.devices.set('$AB', 0);
 
     // Radians/degrees mode (0=degrees, 1=radians)
     this.devices.set('$RD', 0);
@@ -225,6 +233,27 @@ export class Environment {
     const upper = name.toUpperCase();
     this.globals.delete(upper);
     this.arrays.delete(upper);
+  }
+
+  // One frame of the timers: $Z0-$Z9 count down to 0, $TK counts up. They
+  // run whether or not a macro does, as hardware timers would
+  tickTimers() {
+    const tk = this.devices.get('$TK');
+    this.devices.set('$TK', typeof tk === 'number' ? tk + 1 : 1);
+    for (let i = 0; i <= 9; i++) {
+      const k = `$Z${i}`;
+      const v = this.devices.get(k);
+      if (typeof v === 'number' && v > 0) this.devices.set(k, Math.max(0, v - 1));
+    }
+  }
+
+  // Does a variable (local, global, array or device) of this name exist?
+  has(name) {
+    const upper = name.toUpperCase();
+    if (upper.startsWith('$')) return this.devices.has(upper);
+    const mib = this.currentMIB();
+    if (mib && mib.locals.has(name.toLowerCase())) return true;
+    return this.globals.has(upper) || this.arrays.has(upper);
   }
 
   // Update clock device vars

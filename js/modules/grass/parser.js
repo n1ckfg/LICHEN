@@ -76,6 +76,7 @@ export class Parser {
   parseLine() {
     const stmts = [];
     stmts.push(this.parseStatement());
+    if (stmts[0].type === 'WhileStmt') stmts[0].first = true;
 
     while (this.match(TokenType.SEMI)) {
       if (this.atLineEnd() || this.atEnd()) break;
@@ -100,6 +101,10 @@ export class Parser {
     // Check for IF
     if (t.type === TokenType.IDENT && t.value.toUpperCase() === 'IF') {
       return this.parseIf();
+    }
+
+    if (t.type === TokenType.IDENT && t.value.toUpperCase() === 'WHILE') {
+      return this.parseWhile();
     }
 
     // Check for assignment: IDENT ":" or DEVICE ":"
@@ -187,6 +192,22 @@ export class Parser {
 
     const body = stmts.length === 1 ? stmts[0] : AST.Sequence(stmts);
     return AST.IfStmt(condition, body);
+  }
+
+  // WHILE condition,{ lines }ENDWHILE (RT/1). The braces hold any number of
+  // lines, and ENDWHILE follows the closing brace on the same line
+  parseWhile() {
+    this.advance(); // skip WHILE
+    const condition = this.parseExpr();
+    this.expect(TokenType.COMMA);
+    const block = this.peek();
+    const end = this.tokens[this.pos + 1];
+    if (block.type !== TokenType.STRING || !end || end.type !== TokenType.IDENT ||
+        end.value.toUpperCase() !== 'ENDWHILE') {
+      throw new Error('WHILE needs condition,{ lines }ENDWHILE');
+    }
+    this.pos += 2;
+    return AST.WhileStmt(condition, block.value);
   }
 
   // Parse either a command call (IDENT args...) or an expression starting with IDENT
@@ -310,7 +331,18 @@ export class Parser {
   startsSpacedArg(pos) {
     const t = this.tokens[pos];
     const n = this.tokens[pos + 1];
+    if (t && t.spaceBefore && this.incDecAt(pos)) return true; // PRINT ++A
     return Boolean(t && n && t.type === TokenType.MINUS && t.spaceBefore && !n.spaceBefore);
+  }
+
+  // ++NAME or --NAME at pos, with nothing between the signs and the name:
+  // { name, delta }, else null
+  incDecAt(pos) {
+    const [a, b, n] = [this.tokens[pos], this.tokens[pos + 1], this.tokens[pos + 2]];
+    if (!a || !b || !n || a.type !== b.type || b.spaceBefore || n.spaceBefore) return null;
+    if (a.type !== TokenType.PLUS && a.type !== TokenType.MINUS) return null;
+    if (n.type !== TokenType.IDENT && n.type !== TokenType.DEVICE) return null;
+    return { name: n.value, delta: a.type === TokenType.PLUS ? 1 : -1 };
   }
 
   // Can the token at pos begin a command's first argument? A command name
@@ -393,6 +425,16 @@ export class Parser {
   }
 
   parseUnary() {
+    // ++NAME and --NAME (RT/1): the signs and the name written together
+    const inc = this.incDecAt(this.pos);
+    if (inc) {
+      this.pos += 3;
+      return AST.IncDec(inc.name, inc.delta);
+    }
+    if (this.peek().type === TokenType.PLUS) {
+      this.advance();
+      return this.parseUnary();
+    }
     if (this.peek().type === TokenType.MINUS) {
       this.advance();
       const operand = this.parseUnary();
@@ -490,6 +532,26 @@ export class Parser {
     // Identifier — variable reference or function call in expression context
     if (t.type === TokenType.IDENT) {
       this.advance();
+
+      // A function with switches: REPLACE.O(A,B,C), LPAD.R(N," ",5)
+      const switches = [];
+      while (this.peek().type === TokenType.DOT && !this.peek().spaceBefore &&
+             this.tokens[this.pos + 1]?.type === TokenType.IDENT && !this.tokens[this.pos + 1].spaceBefore) {
+        this.advance();
+        switches.push(this.advance().value.toUpperCase());
+      }
+      if (switches.length > 0) {
+        if (this.match(TokenType.LPAREN)) {
+          const args = [];
+          if (this.peek().type !== TokenType.RPAREN) {
+            args.push(this.parseExpr());
+            while (this.match(TokenType.COMMA)) args.push(this.parseExpr());
+          }
+          this.expect(TokenType.RPAREN);
+          return AST.Command(t.value, args, switches);
+        }
+        return AST.Command(t.value, this.startsArg(this.pos) ? this.parseArgList() : [], switches);
+      }
 
       // Function-style call: IDENT(args)
       if (this.peek().type === TokenType.LPAREN) {

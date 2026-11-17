@@ -1,4 +1,11 @@
-// builtins/system.js — HELP, USEMAP, DELETE, COMPILE, EDIT, ARRAY
+// builtins/system.js — HELP, USEMAP, DELETE, COMPILE, EDIT, ARRAY, and the
+// string package: LEN, VAL, STR, CHR, ASC, ASCII, SUBSTR, STRING, MATCH,
+// REPLACE, LPAD, ANYARGS
+
+import { formatNumber, formatValue } from '../numfmt.js';
+
+// A string argument as text; a number reads as PRINT shows it
+const asText = (v) => (v === undefined ? '' : formatValue(v));
 
 export function registerSystemCommands(interp) {
   const reg = interp.commands;
@@ -120,9 +127,11 @@ export function registerSystemCommands(interp) {
     return isNaN(n) ? 0 : n;
   }, 2);
 
-  // STR — convert number to string
+  // STR — convert number to string, with 6 significant digits as PRINT
+  // shows it
   reg.register('STR', (args, switches, ctx) => {
-    return String(args[0] ?? 0);
+    const v = args[0] ?? 0;
+    return typeof v === 'number' ? formatNumber(v) : String(v);
   }, 2);
 
   // CHR — convert number to character
@@ -135,4 +144,94 @@ export function registerSystemCommands(interp) {
     const s = String(args[0] || '');
     return s.length > 0 ? s.charCodeAt(0) : 0;
   }, 2);
+
+  // ASCII n — the one-character string with code n, as CHR (several codes
+  // give several characters). ASCII.N s — the code of s's first character, as
+  // ASC. ASCII.P n... — print the characters (RT/1 sent them to the printer)
+  reg.register('ASCII', (args, switches, ctx) => {
+    if (switches.includes('N')) {
+      const s = String(args[0] ?? '');
+      return s.length > 0 ? s.charCodeAt(0) : 0;
+    }
+    const text = args.map(a => String.fromCharCode(Math.floor(a || 0))).join('');
+    if (switches.includes('P')) {
+      ctx.terminal.print(text);
+      return 1;
+    }
+    return text;
+  }, 4); // ASCI, so that ASC is still ASC
+
+  // SUBSTR s, beg, end — characters beg to end of s, counting from 0, both
+  // included. end past the string stops at its end, and beg after end gives
+  // an empty string (RT/1's CM2.C)
+  reg.register('SUBSTR', (args, switches, ctx) => {
+    const s = String(args[0] ?? '');
+    const beg = Math.max(0, Math.floor(args[1] || 0));
+    const end = Math.min(s.length - 1, Math.floor(args[2] ?? s.length - 1));
+    return beg > end ? '' : s.slice(beg, end + 1);
+  }, 4);
+
+  // MATCH(big, sub) — where sub first starts in big, counting from 0, or -1
+  // when it isn't there. Capitals and small letters differ (RT/1 glossary)
+  reg.register('MATCH', (args) => {
+    return asText(args[0]).indexOf(asText(args[1]));
+  }, 3);
+
+  // REPLACE(big, sub, rep) — big with rep wherever sub was. REPLACE.O puts
+  // it in at the first place only. An empty sub replaces nothing
+  reg.register('REPLACE', (args, switches) => {
+    const [big, sub, rep] = [asText(args[0]), asText(args[1]), asText(args[2])];
+    if (sub === '') return big;
+    return switches.includes('O') ? big.replace(sub, () => rep) : big.split(sub).join(rep);
+  }, 3);
+
+  // LPAD(s, char, width) — s lengthened to width with char added at its
+  // start, which lines numbers up on the right. .R adds them at the end, .C
+  // at both ends (the odd one at the end). s already as wide stays as it is
+  reg.register('LPAD', (args, switches) => {
+    const s = asText(args[0]);
+    const ch = asText(args[1])[0] ?? ' ';
+    const extra = Math.max(0, Math.floor(args[2] || 0) - s.length);
+    if (switches.includes('R')) return s + ch.repeat(extra);
+    if (switches.includes('C')) {
+      const before = Math.floor(extra / 2);
+      return ch.repeat(before) + s + ch.repeat(extra - before);
+    }
+    return ch.repeat(extra) + s;
+  }, 2);
+
+  // STRING s, ix — the code of the character at ix in s. STRING s, ix, c1,
+  // c2... — write the codes c1, c2... into s from ix on, as far as its end,
+  // and return the last one written. s keeps its length. The arguments come
+  // as AST nodes, so a variable written to is set again with its new string
+  reg.register('STRING', (nodes, switches, ctx) => {
+    if (nodes.length < 2) throw new Error('STRING requires string, index');
+    const target = nodes[0];
+    const s = String(ctx.eval(target));
+    let ix = Math.floor(ctx.eval(nodes[1]) || 0);
+    if (ix < 0 || ix > s.length - 1) throw new Error('STRING index out of range');
+    const codes = nodes.slice(2).map(n => Math.floor(ctx.eval(n) || 0));
+    if (codes.length === 0) return s.charCodeAt(ix);
+    const chars = s.split('');
+    let last = 0;
+    for (const c of codes) {
+      if (ix >= chars.length) break;
+      chars[ix++] = String.fromCharCode(c);
+      last = c;
+    }
+    if (target.type === 'VarRef' || (target.type === 'Command' && target.args.length === 0)) {
+      ctx.env.set(target.name, chars.join(''));
+    }
+    return last;
+  }, 4);
+
+  // ANYARGS — 1 if the macro it is in has arguments still to take, else 0.
+  // Arguments let a macro skip its PROMPTs (lesson 6), and this tells it so.
+  // Works as a bare name in an expression: IF ANYARGS,SKIP 2
+  reg.register('ANYARGS', (args, switches, ctx) => {
+    const mib = ctx.env.currentMIB();
+    return mib && mib.args.length > mib.argIndex ? 1 : 0;
+  }, 3);
+  reg.valueNames.add('ANYARGS');
+  reg.valueNames.add('PI');
 }

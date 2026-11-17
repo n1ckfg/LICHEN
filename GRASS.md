@@ -26,11 +26,17 @@
 **ABS `value`**<br>
 Calculate the absolute value.<br>
 
+**ANYARGS**<br>
+Return 1 if the macro it is in still has arguments to take, else 0. Works as a bare name in an expression (`IF ANYARGS,SKIP 2`). (RT/1's `CM2.C`)<br>
+
 **ARRAY `name, size, [size2]`**<br>
 Create a 1D or 2D numeric array with the specified dimensions. In a 2D array, the second and third arguments are rows and columns.<br>
 
 **ASC `char`**<br>
 Convert a character to its corresponding numeric code.<br>
+
+**ASCII `num, [num2, ...]`**<br>
+Return the characters with these codes, as CHR. `ASCII.N str` returns the code of the first character, as ASC; `ASCII.P num, ...` prints the characters to the terminal (RT/1 sent them to the printer).<br>
 
 **ATAN `value`**<br>
 Calculate the arctangent of `value` and return the angle.<br>
@@ -41,17 +47,23 @@ Calculate the two-argument arctangent of `y` and `x`.<br>
 **BOX `xcenter, ycenter, xsize, ysize, [colormode]`**<br>
 Draw a box centered at (`xcenter`, `ycenter`), `xsize` wide and `ysize` high, using the specified `colormode` (defaults to 3).<br>
 
+**CENTER `x, y`**<br>
+Put the origin (0, 0) at (`x`, `y`) measured from the screen's centre. Every command's coordinates, and the centres of the drawing modifiers, are measured from it. `CENTER 0,0` puts it back. (GRASS-RT1)<br>
+
 **CHR `num`**<br>
 Convert a number to its corresponding character.<br>
 
 **CIRCLE `xcenter, ycenter, xradius, [yradius], [colormode]`**<br>
-Draw a circle or ellipse centered at (`xcenter`, `ycenter`) with horizontal radius `xradius` and vertical radius `yradius`.<br>
+Draw a circle or ellipse centered at (`xcenter`, `ycenter`) with horizontal radius `xradius` and vertical radius `yradius`. Each pixel of the outline is drawn once, so an XOR circle is whole, and the outline is closed, so FILL stays inside it.<br>
 
 **CLEAR**<br>
 Clear the TV screen. Using the `.crt` switch (i.e., `clear.crt`) clears the terminal instead.<br>
 
 **COMPILE `macro, newname`**<br>
 Zgrass compiled a macro for speed. Macros here always run interpreted, so this copies `macro` to `newname`, which then runs the same.<br>
+
+**CORNER `xsize, ysize`**<br>
+Drawing modifier: draw nothing in the `xsize` by `ysize` rectangle at the screen's lower right corner, leaving an L-shaped window. `CORNER 0,0` stops it. (GRASS-RT1)<br>
 
 **COS `angle`**<br>
 Calculate the cosine of `angle`.<br>
@@ -60,13 +72,16 @@ Calculate the cosine of `angle`.<br>
 Remove a variable or macro with the specified `name`.<br>
 
 **DISPLAY `name, x, y, [displaymode]`**<br>
-Blit a previously captured picture prototype (`name`) to the screen at position (`x`, `y`) using an optional `displaymode`: 0 plop, 1 XOR, 2 OR, 3 AND (4, 8 and 12 also give XOR, OR and AND).<br>
+Blit a previously captured picture prototype (`name`) to the screen at position (`x`, `y`) using an optional `displaymode`: 0 plop, 1 XOR, 2 OR, 3 AND (4, 8 and 12 also give XOR, OR and AND). The drawing modifiers apply to it, as in RT/1.<br>
 
 **EDIT `name`**<br>
 Open the full-screen editor for a macro `name`.<br>
 
 **EXP `value`**<br>
 Calculate e raised to the power of `value`.<br>
+
+**FILL `x, y, [colormode], [spacing]`**<br>
+Fill the area of one color around (`x`, `y`), joined across pixel edges, in `colormode` (default 3). `.L`, `.V`, `.D`, `.N` and `.C` fill with lines `spacing` apart (default 2) instead: across, up and down, diagonal, the other diagonal, or crossed. Returns -1 if (`x`, `y`) is off the screen, else 1. (GRASS-RT1's seed fill, `TFILL.C`)<br>
 
 **GOTO `label`**<br>
 Jump to a specified label within the current macro.<br>
@@ -80,14 +95,26 @@ Get values and assign them to variables, either from macro arguments or from use
 **INT `value`**<br>
 Truncate a value to its integer component.<br>
 
+**KALIEDOSCOPE `n, [xcenter, ycenter]`**<br>
+Drawing modifier: draw everything `n` times, turned in equal steps about the centre (default the CENTER). `KALIEDOSCOPE.C start, n, ...` draws only what falls in the slice starting at angle `start` (degrees, or radians when `$RD` is 1), and turns that slice. Rotated copies have gaps, as in RT/1. `KALIEDOSCOPE 1` stops it. RT/1 spelled it this way; `KALEIDOSCOPE` also works. Minimum abbreviation `KA`. (GRASS-RT1)<br>
+
+**KILL**<br>
+Stop every drawing modifier: MIRROR, MULTI, KALIEDOSCOPE, SPHERE and CORNER. CENTER stays where it is. (GRASS-RT1)<br>
+
 **LEN `val`**<br>
 Get the length of a string or array.<br>
 
-**LINE `x, y, [colormode]`**<br>
-Draw a line from the current cursor position to (`x`, `y`) using `colormode`.<br>
+**LINE `x, y, [colormode], [thickness]`**<br>
+Draw a line from the current cursor position to (`x`, `y`) using `colormode`. A `thickness` over 1 draws a fat line with a round brush, each pixel once (RT/1).<br>
 
 **LOG `value`**<br>
 Calculate the natural logarithm of a positive `value`.<br>
+
+**LPAD `(str, char, width)`**<br>
+Return `str` lengthened to `width` by adding `char` at its start, so numbers line up on the right (`LPAD(A," ",5)`). `.R` adds them at the end instead, and `.C` at both ends to centre it. A string already as wide comes back as it is. (RT/1 Glossary)<br>
+
+**MATCH `(bigstring, substring)`**<br>
+Return where `substring` first starts in `bigstring`, counting from 0, or -1 if it isn't there. Capitals and small letters differ. Minimum abbreviation `MAT`. (RT/1 Glossary)<br>
 
 **MAX `a, b`**<br>
 Return the maximum of two values.<br>
@@ -95,8 +122,14 @@ Return the maximum of two values.<br>
 **MIN `a, b`**<br>
 Return the minimum of two values.<br>
 
+**MIRROR.X, MIRROR.Y, MIRROR.XY `[xcenter, ycenter]`**<br>
+Drawing modifier: draw everything also reflected across the vertical line `x = xcenter` (`.X`), the horizontal line `y = ycenter` (`.Y`), or both (`.XY`, four copies). The centre defaults to the CENTER. An XOR pixel that lands on its own reflection is drawn twice and vanishes, as in RT/1. Minimum abbreviation `MIR`, so `MI` is still MIN. (GRASS-RT1)<br>
+
 **MOVE `x, y`**<br>
 Set the current drawing position (cursor) to (`x`, `y`).<br>
+
+**MULTI `xsize, ysize, [xcenter, ycenter]`**<br>
+Drawing modifier: draw everything repeated every `xsize` by `ysize` pixels across the whole screen. With one size 0 it repeats along one axis only; `MULTI` on its own, or `MULTI 0,0`, stops it. Switches: `.X` flips alternate rows of tiles across `xcenter`, `.Y` alternate columns across `ycenter`, `.H` adds checkerboard copies half a tile over, and `MULTI.C colormode, xsize, ysize, ...` draws every copy but the original in another colormode. (GRASS-RT1)<br>
 
 **ONERROR `label`**<br>
 Set an error handler by jumping to `label` when an error occurs.<br>
@@ -111,10 +144,13 @@ Set or read a pixel at (`x`, `y`). Without `colormode`, it returns the pixel val
 Calculate `base` raised to the power of `exponent`.<br>
 
 **PRINT `expr1, [expr2, ...]`**<br>
-Print evaluated expressions or values to the terminal.<br>
+Print evaluated expressions or values to the terminal. Numbers show 6 significant digits, as RT/1's `gcvt(value, 6)` did: `100/3` prints `33.3333`, and very large or small ones print in exponent form (`1.23457e+06`). Whole numbers print whole. Save still writes every digit.<br>
 
 **PROMPT `"text", [expr...]`**<br>
 Print its arguments to the terminal like PRINT, but with no NEXTLINE (suppressed when the macro has arguments to consume).<br>
+
+**REPLACE `(bigstring, substring, replacement)`**<br>
+Return `bigstring` with `replacement` wherever `substring` was. `REPLACE.O` replaces only the first one. Minimum abbreviation `REP`. (RT/1 Glossary)<br>
 
 **RETURN `[value]`**<br>
 Return from the current macro, optionally with a return value.<br>
@@ -137,8 +173,17 @@ Capture the `xsize` by `ysize` region of the screen centered at (`x`, `y`) as a 
 **SQRT `value`**<br>
 Calculate the square root of a non-negative `value`.<br>
 
+**SPHERE `xcenter, ycenter, radius`**<br>
+Drawing modifier: wrap the screen onto a sphere of `radius` about (`xcenter`, `ycenter`), seen from the front, so the whole screen fits in its disc. Radius 0 stops it. (GRASS-RT1)<br>
+
 **STR `num`**<br>
-Convert a number to a string.<br>
+Convert a number to a string, with 6 significant digits as PRINT shows it. Joining a number to a string with `&` or `+` formats it the same way.<br>
+
+**STRING `str, index, [code1, code2, ...]`**<br>
+Return the character code at `index` (counting from 0) in `str`. With codes, write them into the string from `index` on, as far as its end, and return the last one written; a variable passed as `str` holds the new string. An index outside the string is an error. Minimum abbreviation `STRI`. (RT/1's `CM2.C`)<br>
+
+**SUBSTR `str, begin, end`**<br>
+Return the characters of `str` from `begin` to `end`, counting from 0, both included. `end` past the string stops at its end, and `begin` after `end` gives an empty string. Minimum abbreviation `SUBS`. (RT/1's `CM2.C`)<br>
 
 **TAN `angle`**<br>
 Calculate the tangent of `angle`.<br>
@@ -154,6 +199,28 @@ Convert a string to a number.<br>
 
 **WAIT `n`**<br>
 Pause execution of the current macro for `n` frames (1/60s per frame).<br>
+
+**WHILE `condition,{ lines }ENDWHILE`**<br>
+Run the lines inside the braces again and again while `condition` is true. The braces may hold several lines, and `ENDWHILE` must follow the closing brace on the same line. As in RT/1, where WHILE was IF and ENDWHILE was `SKIP 0`, a WHILE that starts a line of a macro does one pass through the braces each time that line runs, so `.B` and `.F` macros keep running alongside it and ESC stops it. A WHILE typed at the prompt runs the same way. A WHILE after a `;` or an IF, or inside another WHILE's braces, runs its whole loop at once, and stops with an error after 100000 passes. GOTO or SKIP inside the braces leaves the loop. (RT/1 Glossary, `CMDS.C`, `COMP.C`)<br>
+
+### Operators
+
+**`++name`, `--name`**: add 1 to the variable, or take 1 from it, and return its new value: `++B`, `IF (++K)<58,SKIP -1`, `PRINT ++A+7` (that is, `(++A)+7`). The signs must be written right against the name; `9--A` is still 9 minus -A. (RT/1)<br>
+
+### Drawing modifiers
+
+MIRROR, MULTI, KALIEDOSCOPE, SPHERE and CORNER come from RT/1 (`RT1/BASELINE/MODIFIER.C`). Every pixel that BOX, LINE, POINT, CIRCLE, FILL and DISPLAY draw passes through them; CLEAR doesn't. They stack: each new kind is applied before the ones set up earlier, so `MIRROR.X` then `MULTI 80,0` repeats the original and its reflection across the screen. Setting one up again changes its values but keeps its place in the stack. KILL removes them all.
+
+### Device variables
+
+**`$X1`, `$Y1`, `$T1`, `$K1`**: joystick 1's stick (-1, 0 or 1), trigger, and knob (-128 to 127).<br>
+**`$L0`–`$L3`, `$R0`–`$R3`, `$HB`**: the left and right colors, and the boundary between them in 8-pixel columns.<br>
+**`$HR`, `$MN`, `$SC`**: the clock. Setting one sets the time.<br>
+**`$Z0`–`$Z9`**: timers. A timer set to a number counts down by 1 every frame (60 a second) until it reaches 0, whether or not a macro is running. Set one and wait until it reads 0.<br>
+**`$TK`**: frames counted up since the module started (RT/1's tick counter).<br>
+**`$CH`**: the code of the last key typed in fullscreen (RT/1).<br>
+**`$RD`**: 0 for degrees, 1 for radians.<br>
+**`$AB`**: 1 makes command names exact, with no abbreviations, so an abbreviation reaches a macro of that name instead (RT/1). Default 0.<br>
 
 
 ## Referenced
@@ -481,20 +548,31 @@ Modifies or accesses individual vector endpoints. (GRASS)<br>
 
 ### Implementations
 
+These come from RT/1 (GRASS-RT1) and are implemented here; see Current for details.
+
 **CENTER `x, y`**<br>
 Set the drawing origin/center. (GRASS-RT1)<br>
 
-**KALIEDOSCOPE `n, x, y`**<br>
-Set up a kaleidoscope drawing modifier. (GRASS-RT1)<br>
+**CORNER `xsize, ysize`**<br>
+Mask the lower right corner of the screen, for an L-shaped window. (GRASS-RT1)<br>
+
+**FILL `x, y, color`** (switches `.L .V .D .N .C`)<br>
+Seed fill. (GRASS-RT1)<br>
+
+**KALIEDOSCOPE `n, [xc, yc]`**, **KALIEDOSCOPE.C `start, n, [xc, yc]`**<br>
+Set up a kaleidoscope drawing modifier; `.C` clips to one slice. (GRASS-RT1)<br>
 
 **KILL**<br>
 Clear all drawing modifiers. (GRASS-RT1)<br>
 
-**MIRROR `x, y, xc, yc`**<br>
-Set up a mirror drawing modifier. (GRASS-RT1)<br>
+**MIRROR.X, MIRROR.Y, MIRROR.XY `[xc, yc]`**<br>
+Set up a mirror drawing modifier. The axes are switches, not arguments. (GRASS-RT1)<br>
 
-**MULTI `xs, ys, xc, yc`**<br>
+**MULTI `xsize, ysize, [xc, yc]`** (switches `.X .Y .C .H`; `.C` takes a color first)<br>
 Set up a multi drawing modifier. (GRASS-RT1)<br>
+
+**SPHERE `xc, yc, r`**<br>
+Set up a sphere drawing modifier. (GRASS-RT1)<br>
 
 
 ### Alternative Versions

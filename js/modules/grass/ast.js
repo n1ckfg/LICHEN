@@ -61,6 +61,18 @@ export function IfStmt(condition, body) {
   return { type: 'IfStmt', condition, body };
 }
 
+// WHILE condition,{block}ENDWHILE — block is the source between the braces.
+// first: the WHILE opens its line, so it can loop by going back to that line
+// (RT/1's ENDWHILE is SKIP 0)
+export function WhileStmt(condition, block) {
+  return { type: 'WhileStmt', condition, block, first: false };
+}
+
+// ++NAME or --NAME: add delta to the variable and give its new value
+export function IncDec(name, delta) {
+  return { type: 'IncDec', name, delta };
+}
+
 // Parenthesized expression (may contain assignment)
 export function Paren(expr) {
   return { type: 'Paren', expr };

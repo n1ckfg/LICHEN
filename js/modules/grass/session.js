@@ -72,6 +72,11 @@ export class GrassSession {
     this.queue.push({ summary: batch });
   }
 
+  // A key typed, for $CH: its character code
+  keyTyped(code) {
+    this.env.setDevice('$CH', code);
+  }
+
   // Set joystick 1 for this frame: x and y -1, 0 or 1, trigger 0 or 1, knob
   // -128..127
   setJoystick(x, y, trigger, knob) {
@@ -82,6 +87,7 @@ export class GrassSession {
   // One frame (1/60 s): run what's queued, then the macros
   frame() {
     this.env.updateClock();
+    this.env.tickTimers();
 
     if (!this._joystickHeld) {
       this.joystick = { ...this.joystick, x: 0, y: 0, trigger: 0 };

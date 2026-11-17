@@ -10,6 +10,8 @@
 // taken as a comment and skipped, even if there is a ';' in the line",
 // lesson 8), and a quote or bracket in it means nothing.
 
+import { plainNumber } from './numfmt.js';
+
 // A macro's lines, as GOTO, SKIP and .B interleaving count them. A quoted
 // string may run over several lines inside a macro (CHOOSY's PRINT, lesson 7),
 // and then those lines are one. Blank lines still count, as in Zgrass
@@ -100,7 +102,7 @@ export function serializeWorkspace(env) {
       if (q === null) { skipped.push(name); continue; }
       out.push(`${name}=${q}`);
     } else if (typeof value === 'number' && Number.isFinite(value)) {
-      out.push(`${name}=${value}`);
+      out.push(`${name}=${plainNumber(value)}`);
     } else {
       skipped.push(name);
     }
@@ -112,7 +114,7 @@ export function serializeWorkspace(env) {
       const v = arr.data[i];
       if (v === 0) continue;
       const idx = cols ? `${Math.floor(i / cols)},${i % cols}` : `${i}`;
-      out.push(`${name}(${idx})=${v}`);
+      out.push(`${name}(${idx})=${plainNumber(v)}`);
     }
   }
   return { text: out.length ? out.join('\n') + '\n' : '', skipped };

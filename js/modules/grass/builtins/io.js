@@ -1,5 +1,7 @@
 // builtins/io.js — PRINT, INPUT, PROMPT
 
+import { formatValue } from '../numfmt.js';
+
 export function registerIOCommands(interp) {
   const reg = interp.commands;
 
@@ -8,7 +10,7 @@ export function registerIOCommands(interp) {
     if (args.length === 0) {
       ctx.terminal.println('');
     } else {
-      const output = args.map(a => String(a)).join(' ');
+      const output = args.map(formatValue).join(' ');
       ctx.terminal.println(output);
     }
     return 1;
@@ -23,7 +25,7 @@ export function registerIOCommands(interp) {
     }
     // Like PRINT, a space after each thing, but no NEXTLINE
     if (args.length > 0) {
-      ctx.terminal.print(args.map(a => String(a) + ' ').join(''));
+      ctx.terminal.print(args.map(a => formatValue(a) + ' ').join(''));
     }
     return 1;
   }, 2);

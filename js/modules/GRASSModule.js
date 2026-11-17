@@ -159,6 +159,11 @@ export class GRASSModule extends Module {
   // before this is called), except inside the EDIT macro editor, where ESC
   // saves the macro. CTRL+C stops every macro, .B and .F too, for good
   handleKey(key, keyCode, p) {
+    // $CH is the last key typed: a character's code, or ENTER, BACKSPACE,
+    // TAB and ESC's
+    const typed = typeof key === 'string' && key.length === 1 ? key.charCodeAt(0)
+      : ([8, 9, 13, 27].includes(keyCode) ? keyCode : null);
+    if (typed !== null) this.session.keyTyped(typed);
     if (this.editor.active) {
       this.editor.handleKey(key, keyCode, p);
       return;
