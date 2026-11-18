@@ -13,15 +13,38 @@ export class CommandRegistry {
     // Set to a function returning true for exact names only ($AB=1, as RT/1
     // had it); abbreviations then go to macros and variables
     this.exactOnly = null;
+    // The switches each command takes. A command not listed takes none
+    this.switches = new Map();
   }
 
-  // Register a command
-  register(name, handler, minLen) {
+  // Register a command. switches lists the switches it takes: words, which
+  // may be abbreviated as Zgrass allowed (CL.C is CLEAR.CRT, INPUT.S is
+  // INPUT.STR), or single letters, which may be run together as RT/1 allowed
+  // (MIRROR.XY is MIRROR.X.Y)
+  register(name, handler, minLen, switches) {
     const upper = name.toUpperCase();
     this.commands.set(upper, handler);
     if (minLen !== undefined) {
       this.minLengths.set(upper, minLen);
     }
+    if (switches) this.switches.set(upper, switches.map(w => w.toUpperCase()));
+  }
+
+  // The switches given to command `name`, each written out in full as the
+  // command's handler expects it, or an error for one it doesn't take, as
+  // RT/1's "illegal/unknown switch" (ER_SW)
+  checkSwitches(name, given) {
+    if (!given.length) return given;
+    const known = this.switches.get(name) || [];
+    const letters = known.filter(w => w.length === 1);
+    return given.map(sw => {
+      const upper = sw.toUpperCase();
+      if (known.includes(upper)) return upper;
+      const word = known.filter(w => w.length > 1 && w.startsWith(upper));
+      if (word.length === 1) return word[0];
+      if (upper.length > 1 && [...upper].every(c => letters.includes(c))) return upper;
+      throw new Error(`Unknown switch .${upper} for ${name}`);
+    });
   }
 
   // Resolve a name to a command handler

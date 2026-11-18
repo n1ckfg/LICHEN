@@ -1,6 +1,6 @@
-// builtins/system.js — HELP, USEMAP, DELETE, COMPILE, EDIT, ARRAY, and the
-// string package: LEN, VAL, STR, CHR, ASC, ASCII, SUBSTR, STRING, MATCH,
-// REPLACE, LPAD, ANYARGS
+// builtins/system.js — HELP, USEMAP, DELETE, COMPILE, EDIT, ARRAY, WHATSIS,
+// BEEP, and the string package: LEN, VAL, STR, CHR, ASC, ASCII, SUBSTR,
+// STRING, MATCH, REPLACE, LPAD, ANYARGS
 
 import { formatNumber, formatValue } from '../numfmt.js';
 
@@ -25,8 +25,8 @@ export function registerSystemCommands(interp) {
     }
     if (line.length > 0) ctx.terminal.println(line);
     ctx.terminal.println('');
-    ctx.terminal.println('Assignment: VAR=expr  |  Operators: + - * / \\ % &');
-    ctx.terminal.println('Comparison: == != < > <= >=  |  Logic: AND OR NOT');
+    ctx.terminal.println('Assignment: VAR=expr  |  Operators: + - * / \\ % &  ! (abs)  @ (indirect)');
+    ctx.terminal.println('Comparison: == # <> < > <= >=  |  Logic: AND && OR || NOT');
     ctx.terminal.println('Strings: [text] {text} "text"  |  Macro: NAME=[code]');
     ctx.terminal.println('.B=background .F=foreground  |  ESC=break');
     return 1;
@@ -112,6 +112,32 @@ export function registerSystemCommands(interp) {
     return 1;
   }, 2);
 
+  // WHATSIS name — the kind of value name holds, as RT/1's numbers for them:
+  // 2 nothing, 4 a whole number, 6 a number with a fraction, 8 a string or
+  // macro, 16 an array. WHATSIS.A array — the kind its elements hold, which
+  // here is always 6: LICHEN's arrays hold any number. The name is not
+  // abbreviated, and is not read, so a macro is not run
+  reg.register('WHATSIS', (nodes, switches, ctx) => {
+    if (switches.includes('A')) {
+      ctx.arrayNamed(nodes[0] ?? { type: 'Number' }, 'WHATSIS.A');
+      return 6;
+    }
+    const name = nodes.length ? ctx.argName(nodes[0]) : null;
+    if (name === null) throw new Error('WHATSIS needs a name');
+    if (ctx.env.arrays.has(name.toUpperCase())) return 16;
+    if (!ctx.env.has(name)) return 2;
+    const v = ctx.env.get(name);
+    if (typeof v === 'string') return 8;
+    return Number.isInteger(v) ? 4 : 6;
+  }, 3, ['A']);
+
+  // BEEP — a short tone, where the page can make sound (RT/1 sent the
+  // terminal a BEL)
+  reg.register('BEEP', (args, switches, ctx) => {
+    ctx.terminal.beep();
+    return 1;
+  }, 3);
+
   // LEN — get length of string or array
   reg.register('LEN', (args, switches, ctx) => {
     if (args.length === 0) return 0;
@@ -159,7 +185,7 @@ export function registerSystemCommands(interp) {
       return 1;
     }
     return text;
-  }, 4); // ASCI, so that ASC is still ASC
+  }, 4, ['N', 'P']); // ASCI, so that ASC is still ASC
 
   // SUBSTR s, beg, end — characters beg to end of s, counting from 0, both
   // included. end past the string stops at its end, and beg after end gives
@@ -183,7 +209,7 @@ export function registerSystemCommands(interp) {
     const [big, sub, rep] = [asText(args[0]), asText(args[1]), asText(args[2])];
     if (sub === '') return big;
     return switches.includes('O') ? big.replace(sub, () => rep) : big.split(sub).join(rep);
-  }, 3);
+  }, 3, ['O']);
 
   // LPAD(s, char, width) — s lengthened to width with char added at its
   // start, which lines numbers up on the right. .R adds them at the end, .C
@@ -198,7 +224,7 @@ export function registerSystemCommands(interp) {
       return ch.repeat(before) + s + ch.repeat(extra - before);
     }
     return ch.repeat(extra) + s;
-  }, 2);
+  }, 2, ['R', 'C']);
 
   // STRING s, ix — the code of the character at ix in s. STRING s, ix, c1,
   // c2... — write the codes c1, c2... into s from ix on, as far as its end,

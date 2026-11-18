@@ -1,5 +1,5 @@
 // modifiers.js — RT/1's global drawing modifiers (RT1/BASELINE/MODIFIER.C,
-// Stephan Meyers): MIRROR, MULTI, KALIEDOSCOPE, SPHERE and CORNER.
+// Stephan Meyers): MIRROR, MULTI, KALIEDOSCOPE, SPHERE, CORNER and PATTERN.
 //
 // Every pixel a drawing command writes goes through Framebuffer.plot(), and
 // from there through the modifiers set up, each of which passes it on zero or
@@ -131,6 +131,27 @@ export function corner(xsize, ysize) {
     kind: 'CORNER',
     dot(fb, x, y, cm, next) {
       if (x < FB_WIDTH - xs || y < FB_HEIGHT - ys) fb.plotAt(next, x, y, cm);
+    },
+  };
+}
+
+// PATTERN: every dot drawn in the colormode a 2D array gives for its place,
+// whatever colormode it was drawn in. The array is xs by ys, element (i, j)
+// is used at i pixels right and j up from (ox, oy), and it repeats from
+// there across the screen. cells is a copy, taken when PATTERN was set up,
+// as RT/1 took one; null passes dots on as they are. A snap DISPLAY draws is
+// left alone, as RT/1 left it
+export function pattern(cells, xs, ys, ox, oy) {
+  const mod = (a, n) => ((a % n) + n) % n;
+  return {
+    kind: 'PATTERN',
+    ox,
+    oy,
+    dot(fb, x, y, cm, next) {
+      if (!cells || fb.drawingSnap) { fb.plotAt(next, x, y, cm); return; }
+      const i = mod(x - this.ox, xs);
+      const j = mod(this.oy - y, ys);
+      fb.plotAt(next, x, y, Math.trunc(cells[i * ys + j]) & 15);
     },
   };
 }

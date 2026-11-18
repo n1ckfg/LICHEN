@@ -32,6 +32,12 @@ Return 1 if the macro it is in still has arguments to take, else 0. Works as a b
 **ARRAY `name, size, [size2]`**<br>
 Create a 1D or 2D numeric array with the specified dimensions. In a 2D array, the second and third arguments are rows and columns.<br>
 
+**ARCSIN `value`**, **ARCCOS `value`**, **ARCTAN `value`**<br>
+The angle whose sine, cosine or tangent is `value`, in degrees, or in radians when `$RD` is 1. ARCSIN and ARCCOS take `value` from -1 to 1 and give an error for anything else. ARCTAN is ATAN. RT/1's always gave radians. Minimum abbreviation `ARCS`, `ARCC`, `ARCT`. (RT/1's `CM2.C`)<br>
+
+**ARRDIM `(array, n)`**<br>
+The size of the array's dimension `n`, counting from 0, or 0 for a dimension it hasn't: after `ARRAY FOO,200,10`, `ARRDIM(FOO,0)` is 200, `ARRDIM(FOO,1)` is 10 and `ARRDIM(FOO,2)` is 0. The array's name may be abbreviated. Minimum abbreviation `ARRD`. (RT/1 Glossary)<br>
+
 **ASC `char`**<br>
 Convert a character to its corresponding numeric code.<br>
 
@@ -44,6 +50,9 @@ Calculate the arctangent of `value` and return the angle.<br>
 **ATAN2 `y, x`**<br>
 Calculate the two-argument arctangent of `y` and `x`.<br>
 
+**BEEP**<br>
+Sound a short tone, if the browser lets the page make sound. RT/1 sent its terminal a bell. (RT/1 Glossary)<br>
+
 **BOX `xcenter, ycenter, xsize, ysize, [colormode]`**<br>
 Draw a box centered at (`xcenter`, `ycenter`), `xsize` wide and `ysize` high, using the specified `colormode` (defaults to 3).<br>
 
@@ -54,10 +63,10 @@ Put the origin (0, 0) at (`x`, `y`) measured from the screen's centre. Every com
 Convert a number to its corresponding character.<br>
 
 **CIRCLE `xcenter, ycenter, xradius, [yradius], [colormode]`**<br>
-Draw a circle or ellipse centered at (`xcenter`, `ycenter`) with horizontal radius `xradius` and vertical radius `yradius`. Each pixel of the outline is drawn once, so an XOR circle is whole, and the outline is closed, so FILL stays inside it.<br>
+Draw a circle or ellipse centered at (`xcenter`, `ycenter`) with horizontal radius `xradius` and vertical radius `yradius`. Each pixel of the outline is drawn once, so an XOR circle is whole, and the outline is closed, so FILL stays inside it. `CIRCLE.F` fills it: the outline and everything inside, the same pixels FILL would add. (RT/1)<br>
 
-**CLEAR**<br>
-Clear the TV screen. Using the `.crt` switch (i.e., `clear.crt`) clears the terminal instead.<br>
+**CLEAR `[color]`**<br>
+Clear the TV screen, to `color` (0 to 3) if one is given (`CLEAR 2`), else to 0, as RT/1's CLEAR did. Using the `.crt` switch (i.e., `clear.crt`, or `CL.C` for short, as RT/1 spelled it) clears the terminal instead.<br>
 
 **COMPILE `macro, newname`**<br>
 Zgrass compiled a macro for speed. Macros here always run interpreted, so this copies `macro` to `newname`, which then runs the same.<br>
@@ -77,6 +86,9 @@ Blit a previously captured picture prototype (`name`) to the screen at position 
 **EDIT `name`**<br>
 Open the full-screen editor for a macro `name`.<br>
 
+**ELLIPSE `xcenter, ycenter, xradius, yradius, [colormode], [angle]`**<br>
+CIRCLE's ellipse turned counterclockwise by `angle`, in degrees, or in radians when `$RD` is 1 (RT/1's were always radians). `ELLIPSE.F` fills it. Turned by a whole number of quarter turns it is exactly CIRCLE's ellipse. Turned any other way it is drawn as a polygon with many sides, each pixel once, so an XOR ellipse is still whole. Minimum abbreviation `EL`. (RT/1 Glossary)<br>
+
 **EXP `value`**<br>
 Calculate e raised to the power of `value`.<br>
 
@@ -89,8 +101,11 @@ Jump to a specified label within the current macro.<br>
 **HELP**<br>
 List all available commands and basic syntax help.<br>
 
+**IF `condition, command`**<br>
+Run the rest of the line, `;`s and all, if `condition` is not 0; otherwise go on to the next line. `IF.N` runs it if `condition` is 0 instead (`IF.N FLAG,B=C+D`). (RT/1 Glossary)<br>
+
 **INPUT `var1, [var2, ...]`**<br>
-Get values and assign them to variables, either from macro arguments or from user input via the REPL. A running macro waits for a typed line of comma-separated values; `INPUT.STR` takes the line as a string.<br>
+Get values and assign them to variables, either from macro arguments or from user input via the REPL. A running macro waits for a typed line of comma-separated values; `INPUT.STR` (or RT/1's `INPUT.S`) takes the line as a string. A variable may be given by `@`. `INPUT.N` is `INPUT.STR`, except that a macro argument written as a bare name gives that name rather than its value: with `TAKE=[INPUT.N n;PRINT n]`, `TAKE FOO` prints `FOO`. That lets a macro take names the way RT/1's commands do. `INPUT.F` first throws away what was typed ahead: answers kept for a later INPUT, and the key in `$CH`. (RT/1 Glossary)<br>
 
 **INT `value`**<br>
 Truncate a value to its integer component.<br>
@@ -99,7 +114,7 @@ Truncate a value to its integer component.<br>
 Drawing modifier: draw everything `n` times, turned in equal steps about the centre (default the CENTER). `KALIEDOSCOPE.C start, n, ...` draws only what falls in the slice starting at angle `start` (degrees, or radians when `$RD` is 1), and turns that slice. Rotated copies have gaps, as in RT/1. `KALIEDOSCOPE 1` stops it. RT/1 spelled it this way; `KALEIDOSCOPE` also works. Minimum abbreviation `KA`. (GRASS-RT1)<br>
 
 **KILL**<br>
-Stop every drawing modifier: MIRROR, MULTI, KALIEDOSCOPE, SPHERE and CORNER. CENTER stays where it is. (GRASS-RT1)<br>
+Stop every drawing modifier: MIRROR, MULTI, KALIEDOSCOPE, SPHERE, CORNER and PATTERN. CENTER, and the origin PATTERN.C set, stay where they are. (GRASS-RT1)<br>
 
 **LEN `val`**<br>
 Get the length of a string or array.<br>
@@ -107,8 +122,11 @@ Get the length of a string or array.<br>
 **LINE `x, y, [colormode], [thickness]`**<br>
 Draw a line from the current cursor position to (`x`, `y`) using `colormode`. A `thickness` over 1 draws a fat line with a round brush, each pixel once (RT/1).<br>
 
+**LN `value`**<br>
+Calculate the natural logarithm of a positive `value`, as LOG does. (RT/1's `CM2.C`)<br>
+
 **LOG `value`**<br>
-Calculate the natural logarithm of a positive `value`.<br>
+Calculate the natural logarithm of a positive `value`. RT/1's LOG was base 10, but the UV-1 lessons don't say which Zgrass used, so LOG stays natural here. For base 10, use `LN(x)/LN(10)`.<br>
 
 **LPAD `(str, char, width)`**<br>
 Return `str` lengthened to `width` by adding `char` at its start, so numbers line up on the right (`LPAD(A," ",5)`). `.R` adds them at the end instead, and `.C` at both ends to centre it. A string already as wide comes back as it is. (RT/1 Glossary)<br>
@@ -137,20 +155,29 @@ Set an error handler by jumping to `label` when an error occurs.<br>
 **PI**<br>
 Return the constant π (pi).<br>
 
+**PATTERN `[array]`**<br>
+Drawing modifier: draw everything in the colormodes of a 2D array (`ARRAY PT,xsize,ysize`), repeated across the screen, whatever colormode a command gives. Element `PT(i,j)` is used `i` pixels right and `j` up from the pattern's origin. The array is copied, so changing it later changes nothing until PATTERN is given it again. `PATTERN` on its own stops it. `PATTERN.C x, y` puts the origin at (`x`, `y`); it starts at (0, 0). A snap DISPLAY draws keeps its own colors, as on RT/1. This is RT/1's PATTERN (`MODIFIER.C`); 16k Zgrass had an unrelated PATTERN that built a pixel list (see Referenced). Minimum abbreviation `PAT`. (GRASS-RT1)<br>
+
 **POINT `x, y, [colormode]`**<br>
 Set or read a pixel at (`x`, `y`). Without `colormode`, it returns the pixel value. With `colormode`, it sets the pixel.<br>
 
-**POW `base, exponent`**<br>
-Calculate `base` raised to the power of `exponent`.<br>
+**POLYGON `array, colormode, xcenter, ycenter, [xscale, yscale], [angle]`**<br>
+Join the points of an N by 2 array in order (x in `(i,0)`, y in `(i,1)`), and the last back to the first, about (`xcenter`, `ycenter`). The points are scaled, then turned counterclockwise by `angle` (degrees, or radians when `$RD` is 1). As in RT/1, one extra argument is the angle, two are the scales and three are both. `POLYGON.F` fills it, by the even-odd rule, so a polygon that crosses itself leaves holes. RT/1's `POLYGON.F` wanted two scratch-array names before the array (`POLYGON.F SC1,SC2,SQ,3,0,0`); they may be given and are not needed. Minimum abbreviation `POL`. (RT/1 Glossary)<br>
+
+**POW `base, exponent`**, **POWER `base, exponent`**<br>
+Calculate `base` raised to the power of `exponent`. POWER is RT/1's name (minimum abbreviation `POWE`). RT/1's POWER refused a negative exponent; here both take one.<br>
 
 **PRINT `expr1, [expr2, ...]`**<br>
-Print evaluated expressions or values to the terminal. Numbers show 6 significant digits, as RT/1's `gcvt(value, 6)` did: `100/3` prints `33.3333`, and very large or small ones print in exponent form (`1.23457e+06`). Whole numbers print whole. Save still writes every digit.<br>
+Print evaluated expressions or values to the terminal, a space between them, then a NEXTLINE. `PRINT.S` leaves out the spaces, and `PRINT.N` the spaces and the NEXTLINE, so the next PRINT goes on the same line (RT/1). Numbers show 6 significant digits, as RT/1's `gcvt(value, 6)` did: `100/3` prints `33.3333`, and very large or small ones print in exponent form (`1.23457e+06`). Whole numbers print whole. Save still writes every digit.<br>
 
 **PROMPT `"text", [expr...]`**<br>
 Print its arguments to the terminal like PRINT, but with no NEXTLINE (suppressed when the macro has arguments to consume).<br>
 
 **REPLACE `(bigstring, substring, replacement)`**<br>
 Return `bigstring` with `replacement` wherever `substring` was. `REPLACE.O` replaces only the first one. Minimum abbreviation `REP`. (RT/1 Glossary)<br>
+
+**RBOX `xcenter, ycenter, xsize, ysize, angle, [colormode], [width]`**<br>
+BOX's outline turned counterclockwise by `angle` (degrees, or radians when `$RD` is 1), `width` pixels wide (default 1). Note that the angle comes before the colormode, as in RT/1. `RBOX.F` fills it, and at angle 0 that is exactly BOX. A size of 0 or less draws nothing and returns -1. Minimum abbreviation `RB`. (RT/1's `MEYERS.C`)<br>
 
 **RETURN `[value]`**<br>
 Return from the current macro, optionally with a return value.<br>
@@ -176,6 +203,9 @@ Calculate the square root of a non-negative `value`.<br>
 **SPHERE `xcenter, ycenter, radius`**<br>
 Drawing modifier: wrap the screen onto a sphere of `radius` about (`xcenter`, `ycenter`), seen from the front, so the whole screen fits in its disc. Radius 0 stops it. (GRASS-RT1)<br>
 
+**STOP `name, [name2, ...]`**<br>
+Stop the `.B` and `.F` macros running these macros, and leave the rest running (CTRL+C stops them all). A macro may stop itself. The names may be abbreviated. Returns how many it stopped. Minimum abbreviation `STO`, so that `ST` is still STR. (UV-1 lesson 11, RT/1's `CM2.C`)<br>
+
 **STR `num`**<br>
 Convert a number to a string, with 6 significant digits as PRINT shows it. Joining a number to a string with `&` or `+` formats it the same way.<br>
 
@@ -197,6 +227,9 @@ List all user-defined names (variables and macros) in the environment.<br>
 **VAL `str`**<br>
 Convert a string to a number.<br>
 
+**WHATSIS `name`**<br>
+Return what kind of value `name` holds, using RT/1's numbers: 2 nothing, 4 a whole number, 6 a number with a fraction, 8 a string or macro, 16 an array. The name is not abbreviated, and nothing it names is run. `WHATSIS.A array` returns the kind of value the array's elements hold, which here is always 6, since LICHEN's arrays hold any number. Minimum abbreviation `WHA`. (RT/1 Glossary)<br>
+
 **WAIT `n`**<br>
 Pause execution of the current macro for `n` frames (1/60s per frame).<br>
 
@@ -205,11 +238,19 @@ Run the lines inside the braces again and again while `condition` is true. The b
 
 ### Operators
 
+**`+ - * / \ % &`**, **`== < > <= >=`**, **`AND OR NOT`**: as before. RT/1's own spellings also work (`GLOB.C`): **`#`** and `<>` for not equal (`!=` too), **`=<`** and **`=>`** for `<=` and `>=`, **`&&`** and **`||`** for AND and OR.<br>
+**`!value`**: the absolute value, at the same precedence as unary minus: `!-5` is 5, `1+!-2*3` is 7. (RT/1)<br>
+**`?name`**: the value of `name`, as in a macro's arguments (`SQUAREM(?a,?b)`). Arguments are always values here, so it changes nothing.<br>
+**`@name`**: indirection: the variable whose name is the string `name` holds. With `TOM=12;SAM="TOM"`, `PRINT @SAM` prints 12 and `@SAM=7` sets TOM. The string may name an array element (`@(ANAME&"("&1&")")`), and `@` works where a command takes a name (`ARRAY @ANAME,n`, `DISPLAY @P,0,0`, `INPUT @V`, `STOP @M`). It binds tighter than anything else, so `@SAM+1` is `(@SAM)+1`. (RT/1 Glossary, BASIC Zgrass 1978)<br>
+**Numbers** may start with the point: `B=B+.02`, `IF X<=.7`.<br>
+**Comments**: a line starting with `.` is a comment, and so is the rest of a line after `;` and a `.`, blanks allowed between: `LINE 6,-70,1;.THIS LINE HAS A COMMENT`. A quote or bracket in a comment means nothing. (RT/1 Glossary, BASIC Zgrass 1978)<br>
+**Errors, not quiet wrong answers**: a character that is no operator (`|`, `^`, `~`) is an error, as RT/1's "unknown character in expression"; so is a switch the command doesn't take (`BOX.F`, `PRINT.Q`), as its "illegal/unknown switch", a name called with parentheses that is no function, array or macro (`COSH(1)`), and setting an element of something that is no array (`X(1)=5` before `ARRAY X,...`; it used to set the variable X). An array's name may be abbreviated when an element is set, as when one is read (`PY(2)=7` for PYR). A bare name that has not been set still reads as 0.<br>
+
 **`++name`, `--name`**: add 1 to the variable, or take 1 from it, and return its new value: `++B`, `IF (++K)<58,SKIP -1`, `PRINT ++A+7` (that is, `(++A)+7`). The signs must be written right against the name; `9--A` is still 9 minus -A. (RT/1)<br>
 
 ### Drawing modifiers
 
-MIRROR, MULTI, KALIEDOSCOPE, SPHERE and CORNER come from RT/1 (`RT1/BASELINE/MODIFIER.C`). Every pixel that BOX, LINE, POINT, CIRCLE, FILL and DISPLAY draw passes through them; CLEAR doesn't. They stack: each new kind is applied before the ones set up earlier, so `MIRROR.X` then `MULTI 80,0` repeats the original and its reflection across the screen. Setting one up again changes its values but keeps its place in the stack. KILL removes them all.
+MIRROR, MULTI, KALIEDOSCOPE, SPHERE, CORNER and PATTERN come from RT/1 (`RT1/BASELINE/MODIFIER.C`). Every pixel that BOX, LINE, POINT, CIRCLE, ELLIPSE, RBOX, POLYGON, FILL and DISPLAY draw passes through them; CLEAR doesn't. They stack: each new kind is applied before the ones set up earlier, so `MIRROR.X` then `MULTI 80,0` repeats the original and its reflection across the screen. Setting one up again changes its values but keeps its place in the stack. KILL removes them all.
 
 ### Device variables
 
@@ -556,6 +597,9 @@ Set the drawing origin/center. (GRASS-RT1)<br>
 **CORNER `xsize, ysize`**<br>
 Mask the lower right corner of the screen, for an L-shaped window. (GRASS-RT1)<br>
 
+**ELLIPSE**, **RBOX**, **POLYGON** (switch `.F`), and **CIRCLE.F**<br>
+Turned ellipses and boxes, polygons from an array, and filled shapes. (GRASS-RT1)<br>
+
 **FILL `x, y, color`** (switches `.L .V .D .N .C`)<br>
 Seed fill. (GRASS-RT1)<br>
 
@@ -571,8 +615,14 @@ Set up a mirror drawing modifier. The axes are switches, not arguments. (GRASS-R
 **MULTI `xsize, ysize, [xc, yc]`** (switches `.X .Y .C .H`; `.C` takes a color first)<br>
 Set up a multi drawing modifier. (GRASS-RT1)<br>
 
+**PATTERN `array`**, **PATTERN.C `x, y`**<br>
+Set up a pattern drawing modifier. (GRASS-RT1)<br>
+
 **SPHERE `xc, yc, r`**<br>
 Set up a sphere drawing modifier. (GRASS-RT1)<br>
+
+**LN**, **ARCSIN**, **ARCCOS**, **ARCTAN**, **POWER**, **ARRDIM**, **WHATSIS**, **BEEP**, **CLEAR `color`**, **INPUT.N**, **INPUT.F**<br>
+Functions and commands from RT/1's glossary. (GRASS-RT1)<br>
 
 
 ### Alternative Versions

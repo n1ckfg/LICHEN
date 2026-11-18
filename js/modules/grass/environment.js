@@ -174,16 +174,18 @@ export class Environment {
   }
 
   // Push a new MIB frame (macro invocation)
-  pushMIB(macroName, args) {
-    this.mibStack.push(this.newMIB(macroName, args));
+  pushMIB(macroName, args, argNames) {
+    this.mibStack.push(this.newMIB(macroName, args, argNames));
   }
 
-  // A new MIB frame (macro invocation)
-  newMIB(macroName, args) {
+  // A new MIB frame (macro invocation). argNames holds, for each argument
+  // written as a bare name, that name (else null), for INPUT.N
+  newMIB(macroName, args, argNames) {
     return ({
       macroName,
       locals: new Map(),
       args: args || [],
+      argNames: argNames || [],
       argIndex: 0,
       pc: 0,
       lines: [],

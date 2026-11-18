@@ -43,6 +43,12 @@ export class Terminal {
     this.dirty = true;
   }
 
+  // BEEP: counted here, and played (and the count cleared) by the page,
+  // which has the sound
+  beep() {
+    this.beeps = (this.beeps || 0) + 1;
+  }
+
   // End the open line
   newline() {
     this.atLineStart = true;

@@ -55,10 +55,36 @@ export class GRASSModule extends Module {
     this._startSession();
   }
 
+  // BEEP: a tenth of a second of a soft square wave. Several BEEPs in one
+  // frame sound as one. Silent where the page has no sound, or the browser
+  // hasn't let it start yet
+  _beep() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      const ctx = this._audio || (this._audio = new AC());
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 880;
+      gain.gain.value = 0.08;
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } catch (e) {
+      // no sound
+    }
+  }
+
   // Called every frame by the pipeline (always, regardless of fullscreen state)
   process(graph, glCanvas) {
     this.session.speed = Math.max(1, Math.round(this.params.speed.value));
     this.session.frame();
+    if (this.terminal.beeps) {
+      this.terminal.beeps = 0;
+      this._beep();
+    }
 
     // Build p5.Image from framebuffer + palette lookup
     this._updateFBImage();
@@ -207,6 +233,8 @@ export class GRASSModule extends Module {
   dispose() {
     this.scheduler.killAll();
     this.fbImage = null;
+    if (this._audio) this._audio.close().catch(() => {});
+    this._audio = null;
     super.dispose();
   }
 }

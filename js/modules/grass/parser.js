@@ -7,11 +7,14 @@
 //   command_call = IDENT [switches] [arglist]
 //   arglist = expr { "," expr } | "(" expr { "," expr } ")"
 //   expr = lvalue ("=" | ":") expr | or
-//   comparison = addition { ("==" | "<" | ">" | "<=" | ">=" | "!=") addition }
+//   or = and { ("OR" | "||") and }
+//   and = comparison { ("AND" | "&&") comparison }
+//   comparison = addition { ("==" | "<" | ">" | "<=" | "=<" | ">=" | "=>" |
+//                "#" | "<>" | "!=") addition }
 //   addition = multiplication { ("+" | "-") multiplication }
 //   multiplication = unary { ("*" | "/" | "\" | "%" | "&") unary }
-//   unary = ["-" | "NOT"] primary
-//   primary = NUMBER | STRING | paren_expr | DEVICE | var_or_call
+//   unary = ["-" | "+" | "NOT" | "!" | "?"] unary | "++" NAME | "--" NAME | primary
+//   primary = "@" primary | NUMBER | STRING | paren_expr | DEVICE | var_or_call
 //   paren_expr = "(" [assignment | expr] ")"
 //   var_or_call = IDENT ["(" arglist ")"] [":=" expr]
 
@@ -174,6 +177,18 @@ export class Parser {
   parseIf() {
     this.advance(); // skip IF
 
+    // IF.N runs the rest of the line when the condition is false (RT/1)
+    let negate = false;
+    while (this.peek().type === TokenType.DOT) {
+      this.advance();
+      const sw = this.peek();
+      if (sw.type !== TokenType.IDENT || sw.value.toUpperCase() !== 'N') {
+        throw new Error(`Unknown switch .${sw.value ?? ''} for IF`);
+      }
+      this.advance();
+      negate = true;
+    }
+
     // Parse condition expression
     const condition = this.parseExpr();
 
@@ -191,7 +206,7 @@ export class Parser {
     }
 
     const body = stmts.length === 1 ? stmts[0] : AST.Sequence(stmts);
-    return AST.IfStmt(condition, body);
+    return AST.IfStmt(condition, body, negate);
   }
 
   // WHILE condition,{ lines }ENDWHILE (RT/1). The braces hold any number of
@@ -320,6 +335,11 @@ export class Parser {
       this.advance();
       return AST.ArrayAssign(left.name, left.indices, this.parseExpr());
     }
+    // @NAME=value sets the variable whose name NAME holds
+    if (left.type === 'Indirect') {
+      this.advance();
+      return AST.IndirectAssign(left, this.parseExpr());
+    }
     if (this.peek().type === TokenType.EQ) {
       this.advance();
       return AST.BinOp('==', left, this.parseExpr());
@@ -352,7 +372,8 @@ export class Parser {
     if (!t || !t.spaceBefore) return false;
     return t.type === TokenType.NUMBER || t.type === TokenType.STRING ||
       t.type === TokenType.IDENT || t.type === TokenType.DEVICE ||
-      t.type === TokenType.NOT || this.startsSpacedArg(pos);
+      t.type === TokenType.NOT || t.type === TokenType.BANG || t.type === TokenType.AT ||
+      t.type === TokenType.QUESTION || this.startsSpacedArg(pos);
   }
 
   parseOr() {
@@ -445,11 +466,29 @@ export class Parser {
       const operand = this.parseUnary();
       return AST.UnaryOp('NOT', operand);
     }
+    // !X is the absolute value of X (RT/1)
+    if (this.peek().type === TokenType.BANG) {
+      this.advance();
+      return AST.UnaryOp('ABS', this.parseUnary());
+    }
+    // ?X is X's value: a macro's arguments are values here already, so it
+    // changes nothing (SQUAREM(?a,?b), lesson 11)
+    if (this.peek().type === TokenType.QUESTION) {
+      this.advance();
+      return this.parseUnary();
+    }
     return this.parsePrimary();
   }
 
   parsePrimary() {
     const t = this.peek();
+
+    // @X: the variable (or array element) whose name is the string X holds.
+    // It binds tighter than any other operator, so @X+1 is (@X)+1
+    if (t.type === TokenType.AT) {
+      this.advance();
+      return AST.Indirect(this.parsePrimary());
+    }
 
     // Number literal
     if (t.type === TokenType.NUMBER) {

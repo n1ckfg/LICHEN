@@ -23,10 +23,13 @@ export const TokenType = {
   GT:        'GT',         // >
   LE:        'LE',         // <=
   GE:        'GE',         // >=
-  NE:        'NE',         // != or <>
+  NE:        'NE',         // #, <> or !=
   NOT:       'NOT',        // NOT
-  AND:       'AND',        // AND (logical)
-  OR:        'OR',         // OR (logical)
+  AND:       'AND',        // AND or && (logical)
+  OR:        'OR',         // OR or || (logical)
+  BANG:      'BANG',       // ! (absolute value, unary)
+  AT:        'AT',         // @ (indirection: the name a string holds)
+  QUESTION:  'QUESTION',   // ? (value, unary)
   DOT:       'DOT',        // . (switch prefix)
   NEWLINE:   'NEWLINE',    // end of line
   EOF:       'EOF',
@@ -45,8 +48,8 @@ export function tokenize(source) {
   while (i < len) {
     const ch = source[i];
 
-    // Skip spaces and tabs (but not newlines)
-    if (ch === ' ' || ch === '\t') {
+    // Skip spaces, tabs and other blanks (but not newlines)
+    if (ch !== '\n' && ch !== '\r' && /\s/.test(ch)) {
       spaced = true;
       i++;
       continue;
@@ -64,8 +67,9 @@ export function tokenize(source) {
     // Actually in GRASS, . at start of a line is a comment but .B/.F are switches.
     // We'll handle . as DOT token and let the parser figure it out.
 
-    // Numbers (including decimals)
-    if (ch >= '0' && ch <= '9') {
+    // Numbers (including decimals, and .5 with no 0 before the point, as in
+    // RT/1's glossary: B=B+.02). A . before a letter is a switch or a comment
+    if ((ch >= '0' && ch <= '9') || (ch === '.' && isDigit(source[i + 1]))) {
       let num = '';
       while (i < len && ((source[i] >= '0' && source[i] <= '9') || source[i] === '.')) {
         // Don't consume . if it's followed by a letter (it's a switch like .B)
@@ -75,7 +79,7 @@ export function tokenize(source) {
         i++;
       }
       // Check if this number is immediately followed by letters (label like 1UP)
-      if (i < len && isIdentStart(source[i])) {
+      if (i < len && isIdentStart(source[i]) && num[0] !== '.') {
         let label = num;
         while (i < len && isIdentChar(source[i])) {
           label += source[i];
@@ -173,9 +177,30 @@ export function tokenize(source) {
       continue;
     }
 
-    // Two-character operators
-    if (ch === '=' && i + 1 < len && source[i + 1] === '=') {
-      tokens.push({ type: TokenType.EQ, value: '==' });
+    // ; then . starts a comment that runs to the end of the line, blanks
+    // allowed between: LINE 6,-70,1;.THIS LINE HAS A COMMENT (RT/1 glossary,
+    // COMMENT; BASIC Zgrass 1978's ;.get name). The ; still ends the
+    // statement, and the newline is kept
+    if (ch === ';') {
+      let j = i + 1;
+      while (j < len && (source[j] === ' ' || source[j] === '\t')) j++;
+      if (source[j] === '.') {
+        tokens.push({ type: TokenType.SEMI, value: ';' });
+        while (j < len && source[j] !== '\n' && source[j] !== '\r') j++;
+        i = j;
+        continue;
+      }
+    }
+
+    // Two-character operators. RT/1's table (GLOB.C op_tab) also has =< and
+    // => for <= and >=, && and || for AND and OR
+    const two = source.slice(i, i + 2);
+    const pair = {
+      '==': [TokenType.EQ, '=='], '=<': [TokenType.LE, '<='], '=>': [TokenType.GE, '>='],
+      '&&': [TokenType.AND, 'AND'], '||': [TokenType.OR, 'OR'],
+    }[two];
+    if (pair) {
+      tokens.push({ type: pair[0], value: pair[1] });
       i += 2;
       continue;
     }
@@ -225,15 +250,24 @@ export function tokenize(source) {
       case '<': tokens.push({ type: TokenType.LT, value: '<' }); break;
       case '>': tokens.push({ type: TokenType.GT, value: '>' }); break;
       case '.': tokens.push({ type: TokenType.DOT, value: '.' }); break;
+      case '#': tokens.push({ type: TokenType.NE, value: '<>' }); break;
+      case '!': tokens.push({ type: TokenType.BANG, value: '!' }); break;
+      case '@': tokens.push({ type: TokenType.AT, value: '@' }); break;
+      case '?': tokens.push({ type: TokenType.QUESTION, value: '?' }); break;
       default:
-        // Skip unknown characters
-        break;
+        // RT/1's "unknown character in expression" (ER_DKCH), rather than
+        // reading the line as if the character weren't there
+        throw new Error(`Unknown character in expression: ${ch}`);
     }
     i++;
   }
 
   tokens.push({ type: TokenType.EOF, value: null });
   return tokens;
+}
+
+function isDigit(ch) {
+  return ch !== undefined && ch >= '0' && ch <= '9';
 }
 
 function isIdentStart(ch) {

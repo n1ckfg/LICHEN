@@ -89,11 +89,15 @@ export class Scheduler {
   tick(interpreter, budget = this.mgLinesPerFrame) {
     this.breakRequested = false;
     budget = Math.max(1, Math.floor(budget));
+    // Tasks STOPped since the last frame
+    this.foreground = this.foreground.filter(t => !t.done);
+    this.background = this.background.filter(t => !t.done);
 
     // Run all foreground tasks through once, or once every TIMEOUT frames
     for (let i = this.foreground.length - 1; i >= 0; i--) {
       if (this.breakRequested) break;
       const task = this.foreground[i];
+      if (task.done) { this.foreground.splice(i, 1); continue; } // STOPped
       if (this._sleeping(task)) continue;
       if (task.cooldown > 0) { task.cooldown--; continue; }
       this._guard(task, () => this.runTaskFully(task, interpreter));
@@ -228,6 +232,21 @@ export class Scheduler {
     task.pc = task.pc - 1 + offset; // -1 because pc was already advanced
   }
 
+  // STOP: end the .B and .F tasks running macro `name`. They are marked done,
+  // so a task running now ends after its line, and tick() clears them away.
+  // Returns how many there were
+  stop(name) {
+    const upper = String(name).toUpperCase();
+    let n = 0;
+    for (const task of [...this.foreground, ...this.background]) {
+      if (!task.done && task.name.toUpperCase() === upper) {
+        task.done = true;
+        n++;
+      }
+    }
+    return n;
+  }
+
   // Kill all running tasks
   killAll() {
     this.foreground = [];
@@ -252,6 +271,7 @@ export class Scheduler {
 
   // Check if any tasks are running
   isRunning() {
-    return this.foreground.length > 0 || this.middleground.length > 0 || this.background.length > 0;
+    const live = (t) => !t.done;
+    return this.foreground.some(live) || this.middleground.length > 0 || this.background.some(live);
   }
 }

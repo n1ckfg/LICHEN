@@ -57,8 +57,19 @@ export function Sequence(stmts) {
 }
 
 // IF condition, rest-of-line
-export function IfStmt(condition, body) {
-  return { type: 'IfStmt', condition, body };
+// negate: IF.N, which runs the body when the condition is false
+export function IfStmt(condition, body, negate = false) {
+  return { type: 'IfStmt', condition, body, negate };
+}
+
+// @expr: the variable named by the string expr gives (RT/1's indirection)
+export function Indirect(expr) {
+  return { type: 'Indirect', expr };
+}
+
+// @expr=value: set the variable named by the string expr gives
+export function IndirectAssign(target, expr) {
+  return { type: 'IndirectAssign', target, expr };
 }
 
 // WHILE condition,{block}ENDWHILE — block is the source between the braces.

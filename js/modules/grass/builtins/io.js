@@ -5,16 +5,19 @@ import { formatValue } from '../numfmt.js';
 export function registerIOCommands(interp) {
   const reg = interp.commands;
 
-  // PRINT expr — print value to terminal, returns 1
+  // PRINT expr, ... — print the values to the terminal, a space between them,
+  // then a NEXTLINE. Returns 1
   reg.register('PRINT', (args, switches, ctx) => {
     if (args.length === 0) {
-      ctx.terminal.println('');
+      if (!switches.some(s => s.includes('N'))) ctx.terminal.println('');
     } else {
-      const output = args.map(formatValue).join(' ');
-      ctx.terminal.println(output);
+      // .S: no space between the things, .N: and no NEXTLINE either (RT/1)
+      const output = args.map(formatValue).join(switches.length ? '' : ' ');
+      if (switches.some(s => s.includes('N'))) ctx.terminal.print(output);
+      else ctx.terminal.println(output);
     }
     return 1;
-  }, 1);
+  }, 1, ['S', 'N']);
 
   // PROMPT "text" — print prompt text (suppressed when macro has args)
   reg.register('PROMPT', (args, switches, ctx) => {
@@ -37,18 +40,30 @@ export function registerIOCommands(interp) {
   // and fill the variables in order. Too few and the next is asked for; too
   // many and the rest wait for the macro's next INPUT. INPUT.STR takes the
   // line whole as a string. All the variables are set at once, when there are
-  // enough values, and then the rest of the line runs
+  // enough values, and then the rest of the line runs.
+  // INPUT.N is INPUT.STR, except that an argument passed as a bare name
+  // (MAC FOO) gives the name FOO, not its value, so a macro can take names
+  // as RT/1's commands do. INPUT.F first throws away what was typed ahead:
+  // answers kept for a later INPUT, and the key in $CH (RT/1)
   reg.register('INPUT', (astNodes, switches, ctx) => {
     const mib = ctx.env.currentMIB();
     const task = ctx.currentTask;
-    const asString = switches.includes('STR');
+    const has = (letter) => switches.some(s => s !== 'STR' && s.includes(letter));
+    const byName = has('N');
+    const asString = switches.includes('STR') || byName;
+    // Not on a line run again after an answer, which would throw it away
+    if (has('F') && !(task && task._inputFrom !== undefined)) {
+      ctx.env.setDevice('$CH', 0);
+      if (task) task._inputValues = [];
+    }
 
     // Extract variable names; an array element such as CHECKERBOARD(X,Y) is
     // set through its array
     const targets = [];
     for (const node of astNodes) {
-      if (node.type === 'VarRef' || node.type === 'Command') {
-        targets.push({ name: node.name, store: (v) => ctx.env.set(node.name, v) });
+      if (node.type === 'VarRef' || node.type === 'Command' || node.type === 'Indirect') {
+        const name = ctx.argName(node);
+        targets.push({ name, store: (v) => ctx.env.set(name, v) });
       } else if (node.type === 'ArrayRef' && ctx.env.arrays.has(node.name.toUpperCase())) {
         const indices = node.indices.map(i => ctx.eval(i));
         targets.push({ name: node.name, store: (v) => ctx.env.setArray(node.name, indices, v) });
@@ -65,7 +80,8 @@ export function registerIOCommands(interp) {
     } else {
       k = 0;
       while (k < targets.length && mib && mib.args.length > mib.argIndex) {
-        targets[k++].store(mib.args[mib.argIndex++]);
+        const i = mib.argIndex++;
+        targets[k++].store(byName ? (mib.argNames[i] ?? mib.args[i]) : mib.args[i]);
       }
     }
     if (task) delete task._inputFrom;
@@ -97,7 +113,7 @@ export function registerIOCommands(interp) {
       ctx.terminal.println(`(INPUT ${t.name}: no input here; run the macro by name to type values)`);
     }
     return 1;
-  }, 1);
+  }, 1, ['STR', 'N', 'F']);
 }
 
 // A typed answer: numbers where they parse, else strings

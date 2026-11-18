@@ -8,7 +8,17 @@
 // line, so one stray quote can't swallow the rest of the file. A line whose
 // first character is a period is a comment, as in a macro ("the entire line is
 // taken as a comment and skipped, even if there is a ';' in the line",
-// lesson 8), and a quote or bracket in it means nothing.
+// lesson 8), and a quote or bracket in it means nothing. So does one in a
+// comment after a command, which starts at a ; followed by a period
+// (LINE 6,-70,1;.IT'S A COMMENT), outside any [] or {}.
+
+// Does a comment start at src[i], a ; followed by a period, blanks between?
+function inlineCommentAt(src, i) {
+  if (src[i] !== ';') return false;
+  let j = i + 1;
+  while (src[j] === ' ' || src[j] === '\t') j++;
+  return src[j] === '.';
+}
 
 import { plainNumber } from './numfmt.js';
 
@@ -63,6 +73,12 @@ export function splitScript(text, { quotesSpanLines = false, keepBlank = false }
     }
     if (quote) {
       if (ch === quote) quote = null;
+      continue;
+    }
+    if (depth === 0 && inlineCommentAt(src, i)) {
+      // Skip to the end of the line; the newline ends the command as usual
+      const nl = src.indexOf('\n', i);
+      i = (nl === -1 ? src.length : nl) - 1;
       continue;
     }
     if (ch === '[' || ch === '{') depth++;

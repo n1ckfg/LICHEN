@@ -2,7 +2,7 @@
 // Evaluates AST nodes, dispatches commands, handles macro invocation.
 
 import { tokenize } from './tokenizer.js';
-import { parse } from './parser.js';
+import { parse, Parser } from './parser.js';
 import { CommandRegistry } from './commands.js';
 import { splitMacroLines } from './script.js';
 import { formatValue } from './numfmt.js';
@@ -13,7 +13,11 @@ import { registerControlCommands } from './builtins/control.js';
 import { registerSystemCommands } from './builtins/system.js';
 
 // Commands whose handlers get their arguments as AST nodes, to set variables
-const RAW_ARG_COMMANDS = new Set(['INPUT', 'STRING']);
+// or to take names (ARRDIM FOO,0 names the array FOO, not its value)
+const RAW_ARG_COMMANDS = new Set(['INPUT', 'STRING', 'ARRDIM', 'WHATSIS', 'POLYGON', 'PATTERN']);
+
+// Commands whose arguments are all names: COMPILE TRIANGLES,CT and STOP NB
+const NAME_ARG_COMMANDS = new Set(['COMPILE', 'STOP']);
 
 // A WHILE run here and now (not one line a turn) stops with an error after
 // this many turns, so a loop that never ends can't hang the page
@@ -84,7 +88,8 @@ export class Interpreter {
       if (name) {
         const args = ast.args.map(a => this.eval(a));
         const lines = splitMacroLines(this.env.get(name));
-        return this.scheduler.addTask('MG', name.toUpperCase(), lines, args, this.env.newMIB(name, args));
+        return this.scheduler.addTask('MG', name.toUpperCase(), lines, args,
+          this.env.newMIB(name, args, this.macroArgNames(ast.args)));
       }
     }
     this.eval(ast);
@@ -135,6 +140,12 @@ export class Interpreter {
       case 'IncDec':
         return this.evalIncDec(node);
 
+      case 'Indirect':
+        return this.eval(this.indirectTarget(node));
+
+      case 'IndirectAssign':
+        return this.evalIndirectAssign(node);
+
       case 'Paren':
         return this.eval(node.expr);
 
@@ -156,6 +167,56 @@ export class Interpreter {
     return this.env.get(node.name);
   }
 
+  // The name an @ gives: the string its operand evaluates to, which must
+  // start with a letter or $ (RT/1's zzind)
+  indirectName(node) {
+    const name = String(this.eval(node.expr)).trim();
+    if (!/^[A-Za-z_$]/.test(name)) throw new Error(`@ needs a name, not "${name}"`);
+    return name;
+  }
+
+  // What an @ refers to, as a VarRef or ArrayRef node: @S with S="TOM" is
+  // TOM, and with S="A(1)" is A(1), as in the glossary's
+  // @(ANAME&"("&1&")")
+  indirectTarget(node) {
+    const name = this.indirectName(node);
+    const parser = new Parser(tokenize(name));
+    const ref = parser.parseOr();
+    if (!parser.atEnd() || (ref.type !== 'VarRef' && ref.type !== 'ArrayRef')) {
+      throw new Error(`@ needs a name, not "${name}"`);
+    }
+    return ref;
+  }
+
+  // @S=value: set what @S refers to
+  evalIndirectAssign(node) {
+    const ref = this.indirectTarget(node.target);
+    return ref.type === 'ArrayRef'
+      ? this.evalArrayAssign({ name: ref.name, indices: ref.indices, expr: node.expr })
+      : this.evalAssign({ name: ref.name, expr: node.expr });
+  }
+
+  // The name an argument gives a command that takes names (ARRAY, SNAP,
+  // STOP...): the name written, or the one an @ gives. null for neither
+  argName(node) {
+    if (node.type === 'VarRef' || node.type === 'Command') return node.name;
+    if (node.type === 'Indirect') return this.indirectName(node);
+    return null;
+  }
+
+  // The array an argument names (abbreviated or by @), as { name, arr }, or
+  // an error naming `cmd` for anything else
+  arrayNamed(node, cmd) {
+    const given = this.argName(node);
+    if (given !== null) {
+      const upper = given.toUpperCase();
+      if (this.env.arrays.has(upper)) return { name: upper, arr: this.env.arrays.get(upper) };
+      const full = this.env.resolvePrefix(given);
+      if (full && this.env.arrays.has(full)) return { name: full, arr: this.env.arrays.get(full) };
+    }
+    throw new Error(`${cmd} needs an array${given !== null ? `, and ${given} is not one` : ''}`);
+  }
+
   evalAssign(node) {
     const value = this.eval(node.expr);
     this.env.set(node.name, value);
@@ -166,18 +227,23 @@ export class Interpreter {
     return value;
   }
 
+  // NAME(i)=value sets an element of array NAME, which may be abbreviated
+  // as when it is read (PY(1)=5 for PYR). A name that is no array is an
+  // error, found before anything is evaluated: setting the variable NAME
+  // instead, as this once did, hid a missing ARRAY
   evalArrayAssign(node) {
+    const upper = node.name.toUpperCase();
+    let name = upper;
+    if (!this.env.arrays.has(upper)) {
+      const full = this.env.resolvePrefix(node.name);
+      if (!full || !this.env.arrays.has(full)) {
+        throw new Error(`${node.name} is not an array (make it with ARRAY first)`);
+      }
+      name = full;
+    }
     const indices = node.indices.map(i => this.eval(i));
     const value = this.eval(node.expr);
-
-    // Check if it's an actual array
-    const upper = node.name.toUpperCase();
-    if (this.env.arrays.has(upper)) {
-      this.env.setArray(node.name, indices, value);
-    } else {
-      // Could be function-style assignment — treat as regular assignment for now
-      this.env.set(node.name, value);
-    }
+    this.env.setArray(name, indices, value);
     return value;
   }
 
@@ -194,6 +260,9 @@ export class Interpreter {
     const cmd = this.commands.resolve(node.name);
     if (cmd) {
       if (RAW_ARG_COMMANDS.has(cmd.name)) return cmd.handler(node.indices, [], this);
+      if (NAME_ARG_COMMANDS.has(cmd.name)) {
+        return cmd.handler(node.indices.map(a => this.argName(a) ?? this.eval(a)), [], this);
+      }
       const args = node.indices.map(i => this.eval(i));
       return cmd.handler(args, [], this);
     }
@@ -212,8 +281,9 @@ export class Interpreter {
       return this.invokeMacro(full, node.indices, []);
     }
 
-    // Fall back to variable reference
-    return this.env.get(node.name);
+    // Not an array, a function or a macro: RT/1 had no name to call, and
+    // reading it as 0 would hide a misspelling or a missing function
+    throw new Error(`Unknown function or array: ${node.name}`);
   }
 
   evalBinOp(node) {
@@ -255,13 +325,14 @@ export class Interpreter {
     switch (node.op) {
       case '-': return -operand;
       case 'NOT': return operand ? 0 : 1;
+      case 'ABS': return Math.abs(operand);
       default: throw new Error(`Unknown unary operator: ${node.op}`);
     }
   }
 
   evalCommand(node) {
     const name = node.name;
-    const switches = node.switches || [];
+    let switches = node.switches || [];
 
     // Check for macro invocation with switches
     if (switches.length > 0 && this.env.isMacro(name)) {
@@ -271,14 +342,13 @@ export class Interpreter {
     // Try registered commands first
     const cmd = this.commands.resolve(name);
     if (cmd) {
+      switches = this.commands.checkSwitches(cmd.name, switches);
       // INPUT and STRING get raw AST nodes, for the variables they set
       if (RAW_ARG_COMMANDS.has(cmd.name)) {
         return cmd.handler(node.args, switches, this);
       }
-      // Commands whose arguments are all names: COMPILE TRIANGLES,CT
-      if (cmd.name === 'COMPILE') {
-        const names = node.args.map(a =>
-          (a.type === 'VarRef' || a.type === 'Command') ? a.name : this.eval(a));
+      if (NAME_ARG_COMMANDS.has(cmd.name)) {
+        const names = node.args.map(a => this.argName(a) ?? this.eval(a));
         return cmd.handler(names, switches, this);
       }
       // Commands that take a name/identifier as first arg
@@ -287,7 +357,9 @@ export class Interpreter {
         let rest = node.args.slice(1);
         const firstArg = node.args[0];
         let nameStr;
-        if (firstArg.type === 'VarRef' || firstArg.type === 'Command') {
+        if (firstArg.type === 'Indirect') {
+          nameStr = this.indirectName(firstArg); // ARRAY @ANAME,n
+        } else if (firstArg.type === 'VarRef' || firstArg.type === 'Command') {
           nameStr = firstArg.name;
           // ARRAY PYR 10,4 parses as a call of PYR, whose arguments are ARRAY's
           if (firstArg.type === 'Command' && firstArg.args.length > 0) {
@@ -345,7 +417,7 @@ export class Interpreter {
 
   evalIf(node) {
     const condition = this.eval(node.condition);
-    if (condition) {
+    if (node.negate ? !condition : condition) {
       return this.eval(node.body);
     }
     return 0;
@@ -411,6 +483,7 @@ export class Interpreter {
 
     // Evaluate arguments before entering macro
     const args = argNodes.map(a => this.eval(a));
+    const argNames = this.macroArgNames(argNodes);
 
     // Parse macro body into lines
     const lines = splitMacroLines(body);
@@ -420,18 +493,25 @@ export class Interpreter {
 
     if (mode === 'FG' || mode === 'BG') {
       // Schedule as foreground or background task, with its own locals
-      this.scheduler.addTask(mode, name, lines, args, this.env.newMIB(name, args));
+      this.scheduler.addTask(mode, name, lines, args, this.env.newMIB(name, args, argNames));
       return 1;
     }
 
     // Middleground / immediate execution — run inline
-    return this.runMacroImmediate(name, lines, args);
+    return this.runMacroImmediate(name, lines, args, argNames);
+  }
+
+  // For each argument to a macro written as a bare name (MAC FOO), that
+  // name, else null. INPUT.N takes it as the name, not its value
+  macroArgNames(nodes) {
+    return nodes.map(a => (a.type === 'VarRef' ||
+      (a.type === 'Command' && a.args.length === 0 && !(a.switches || []).length)) ? a.name : null);
   }
 
   // Run a macro immediately (middleground)
-  runMacroImmediate(name, lines, args) {
+  runMacroImmediate(name, lines, args, argNames) {
     // Push MIB frame
-    this.env.pushMIB(name, args);
+    this.env.pushMIB(name, args, argNames);
     const mib = this.env.currentMIB();
     mib.lines = lines;
     mib.labels = this.parseMacroLabels(lines);

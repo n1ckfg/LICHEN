@@ -1,4 +1,4 @@
-// builtins/control.js — IF, GOTO, SKIP, RETURN, WAIT, ONERROR
+// builtins/control.js — GOTO, SKIP, RETURN, WAIT, TIMEOUT, ONERROR, STOP
 
 export function registerControlCommands(interp) {
   const reg = interp.commands;
@@ -69,6 +69,20 @@ export function registerControlCommands(interp) {
     if (ctx.currentTask) ctx.currentTask.timeout = frames;
     return 1;
   }, 2);
+
+  // STOP name, ... — stop the .B and .F macros running these macros, and
+  // leave the rest running (lesson 11: "stop them selectively with the STOP
+  // command"; RT/1's CM2.C). A macro may stop itself. A name may be
+  // abbreviated, as when it was started. Returns how many were stopped
+  reg.register('STOP', (args, switches, ctx) => {
+    let stopped = 0;
+    for (const arg of args) {
+      const name = String(arg);
+      const full = ctx.env.isMacro(name) ? name : ctx.env.resolvePrefix(name);
+      stopped += ctx.scheduler.stop(full || name);
+    }
+    return stopped;
+  }, 3); // STO, so that ST is still STR
 
   // ONERROR label — set error handler
   reg.register('ONERROR', (args, switches, ctx) => {

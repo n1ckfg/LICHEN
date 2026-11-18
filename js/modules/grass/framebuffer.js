@@ -28,6 +28,23 @@ function roundBrush(size) {
   return out;
 }
 
+// The pixels of the line from (x0, y0) to (x1, y1), by Bresenham's
+// algorithm, each passed to put(x, y)
+function bresenham(x0, y0, x1, y1, put) {
+  const dx = Math.abs(x1 - x0);
+  const dy = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy;
+  while (true) {
+    put(x0, y0);
+    if (x0 === x1 && y0 === y1) return;
+    const e2 = 2 * err;
+    if (e2 > -dy) { err -= dy; x0 += sx; }
+    if (e2 < dx) { err += dx; y0 += sy; }
+  }
+}
+
 export class Framebuffer {
   constructor() {
     // Flat array, 1 byte per pixel (only low 2 bits used)
@@ -48,6 +65,11 @@ export class Framebuffer {
     // Drawing modifiers (modifiers.js), in the order first set up. A dot goes
     // through the last one first
     this.modifiers = [];
+    // True while DISPLAY draws a snap, which PATTERN leaves as it is
+    this.drawingSnap = false;
+    // PATTERN.C x, y: the buffer pixel a PATTERN's element (0, 0) is drawn
+    // at. null: GRASS's (0, 0) when the PATTERN is set up
+    this.patternOrigin = null;
   }
 
   // The UV-1's TV showed the screen memory at whatever moment the beam passed,
@@ -169,9 +191,10 @@ export class Framebuffer {
     this.pixels[by * FB_WIDTH + bx] = value & 3;
   }
 
-  // Clear entire framebuffer to color 0
-  clear() {
-    this.pixels.fill(0);
+  // Clear the whole framebuffer to a color, 0 to 3 (CLEAR n, RT/1's
+  // graphclr), without the modifiers
+  clear(color = 0) {
+    this.pixels.fill(color & 3);
     this._op();
   }
 
@@ -260,7 +283,7 @@ export class Framebuffer {
   // as RT/1's stefcirc() drew circles: a closed outline, so FILL stays inside
   // it. The four quarters meet on the axes, so the pixels are gathered first
   // and each drawn once: in XOR a pixel drawn twice would vanish
-  circle(cx, cy, rx, ry, colormode) {
+  circle(cx, cy, rx, ry, colormode, fill = false) {
     const bcx = this.toBufferX(cx);
     const bcy = this.toBufferY(cy);
     const arx = Math.abs(Math.trunc(rx));
@@ -305,6 +328,67 @@ export class Framebuffer {
         x++;
         px += 2 * ry2;
         p += rx2 - py + px;
+      }
+    }
+    if (fill) this.fillRows(keys);
+    this.plotSet(keys, colormode);
+    this._op();
+  }
+
+  // Add to a set of pixel keys, on each row of the screen it touches,
+  // everything between its leftmost and rightmost pixel: a convex outline
+  // filled in, just as far as the outline goes
+  fillRows(keys) {
+    const rows = new Map();
+    for (const k of keys) {
+      const x = (k % 65536) - 32768;
+      const y = Math.floor(k / 65536) - 32768;
+      const r = rows.get(y);
+      if (r) { r[0] = Math.min(r[0], x); r[1] = Math.max(r[1], x); } else rows.set(y, [x, x]);
+    }
+    for (const [y, [a, b]] of rows) {
+      if (y < 0 || y >= FB_HEIGHT) continue;
+      for (let x = Math.max(0, a); x <= Math.min(FB_WIDTH - 1, b); x++) keys.add(pixelKey(x, y));
+    }
+  }
+
+  // A closed shape through buffer points [[x, y], ...], each joined to the
+  // next and the last to the first (RT/1's POLYGON, RBOX, ELLIPSE). Every
+  // pixel is drawn once, so an XOR shape is whole. A width over 1 draws the
+  // outline with a round brush that wide; fill draws the inside too, by the
+  // even-odd rule, so a shape that crosses itself has holes where it would
+  shape(points, colormode, fill = false, width = 1) {
+    const keys = new Set();
+    const n = points.length;
+    if (n === 0) { this._op(); return; }
+    const brush = width > 1 ? roundBrush(Math.floor(width)) : [[0, 0]];
+    const put = (x, y) => { for (const [ox, oy] of brush) keys.add(pixelKey(x + ox, y + oy)); };
+    for (let i = 0; i < n; i++) {
+      const [x0, y0] = points[(i + n - 1) % n];
+      const [x1, y1] = points[i];
+      bresenham(x0, y0, x1, y1, put);
+    }
+    if (fill && n >= 3) {
+      const ys = points.map(q => q[1]);
+      const top = Math.max(0, Math.min(...ys));
+      const bottom = Math.min(FB_HEIGHT - 1, Math.max(...ys));
+      for (let y = top; y <= bottom; y++) {
+        // Where the edges cross this row. An edge counts from its upper end
+        // down to just above its lower, so a corner is crossed once
+        const xs = [];
+        for (let i = 0; i < n; i++) {
+          const [x0, y0] = points[(i + n - 1) % n];
+          const [x1, y1] = points[i];
+          if ((y0 <= y && y < y1) || (y1 <= y && y < y0)) {
+            xs.push(x0 + (y - y0) * (x1 - x0) / (y1 - y0));
+          }
+        }
+        xs.sort((a, b) => a - b);
+        for (let j = 0; j + 1 < xs.length; j += 2) {
+          const a = Math.max(0, Math.ceil(xs[j]));
+          const b = Math.min(FB_WIDTH - 1, Math.floor(xs[j + 1]));
+          for (let x = a; x <= b; x++) keys.add(pixelKey(x, y));
+        }
       }
     }
     this.plotSet(keys, colormode);
@@ -404,11 +488,16 @@ export class Framebuffer {
     // is drawn as that operation with its own color, through the modifiers,
     // as RT/1's DISPLAY was
     const operation = displayMode < 4 ? displayMode & 3 : (displayMode >> 2) & 3;
-    for (let sy = 0; sy < sprite.height; sy++) {
-      for (let sx = 0; sx < sprite.width; sx++) {
-        const srcPixel = sprite.data[sy * sprite.width + sx] & 3;
-        this.plot(startX + sx, startY + sy, (operation << 2) | srcPixel);
+    this.drawingSnap = true;
+    try {
+      for (let sy = 0; sy < sprite.height; sy++) {
+        for (let sx = 0; sx < sprite.width; sx++) {
+          const srcPixel = sprite.data[sy * sprite.width + sx] & 3;
+          this.plot(startX + sx, startY + sy, (operation << 2) | srcPixel);
+        }
       }
+    } finally {
+      this.drawingSnap = false;
     }
     this._op();
   }
