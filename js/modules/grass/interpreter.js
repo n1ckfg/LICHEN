@@ -46,15 +46,16 @@ export class Interpreter {
     registerSystemCommands(this);
   }
 
-  // Execute a line of GRASS source (from REPL or task)
-  execLine(source, task) {
+  // Execute a line of GRASS source (from REPL or task). `resume` is where an
+  // INPUT on this line waited (see evalSequence), to carry on from there
+  execLine(source, task, resume = null) {
     const prevTask = this.currentTask;
     if (task) this.currentTask = task;
 
     try {
       const tokens = tokenize(source);
       const ast = parse(tokens);
-      return this.eval(ast);
+      return resume ? this.evalResume(ast, resume) : this.eval(ast);
     } finally {
       this.currentTask = prevTask;
     }
@@ -407,20 +408,64 @@ export class Interpreter {
     throw new Error(`Unknown command: ${name}`);
   }
 
-  evalSequence(node) {
+  // A line whose INPUT waits for a typed answer runs again once it comes.
+  // So that what came before the INPUT isn't done twice (N=N+1;INPUT A, or
+  // PROMPT "AGE?";INPUT AGE), the INPUT_WAIT error carries `resume`, the
+  // INPUT's place in the line: in a Sequence the index of its statement, and
+  // in an IF 'body', for the rest of the line after a condition that held.
+  // Each Sequence and IF it passes out of puts its part in front. The line
+  // runs again from there (evalResume), the INPUT taking the answer. WHILE
+  // does the same in its braces. An INPUT inside anything else (an
+  // expression) runs again with the whole statement it is in, as every
+  // INPUT line once did
+  evalSequence(node, resume = []) {
     let result = 0;
-    for (const stmt of node.stmts) {
-      result = this.eval(stmt);
+    const start = resume.length ? resume[0] : 0;
+    for (let i = start; i < node.stmts.length; i++) {
+      const stmt = node.stmts[i];
+      try {
+        result = i === start && resume.length > 1 ? this.evalResume(stmt, resume.slice(1)) : this.eval(stmt);
+      } catch (e) {
+        if (e.message === 'INPUT_WAIT') e.resume = [i, ...this.resumeWithin(stmt, e)];
+        throw e;
+      }
     }
     return result;
   }
 
-  evalIf(node) {
-    const condition = this.eval(node.condition);
-    if (node.negate ? !condition : condition) {
-      return this.eval(node.body);
+  evalIf(node, resume = []) {
+    if (!resume.length) {
+      let condition;
+      try {
+        condition = this.eval(node.condition);
+      } catch (e) {
+        if (e.message === 'INPUT_WAIT') e.resume = [];
+        throw e;
+      }
+      if (!(node.negate ? !condition : condition)) return 0;
     }
-    return 0;
+    try {
+      return resume.length > 1 ? this.evalResume(node.body, resume.slice(1)) : this.eval(node.body);
+    } catch (e) {
+      if (e.message === 'INPUT_WAIT') e.resume = ['body', ...this.resumeWithin(node.body, e)];
+      throw e;
+    }
+  }
+
+  // Run a node from the place `resume` gives (see evalSequence)
+  evalResume(node, resume) {
+    if (!resume.length) return this.eval(node);
+    if (node.type === 'Sequence') return this.evalSequence(node, resume);
+    if (node.type === 'LabeledLine') return this.evalSequence({ stmts: node.commands }, resume);
+    if (node.type === 'IfStmt') return this.evalIf(node, resume);
+    if (node.type === 'WhileStmt') return this.evalWhile(node, resume);
+    return this.eval(node);
+  }
+
+  // The place an INPUT_WAIT gives within `child`: only a Sequence, IF or
+  // WHILE keeps one, else the child runs again whole
+  resumeWithin(child, e) {
+    return ['Sequence', 'LabeledLine', 'IfStmt', 'WhileStmt'].includes(child.type) ? (e.resume ?? []) : [];
   }
 
   // WHILE condition,{ lines }ENDWHILE. RT/1 ran WHILE as IF and ENDWHILE as
@@ -431,33 +476,59 @@ export class Interpreter {
   // ; or IF, inside another WHILE's braces, typed at the prompt with no
   // macro) runs its loop through here and now. GOTO or SKIP in the braces
   // leaves the loop
-  evalWhile(node) {
+  // An INPUT in the braces that waits gives resume ['block', line, ...]:
+  // run again, the turn carries on from that line of the braces, without
+  // testing the condition first (see evalSequence)
+  evalWhile(node, resume = []) {
     const task = this.currentTask;
     const mib = task ? null : this.env.currentMIB();
+    const from = resume.length ? resume.slice(1) : null;
+    const condition = () => {
+      try {
+        return this.eval(node.condition);
+      } catch (e) {
+        if (e.message === 'INPUT_WAIT') e.resume = [];
+        throw e;
+      }
+    };
     if (node.first && this.blockDepth === 0 && (task || (mib && mib.lines.length))) {
-      if (!this.eval(node.condition)) return 0;
-      this.runBlock(node.block);
+      if (!from && !condition()) return 0;
+      this.runBlock(node.block, from);
       if (task) this.scheduler.skip(task, 0);
       else mib.pc -= 1;
       throw new Error('SKIP');
     }
     let turns = 0;
-    while (this.eval(node.condition)) {
+    if (from) {
+      turns++;
+      this.runBlock(node.block, from);
+    }
+    while (condition()) {
       if (++turns > WHILE_MAX_TURNS) throw new Error(`WHILE ran ${WHILE_MAX_TURNS} times without ending`);
       this.runBlock(node.block);
     }
     return 0;
   }
 
-  // The lines inside a WHILE's braces, run in order as one line of the macro
-  runBlock(source) {
+  // The lines inside a WHILE's braces, run in order as one line of the
+  // macro; with `from`, from the place an INPUT waited
+  runBlock(source, from = null) {
     this.blockDepth++;
     try {
-      for (const raw of splitMacroLines(source)) {
-        const line = raw.trim();
+      const lines = splitMacroLines(source);
+      for (let i = from ? from[0] : 0; i < lines.length; i++) {
+        const line = lines[i].trim();
         if (line === '' || line.startsWith('.')) continue;
         const execLine = line.replace(/^\d+\w*(\s+|$)/, '');
-        if (execLine.trim() !== '') this.eval(parse(tokenize(execLine)));
+        if (execLine.trim() === '') continue;
+        const ast = parse(tokenize(execLine));
+        try {
+          if (from && i === from[0]) this.evalResume(ast, from.slice(1));
+          else this.eval(ast);
+        } catch (e) {
+          if (e.message === 'INPUT_WAIT') e.resume = ['block', i, ...this.resumeWithin(ast, e)];
+          throw e;
+        }
       }
     } finally {
       this.blockDepth--;

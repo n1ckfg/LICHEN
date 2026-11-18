@@ -186,6 +186,10 @@ export class Scheduler {
       return;
     }
 
+    // Back on the line whose INPUT waited: carry on from that INPUT
+    const resume = task._resume && task._resume.pc === task.pc ? task._resume.at : null;
+    task._resume = null;
+
     const line = task.lines[task.pc].trim();
     task.pc++;
 
@@ -199,8 +203,10 @@ export class Scheduler {
     const env = interpreter.env;
     if (task.mib) env.mibStack.push(task.mib);
     try {
-      interpreter.execLine(execLine, task);
+      interpreter.execLine(execLine, task, resume);
     } catch (e) {
+      // INPUT put pc back on this line; remember where in it to carry on
+      if (e.message === 'INPUT_WAIT') task._resume = { pc: task.pc, at: e.resume ?? [] };
       if (e.message === 'RETURN' || e.message === 'BREAK') {
         task.done = true;
       } else if (e.message === 'GOTO' || e.message === 'SKIP' || e.message === 'INPUT_WAIT') {

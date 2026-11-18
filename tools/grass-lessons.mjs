@@ -532,6 +532,51 @@ for (const [name, mods] of Object.entries(MODS)) {
   check(u.env.get('$CH') === 0, 'INPUT.F clears $CH');
 }
 
+// A line whose INPUT waits carries on from that INPUT once the answer comes,
+// so what came before it on the line is done once
+{
+  // Run macro T, answering each INPUT in turn from `answers`
+  const answered = (defn, call, answers, midway) => {
+    const s = fresh(defn);
+    run(s, call);
+    const queue = [...answers];
+    for (let i = 0; i < 30; i++) {
+      if (midway && i === 1) midway(s);
+      if (s.repl.isWaitingForInput()) {
+        s.repl.inputBuffer = queue.shift() ?? '99';
+        s.repl.handleKey('', 13, { ENTER: 13 });
+      }
+      fakeNow += 1000 / 60;
+      s.frame();
+    }
+    const g = (n) => s.env.get(n);
+    return { s, g, asked: answers.length - queue.length, errs: errorsIn(s.log).length };
+  };
+  const cases = [
+    ['T=[INPUT A;INPUT B]', 'T', ['7', '8'], (g) => g('A') === 7 && g('B') === 8, 'two INPUTs on one line each take their own answer'],
+    ['T=[N=N+1;INPUT A]', 'T', ['7'], (g) => g('A') === 7 && g('N') === 1, 'what comes before an INPUT on its line runs once'],
+    ['T=[INPUT A;A=A*2;INPUT B;PRINT A,B]', 'T', ['7', '8'], (g, s) => s.log.includes('14 8'), 'a line carries on from its INPUT, keeping what it did'],
+    ['T=[IF 1,N=N+1;IF 1,INPUT A;INPUT B]', 'T', ['7', '8'], (g) => g('A') === 7 && g('B') === 8 && g('N') === 1, 'an INPUT after IFs carries on inside them'],
+    ['T=[IF.N 0,INPUT A;N=N+1;INPUT B]', 'T', ['7', '8'], (g) => g('A') === 7 && g('B') === 8 && g('N') === 1, 'and after IF.N'],
+    ['T=[N=N+1;INPUT A,B]', 'T 5', ['8'], (g) => g('A') === 5 && g('B') === 8 && g('N') === 1, 'an INPUT taking a macro argument and an answer'],
+    ['T=[I=0\nWHILE I<2,{N=N+1;INPUT A;B=B+A;I=I+1}ENDWHILE\nPRINT "DONE"]', 'T', ['7', '8'],
+      (g) => g('N') === 2 && g('B') === 15, 'an INPUT in a WHILE\'s braces carries on in its turn'],
+    ['T=[WHILE (I=I+1)<3,{INPUT A;N=N+A}ENDWHILE]', 'T', ['7', '8'], (g) => g('N') === 15 && g('I') === 3,
+      'a WHILE resuming after an INPUT doesn\'t test its condition again'],
+    ['T=[I=0;WHILE I<2,{N=N+1;INPUT A\nB=B+A;I=I+1}ENDWHILE;PRINT B]', 'T', ['7', '8'],
+      (g) => g('N') === 2 && g('B') === 15, 'and a WHILE after a ; (run in place)'],
+  ];
+  for (const [defn, call, answers, good, label] of cases) {
+    const { s, g, asked, errs } = answered(defn, call, answers);
+    check(good(g, s) && asked === answers.length && errs === 0 && !s.repl.isWaitingForInput(),
+      `${label} (${JSON.stringify(defn)}: A=${g('A')} B=${g('B')} N=${g('N')}, ${asked} answers)`);
+  }
+  const p = answered('T=[PROMPT "AGE?";INPUT A]', 'T', ['7']);
+  check(p.s.log.filter(l => l.includes('AGE?')).length === 1 && p.g('A') === 7, 'PROMPT "AGE?";INPUT A asks once');
+  const st = answered('T=[N=N+1;INPUT A;INPUT B]', 'T', ['7', '8'], (s) => { s.stop(); s.play(); });
+  check(st.g('N') === 1 && st.g('A') === 7 && st.g('B') === 8, `Stop and Play while an INPUT waits carry on from it (N=${st.g('N')})`);
+}
+
 // CLEAR n, CIRCLE.F, ELLIPSE, RBOX and POLYGON
 {
   // A 21 by 21 square of points about (0, 0), for POLYGON

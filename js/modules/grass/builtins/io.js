@@ -95,7 +95,8 @@ export function registerIOCommands(interp) {
         typed.splice(0, rest.length);
         return 1;
       }
-      // Wait for the user, then run this line again
+      // Wait for the user, then run this line again from this INPUT (the
+      // interpreter's evalSequence keeps where it is in the line)
       task._inputFrom = k;
       task._waitingForInput = true;
       task.pc--;

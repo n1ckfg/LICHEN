@@ -105,7 +105,7 @@ List all available commands and basic syntax help.<br>
 Run the rest of the line, `;`s and all, if `condition` is not 0; otherwise go on to the next line. `IF.N` runs it if `condition` is 0 instead (`IF.N FLAG,B=C+D`). (RT/1 Glossary)<br>
 
 **INPUT `var1, [var2, ...]`**<br>
-Get values and assign them to variables, either from macro arguments or from user input via the REPL. A running macro waits for a typed line of comma-separated values; `INPUT.STR` (or RT/1's `INPUT.S`) takes the line as a string. A variable may be given by `@`. `INPUT.N` is `INPUT.STR`, except that a macro argument written as a bare name gives that name rather than its value: with `TAKE=[INPUT.N n;PRINT n]`, `TAKE FOO` prints `FOO`. That lets a macro take names the way RT/1's commands do. `INPUT.F` first throws away what was typed ahead: answers kept for a later INPUT, and the key in `$CH`. (RT/1 Glossary)<br>
+Get values and assign them to variables, either from macro arguments or from user input via the REPL. A running macro waits for a typed line of comma-separated values, then carries on from the INPUT, so what came before it on the line is not done again (`PROMPT "AGE?";INPUT AGE` asks once, and `INPUT A;INPUT B` takes one answer each); `INPUT.STR` (or RT/1's `INPUT.S`) takes the line as a string. A variable may be given by `@`. `INPUT.N` is `INPUT.STR`, except that a macro argument written as a bare name gives that name rather than its value: with `TAKE=[INPUT.N n;PRINT n]`, `TAKE FOO` prints `FOO`. That lets a macro take names the way RT/1's commands do. `INPUT.F` first throws away what was typed ahead: answers kept for a later INPUT, and the key in `$CH`. (RT/1 Glossary)<br>
 
 **INT `value`**<br>
 Truncate a value to its integer component.<br>
