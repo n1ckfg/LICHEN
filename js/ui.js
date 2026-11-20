@@ -590,7 +590,7 @@ export class NodeGraphUI {
 
     const bannerLink = document.createElement('a');
     bannerLink.className = 'palette-banner-link';
-    bannerLink.href = 'https://github.com/n1ckfg/LICHEN';
+    bannerLink.href = 'https://fox-gieg.com/lichen.html';
     bannerLink.target = '_blank';
     bannerLink.rel = 'noopener noreferrer';
 
@@ -2071,8 +2071,10 @@ export class NodeGraphUI {
         play: !mod.session.hasStopped(),
         stop: !mod.session.isRunning(),
       };
+      p.textSize(9);
       for (const b of this._grassButtons(mod)) {
-        pushButton(p, b.x, b.y, b.w, 20, b.label, { disabled: dim[b.action] });
+        const label = b.action === 'load' && mod.fileName ? fitText(p, mod.fileName, b.w - 10) : b.label;
+        pushButton(p, b.x, b.y, b.w, 20, label, { disabled: dim[b.action] });
       }
     }
 
@@ -2093,8 +2095,9 @@ export class NodeGraphUI {
         ? preview.y + PREVIEW_H + 6
         : mod.y + HEADER_HEIGHT + this._portSection(mod) + paramNames.length * PARAM_ROW_HEIGHT + 6;
       p.textSize(9);
-      // A loaded LUT, panorama, world or drawing names itself on the button, which still opens the picker
-      const btnLabel = mod.type === 'NAPLPS' ? 'Load .nap...' : mod.type === 'Image' ? 'Load Image...'
+      // A loaded LUT, NAPLPS, panorama, world or drawing names itself on the button, which still opens the picker
+      const btnLabel = mod.type === 'NAPLPS' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .nap...')
+        : mod.type === 'Image' ? 'Load Image...'
         : mod.type === 'LUT' ? (mod.lutName ? fitText(p, mod.lutName, MODULE_WIDTH - 32) : 'Load LUT...')
         : mod.type === 'QTVR' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load Panorama...')
         : mod.type === 'VRML' ? (mod.fileName ? fitText(p, mod.fileName, MODULE_WIDTH - 32) : 'Load .wrl...')

@@ -17,6 +17,41 @@ const SPLINE_STEPS = 16;     // samples per Catmull-Rom span on X and Y
 
 const WHITE = { r: 1, g: 1, b: 1 };
 
+// The .nap files bundled in files/naps, in drop-down order after option 0.
+// Patches save the preset as its index, so new files are appended, never inserted.
+const PRESET_DIR = new URL('../../files/naps/', import.meta.url);
+const PRESETS = [
+  'beer.nap',
+  'email2.nap',
+  'haunt.nap',
+  'santa.nap',
+  'shark.nap',
+  'wast.nap',
+];
+const NO_FILE_LABEL = 'None';
+
+// Preset index -> promise of its raw bytes. Shared by every NAPLPS node, so
+// each bundled file is fetched at most once per session.
+const presetCache = new Map();
+const presetAlerted = new Set();
+
+function loadPreset(k) {
+  if (!presetCache.has(k)) {
+    const file = PRESETS[k];
+    presetCache.set(k, fetch(new URL(file, PRESET_DIR))
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.arrayBuffer();
+      })
+      .then((buf) => new Uint8Array(buf))
+      .catch((err) => {
+        presetCache.delete(k);
+        throw err;
+      }));
+  }
+  return presetCache.get(k);
+}
+
 function chan(v) {
   return Math.max(0, Math.min(255, Math.round(v * 255)));
 }
@@ -121,7 +156,13 @@ export class NAPLPSModule extends Module {
       { id: '4e53', name: 'y', type: 'control' },
     ];
     this.historicalInfo = 'NAPLPS';
+    // Option 0 is the file loaded with the button, named after it once there
+    // is one; the rest are the bundled presets.
     this.params = {
+      preset: {
+        id: '249b', value: 0, min: 0, max: PRESETS.length, step: 1, label: 'File',
+        widget: 'dropdown', valueLabels: [NO_FILE_LABEL, ...PRESETS],
+      },
       speed: { id: '9a2d', value: 1, min: 0.1, max: 10, step: 0.1, label: 'Speed' },
       // Loops a second on X and Y. A lower rate gives the drawing more samples
       loopHz: { id: '48f2', value: 5, min: 1, max: 100, step: 0.1, label: 'Loop Hz' },
@@ -139,6 +180,11 @@ export class NAPLPSModule extends Module {
     this.pg = null;
     this.napPg = null;   // 4:3 render target used when the frame is not 4:3
     this.napReady = false;
+    this.fileName = '';    // the file loaded with the button, shown on it
+    this.fileData = null;  // that file's raw bytes, kept for option 0
+    this._shownPreset = 0; // the option the active drawing belongs to
+    this._loadToken = 0;   // so a slow preset can't land after a newer choice
+    this._disposed = false;
     this.xy = new XYOutputs(SAMPLE_RATE);
     this.lastTime = performance.now() / 1000;
     this.createShader(passthroughFrag);
@@ -155,7 +201,6 @@ export class NAPLPSModule extends Module {
     this.fileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) this.loadNAPFile(file);
-      this.fileInput.value = '';
     });
   }
 
@@ -163,13 +208,31 @@ export class NAPLPSModule extends Module {
     this.fileInput.click();
   }
 
-  loadNAPFile(file) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      this.loadNAPData(new Uint8Array(e.target.result));
-    };
-    // NAPLPS is a byte stream; reading as text would corrupt bytes >= 0x80
-    reader.readAsArrayBuffer(file);
+  async loadNAPFile(file) {
+    const token = ++this._loadToken;
+    try {
+      // NAPLPS is a byte stream; reading as text would corrupt bytes >= 0x80
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      if (this._disposed || token !== this._loadToken) return;
+      this._loadUserData(bytes, file.name);
+    } catch (e) {
+      // Keep whatever drawing was loaded before
+      alert(`Could not load ${file.name}: ${e.message}`);
+    }
+    this.fileInput.value = ''; // so picking the same file again still fires 'change'
+  }
+
+  // Load a file into option 0 and switch to it; throws if decoding fails.
+  // A cable on the drop-down can switch straight back.
+  _loadUserData(bytes, fileName = '') {
+    const decoded = NAPLPS.decode(bytes);
+    this.fileData = bytes;
+    this.fileName = fileName;
+    this.params.preset.valueLabels[0] = fileName || NO_FILE_LABEL;
+    this.setParam('preset', 0);
+    this._shownPreset = 0;
+    this._loadToken++;
+    this._applyDecoded(decoded);
   }
 
   loadNAPData(data) {
@@ -178,9 +241,13 @@ export class NAPLPSModule extends Module {
       decoded = NAPLPS.decode(data);
     } catch (err) {
       console.error("Couldn't decode NAPLPS input", err);
-      return;
+      return false;
     }
+    this._applyDecoded(decoded);
+    return true;
+  }
 
+  _applyDecoded(decoded) {
     this._freeMaskSheets();
     const p = this.glCanvas._pInst;
     const w = this.glCanvas.width;
@@ -203,6 +270,53 @@ export class NAPLPSModule extends Module {
     this.pieces = [];
     this.dirty = true;
     this.napReady = true;
+  }
+
+  _clearDrawing() {
+    this._freeMaskSheets();
+    this.commands = [];
+    this.blinks = false;
+    this.index = 0;
+    this.spent = 0;
+    this.clock = 0;
+    this.elapsed = 0;
+    this.blinkTime = 0;
+    this.finished = false;
+    this.pieces = [];
+    this.dirty = false;
+    this.napReady = false;
+    if (this.pg) this.pg.background(0);
+    this.outputFBO.begin();
+    this.glCanvas.clear();
+    this.outputFBO.end();
+  }
+
+  // Follow the drop-down, whether a click or a cable moved it. Presets load
+  // asynchronously; the previous drawing stays on until the new one is ready.
+  _syncPreset() {
+    const k = Math.max(0, Math.min(PRESETS.length, Math.round(this.params.preset.value)));
+    if (k === this._shownPreset) return;
+    this._shownPreset = k;
+    const token = ++this._loadToken;
+    if (k === 0) {
+      if (this.fileData) this.loadNAPData(this.fileData);
+      else this._clearDrawing();
+      return;
+    }
+    const file = PRESETS[k - 1];
+    loadPreset(k - 1).then(
+      (bytes) => {
+        if (!this._disposed && token === this._loadToken) this.loadNAPData(bytes);
+      },
+      (err) => {
+        console.error(`Could not load NAPLPS preset ${file}:`, err);
+        // Once per preset, so a cable sweeping the menu can't stack alerts
+        if (!presetAlerted.has(k)) {
+          presetAlerted.add(k);
+          alert(`Could not load ${file}: ${err.message}`);
+        }
+      },
+    );
   }
 
   _freeMaskSheets() {
@@ -267,6 +381,8 @@ export class NAPLPSModule extends Module {
     const now = performance.now() / 1000;
     const dt = Math.min(Math.max(now - this.lastTime, 0), MAX_DT);
     this.lastTime = now;
+
+    this._syncPreset();
 
     const w = glCanvas.width;
     const h = glCanvas.height;
@@ -485,10 +601,13 @@ export class NAPLPSModule extends Module {
   }
 
   dispose() {
+    this._disposed = true;
+    this._loadToken++;
     this._freeMaskSheets();
     if (this.napPg) this.napPg.remove();
     if (this.pg) this.pg.remove();
     if (this.fileInput) this.fileInput.remove();
+    this.fileData = null;
     super.dispose();
   }
 }

@@ -6,6 +6,44 @@ import { FB_WIDTH, FB_HEIGHT } from './grass/framebuffer.js';
 import { GrassSession } from './grass/session.js';
 import { serializeWorkspace } from './grass/script.js';
 
+// The .grass scripts bundled in files/grass, in drop-down order after option 0.
+// Patches save the preset as its index, so new files are appended, never inserted.
+const PRESET_DIR = new URL('../../files/grass/', import.meta.url);
+const PRESETS = [
+  'lesson_01.grass',
+  'lesson_02.grass',
+  'lesson_03.grass',
+  'lesson_04.grass',
+  'lesson_05.grass',
+  'lesson_06.grass',
+  'lesson_07.grass',
+  'lesson_08.grass',
+  'lesson_09.grass',
+  'lesson_10.grass',
+  'lesson_11.grass',
+];
+const NO_FILE_LABEL = 'None';
+
+// Preset index -> promise of its script text. Shared by every GRASS node.
+const presetCache = new Map();
+const presetAlerted = new Set();
+
+function loadPreset(k) {
+  if (!presetCache.has(k)) {
+    const file = PRESETS[k];
+    presetCache.set(k, fetch(new URL(file, PRESET_DIR))
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.text();
+      })
+      .catch((err) => {
+        presetCache.delete(k);
+        throw err;
+      }));
+  }
+  return presetCache.get(k);
+}
+
 export class GRASSModule extends Module {
   static uid = 'ca2234bc';
 
@@ -14,7 +52,13 @@ export class GRASSModule extends Module {
     this.inputs = [];
     this.outputs = [{ id: '0a9c', name: 'out', type: 'video' }];
     this.historicalInfo = 'GRASS';
+    // Option 0 is the script loaded with the Load button, named after it once
+    // there is one; the rest are the bundled lessons.
     this.params = {
+      preset: {
+        id: '0d9e', value: 0, min: 0, max: PRESETS.length, step: 1, label: 'File',
+        widget: 'dropdown', valueLabels: [NO_FILE_LABEL, ...PRESETS],
+      },
       // Lines a middleground macro runs a frame; .B macros share as many
       speed: { id: '1adf', value: 8, min: 1, max: 1000, step: 1, label: 'Speed' },
     };
@@ -22,6 +66,11 @@ export class GRASSModule extends Module {
     // p5.Image used to transfer framebuffer pixels to WebGL as a texture
     const p = glCanvas._pInst;
     this.fbImage = p.createImage(FB_WIDTH, FB_HEIGHT);
+    this.fileName = '';      // the script loaded with the button, shown on it
+    this.fileScript = null;  // { text, name } kept for option 0
+    this._shownPreset = 0;   // the option the active session belongs to
+    this._loadToken = 0;     // so a slow preset can't land after a newer choice
+    this._disposed = false;
 
     this.createShader(passthroughFrag);
     this.createOutputFBO();
@@ -46,13 +95,18 @@ export class GRASSModule extends Module {
     this.terminal.println('');
   }
 
+  _resetSession() {
+    this.session.breakAll();
+    this._startSession();
+  }
+
   // Reset button: back to the state the module starts in. Every macro stops,
   // and the screen, terminal, prompt history, workspace (macros, variables,
   // arrays, snaps), palette and clock start over. The Speed knob, a patch
   // setting, stays where it is
   reset() {
-    this.session.breakAll();
-    this._startSession();
+    this._loadToken++;
+    this._resetSession();
   }
 
   // BEEP: a tenth of a second of a soft square wave. Several BEEPs in one
@@ -77,8 +131,40 @@ export class GRASSModule extends Module {
     }
   }
 
+  // Follow the drop-down, whether a click or a cable moved it. Presets load
+  // asynchronously; the previous session stays on until the new script arrives.
+  _syncPreset() {
+    const k = Math.max(0, Math.min(PRESETS.length, Math.round(this.params.preset.value)));
+    if (k === this._shownPreset) return;
+    this._shownPreset = k;
+    const token = ++this._loadToken;
+    if (k === 0) {
+      this._resetSession();
+      if (this.fileScript) this.loadScript(this.fileScript.text, this.fileScript.name);
+      return;
+    }
+    const file = PRESETS[k - 1];
+    loadPreset(k - 1).then(
+      (text) => {
+        if (!this._disposed && token === this._loadToken) {
+          this._resetSession();
+          this.loadScript(text, file);
+        }
+      },
+      (e) => {
+        console.error(`Could not load GRASS preset ${file}:`, e);
+        // Once per preset, so a cable sweeping the menu can't stack alerts
+        if (!presetAlerted.has(k)) {
+          presetAlerted.add(k);
+          alert(`Could not load ${file}: ${e.message}`);
+        }
+      },
+    );
+  }
+
   // Called every frame by the pipeline (always, regardless of fullscreen state)
   process(graph, glCanvas) {
+    this._syncPreset();
     this.session.speed = Math.max(1, Math.round(this.params.speed.value));
     this.session.frame();
     if (this.terminal.beeps) {
@@ -124,21 +210,37 @@ export class GRASSModule extends Module {
     img.updatePixels();
   }
 
-  // Load button: pick a .grass script, reset the module (as the Reset button
-  // does), and run the script on the fresh machine. Cancelling the file
-  // dialog changes nothing
+  // Load button: pick a .grass script, store it in option 0, switch the menu
+  // to it, reset the module (as the Reset button does), and run the script on
+  // the fresh machine. Cancelling the file dialog changes nothing
   pickScript() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.grass,.GRASS,.txt';
     input.onchange = (e) => {
       const file = e.target.files[0];
-      if (file) file.text().then(text => {
-        this.reset();
-        this.loadScript(text, file.name);
-      });
+      if (file) this.loadScriptFile(file);
     };
     input.click();
+  }
+
+  async loadScriptFile(file) {
+    const token = ++this._loadToken;
+    try {
+      const text = await file.text();
+      if (this._disposed || token !== this._loadToken) return;
+      this.fileScript = { text, name: file.name };
+      this.fileName = file.name;
+      this.params.preset.valueLabels[0] = file.name || NO_FILE_LABEL;
+      this.setParam('preset', 0);
+      this._shownPreset = 0;
+      this._loadToken++;
+      this._resetSession();
+      this.loadScript(text, file.name);
+    } catch (e) {
+      // Keep whatever session was running before
+      alert(`Could not load ${file.name}: ${e.message}`);
+    }
   }
 
   // Queue a script's commands, to run in order as if each were typed at the
@@ -231,6 +333,9 @@ export class GRASSModule extends Module {
   }
 
   dispose() {
+    this._disposed = true;
+    this._loadToken++;
+    this.fileScript = null;
     this.scheduler.killAll();
     this.fbImage = null;
     if (this._audio) this._audio.close().catch(() => {});

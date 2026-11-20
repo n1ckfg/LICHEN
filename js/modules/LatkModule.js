@@ -9,7 +9,43 @@ const SAMPLE_RATE = 44100;   // of the X and Y outputs
 const MAX_DT = 0.1;          // clamp long stalls so a tab switch doesn't jump the clocks
 const ORBIT_RATE = 0.01;     // example-latk's drag rate, radians per pixel
 const ZOOM_RATE = 0.001;     // and its wheel: distance x exp(delta x ZOOM_RATE)
-const DEFAULT_FILE = new URL('../../files/latk/jellyfish.latk', import.meta.url);
+
+// The .latk files bundled in files/latk, in drop-down order after option 0.
+// Patches save the preset as its index, so new files are appended, never inserted.
+const PRESET_DIR = new URL('../../files/latk/', import.meta.url);
+const PRESETS = [
+  'flower.latk',
+  'jellyfish.latk',
+  'kinect_guy.latk',
+  'latk_logo.latk',
+];
+const NO_FILE_LABEL = 'None';
+
+// Preset index -> promise of parsed layers. Shared by every Latk node; each
+// node gets fresh layer wrappers so its playback counter stays independent.
+const presetCache = new Map();
+const presetAlerted = new Set();
+
+function loadPreset(k) {
+  if (!presetCache.has(k)) {
+    const file = PRESETS[k];
+    presetCache.set(k, fetch(new URL(file, PRESET_DIR))
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.arrayBuffer();
+      })
+      .then((buf) => readLatk(buf))
+      .catch((err) => {
+        presetCache.delete(k);
+        throw err;
+      }));
+  }
+  return presetCache.get(k);
+}
+
+function cloneLayers(layers) {
+  return layers.map((layer) => ({ ...layer, counter: 0 }));
+}
 
 // A Latk drawing (Lightning Artist Toolkit), played back and drawn as lines in
 // its strokes' colours, seen through an orbiting camera. This is the player
@@ -27,7 +63,13 @@ export class LatkModule extends Module {
       { id: 'd1e6', name: 'y', type: 'control' },
     ];
     this.historicalInfo = 'Latk';
+    // Option 0 is the file loaded with the button, named after it once there
+    // is one; the rest are the bundled presets.
     this.params = {
+      preset: {
+        id: '60f3', value: 0, min: 0, max: PRESETS.length, step: 1, label: 'File',
+        widget: 'dropdown', valueLabels: [NO_FILE_LABEL, ...PRESETS],
+      },
       fps: { id: '9083', value: 12, min: 0, max: 60, step: 1, label: 'FPS' },   // ofxLatk's 12 frames a second
       yaw: { id: '180c', value: 0, min: -180, max: 180, step: 1, label: 'Yaw' },
       pitch: { id: '9432', value: OrbitCamera.HOME_PITCH * 180 / Math.PI, min: -89, max: 89, step: 1, label: 'Pitch' },
@@ -50,7 +92,11 @@ export class LatkModule extends Module {
 
     this.cam = new OrbitCamera();
     this.latk = null;         // { layers } once a drawing is in
-    this.fileName = '';       // shown on the load button
+    this.fileName = '';       // the file loaded with the button, shown on it
+    this.fileLayers = null;   // that file's parsed layers, kept for option 0
+    this._shownPreset = 0;    // the option the active drawing belongs to
+    this._loadToken = 0;      // so a slow preset can't land after a newer choice
+    this._disposed = false;
     this.frameClock = 0;      // Latk frames still to advance
     this.spinYaw = 0;         // degrees turned by Spin, added to the Yaw knob
     this.dragX = null;        // last fullscreen drag position, null when not dragging
@@ -58,7 +104,6 @@ export class LatkModule extends Module {
     this.lastTime = performance.now() / 1000;
 
     this._createFileInput();
-    this._loadDefault();
   }
 
   _createFileInput() {
@@ -78,8 +123,17 @@ export class LatkModule extends Module {
   }
 
   async loadFile(file) {
+    const token = ++this._loadToken;
     try {
-      this._setDrawing(await readLatk(await file.arrayBuffer()), file.name);
+      const layers = await readLatk(await file.arrayBuffer());
+      if (this._disposed || token !== this._loadToken) return;
+      this.fileLayers = layers;
+      this.fileName = file.name;
+      this.params.preset.valueLabels[0] = file.name || NO_FILE_LABEL;
+      this.setParam('preset', 0);
+      this._shownPreset = 0;
+      this._loadToken++;
+      this._setDrawing(cloneLayers(layers));
     } catch (e) {
       // Keep whatever drawing was loaded before
       alert(`Could not load ${file.name}: ${e.message}`);
@@ -87,21 +141,42 @@ export class LatkModule extends Module {
     this.fileInput.value = '';   // so picking the same file again still fires 'change'
   }
 
-  // example-latk's jellyfish, until a file is picked
-  async _loadDefault() {
-    try {
-      const res = await fetch(DEFAULT_FILE);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const layers = await readLatk(await res.arrayBuffer());
-      if (!this.latk) this._setDrawing(layers, 'jellyfish.latk');
-    } catch (e) {
-      console.error('Latk: could not load jellyfish.latk', e);
+  // Follow the drop-down, whether a click or a cable moved it. Presets load
+  // asynchronously; the previous drawing stays on until the new one is ready.
+  _syncPreset() {
+    const k = Math.max(0, Math.min(PRESETS.length, Math.round(this.params.preset.value)));
+    if (k === this._shownPreset) return;
+    this._shownPreset = k;
+    const token = ++this._loadToken;
+    if (k === 0) {
+      if (this.fileLayers) this._setDrawing(cloneLayers(this.fileLayers));
+      else this._clearDrawing();
+      return;
     }
+    const file = PRESETS[k - 1];
+    loadPreset(k - 1).then(
+      (layers) => {
+        if (!this._disposed && token === this._loadToken) this._setDrawing(cloneLayers(layers));
+      },
+      (e) => {
+        console.error(`Could not load Latk preset ${file}:`, e);
+        // Once per preset, so a cable sweeping the menu can't stack alerts
+        if (!presetAlerted.has(k)) {
+          presetAlerted.add(k);
+          alert(`Could not load ${file}: ${e.message}`);
+        }
+      },
+    );
+  }
+
+  _clearDrawing() {
+    this.latk = null;
+    this.frameClock = 0;
   }
 
   // The camera looks at the whole drawing, every frame of it, as example-latk's
   // frameDrawing() did
-  _setDrawing(layers, fileName) {
+  _setDrawing(layers) {
     const min = [Infinity, Infinity, Infinity];
     const max = [-Infinity, -Infinity, -Infinity];
     for (const layer of layers) {
@@ -118,11 +193,11 @@ export class LatkModule extends Module {
     }
     if (min[0] <= max[0]) this.cam.fit(min, max);
     this.latk = { layers };
-    this.fileName = fileName;
     this.frameClock = 0;
   }
 
   process(graph, glCanvas) {
+    this._syncPreset();
     const now = performance.now() / 1000;
     const dt = Math.min(Math.max(now - this.lastTime, 0), MAX_DT);
     this.lastTime = now;
@@ -195,6 +270,9 @@ export class LatkModule extends Module {
   }
 
   dispose() {
+    this._disposed = true;
+    this._loadToken++;
+    this.fileLayers = null;
     this.segments.dispose();
     if (this.fileInput) this.fileInput.remove();
     super.dispose();
