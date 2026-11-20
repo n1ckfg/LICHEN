@@ -313,21 +313,25 @@ Checked in Node against all eleven lessons, and in headless Chrome through the b
 
 ## NAPLPS Module
 
-The NAPLPS module (`js/modules/NAPLPSModule.js`) decodes North American Presentation Level Protocol Syntax (.nap) files containing vector graphics instructions.
+The NAPLPS module (`js/modules/NAPLPSModule.js`) decodes North American Presentation Level Protocol Syntax and Telidon 699 (`.nap`) files containing vector graphics instructions.
 
-**Decoding:** Relies on the external `js/modules/naplps/naplps.js` decoder logic. It accepts file drops through a hidden HTML file input, creating draw commands progressively with a configurable playback speed.
-**Rendering path:** Commands are executed into a 2D `p5.Graphics` buffer using p5 drawing commands (`pg.rect`, `pg.vertex`, etc.), tracking color and progressive drawing state, which is then mapped to the module's WebGL `outputFBO` via the passthrough shader.
+**Libraries:** Uses unmodified copies of the standard UMD `js/modules/naplps/naplps.js` and `js/modules/naplps/TelidonP5.js` libraries (from `TEIA_TELIDON_ETC/Telidon/js/libraries/telidon`). Both are side-effect imported as classic scripts (`window.NAPLPS`, `window.TelidonP5`), so both the browser and `tools/patch-to-gles3.mjs` load them unchanged.
 
-**Params.** Speed sets how fast each command's points are revealed. Loop Hz (1–100, default 5) is the loops a second on X and Y, as Latk's: a lower rate gives the drawing more samples.
+**Decoding:** Files are picked through a hidden HTML file input and read as raw bytes (`ArrayBuffer` -> `Uint8Array`), then decoded once via `NAPLPS.decode()` into a command array (handling both NAPLPS 709 and Telidon 699 automatically).
 
-**X and Y.** Like Latk, NAPLPS has X and Y control outputs, which carry what it draws each frame as one loop of XY audio to drive Twoscilloscope (see Latk Module). As each command is drawn, its outline goes into the loop in the command's colour:
-- **Polygons, lines and points:** the points revealed so far, closed back to the first, as they are drawn.
+**Rendering path:** Commands are rendered into a 2D `p5.Graphics` buffer via `TelidonP5.render(pg, commands, { limit, time, blinkTime })` and uploaded to the module's WebGL `outputFBO` through the passthrough shader. Playback walks forward through `commands` at 150 commands/sec scaled by Speed, honouring `wait` pauses and `blink` palette animation; once a still image finishes it stops re-rendering until resized or replaced. At non-4:3 frame sizes `TelidonP5.render()` draws into a 4:3 buffer sized by `letterbox(4, 3, w, h)` and blits it centred onto `pg`. Any programmable texture mask sheets cached by `TelidonP5` on `texture` commands are freed on reload and `dispose()`.
+
+**Params.** Speed (0.1–10, default 1) scales the playback rate (commands/sec, `wait` durations and `blink` phase). Loop Hz (1–100, default 5) is the loops a second on X and Y, as Latk's: a lower rate gives the drawing more samples.
+
+**X and Y.** Like Latk, NAPLPS has X and Y control outputs, which carry what it draws each frame as one loop of XY audio to drive Twoscilloscope (see Latk Module). The module walks the frame's rendered commands through the same `TelidonP5.Viewport` and display palette (including `blink` substitutions), clearing earlier outlines on a screen-clearing `reset`, and adds each vector outline in its current colour:
+- **Lines and incremental lines:** open segments (connected `incLine` segments are chained into polylines).
+- **Polygons:** closed back to the first vertex.
 - **Rectangles:** their four sides.
-- **Arcs:** the full circle, in 72 sides, since the module draws every arc as a circle. The box runs down and to the right of the first point whatever the sign of its size, as p5 draws it.
+- **Arcs:** 2-point circles (72 sides), 3-point circumcircle arcs (64 segments, or a straight line when collinear), and >3-point Catmull-Rom splines, matching `TelidonP5`.
 - **Filled shapes:** the beam can't fill, so they are traced as outlines.
-- **Left out:** text, and anything with no length (a single point), which a canvas doesn't stroke either.
+- **Left out:** text, mosaics, DRCS glyphs, incremental bitmaps (`incPoint`), and anything with no length (single points).
 
-Outlines are cut at the canvas edge, as Latk's strokes are. `images/test.nap` is 1,595 filled polygons, which give 1,566 outlines once those with no length are left out. All of them fit in a loop at the default 5 Hz. A busier file loses its shortest outlines first (see Latk's X and Y). Before a file loads, the loop is all blank, so the beam rests unlit in the middle. Adding the outputs left the video unchanged: in headless Chrome, `test.nap` plays back on every pixel as it did before, at three points in its reveal. Twoscilloscope's Original Lines, fed from X and Y, lay over the video's polygons, rectangles and arcs in `test.nap` and in TEIA_TELIDON_ETC's `beer.nap`, `email2.nap` and `memra2.nap`.
+Outlines are cut at the canvas edge, as Latk's strokes are. Before a file loads, the loop is all blank, so the beam rests unlit in the middle. Checked in headless Chromium with `images/test.nap` and TEIA_TELIDON_ETC's `shark.nap`, `beer.nap`, `email2.nap`, `wast.nap`, `santa.nap`, `canada1.nap` and `haunt.nap`, across 4:3, 16:9 and portrait frame sizes, out-of-range typed param values, Twoscilloscope `Original Lines` overlay, and `tools/patch-to-gles3.mjs` bundling.
 
 ## QTVR and VRML Modules
 
