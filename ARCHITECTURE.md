@@ -1078,7 +1078,7 @@ The OpticalFlow module (`js/modules/OpticalFlowModule.js`, `js/shaders/optical-f
 2. **Gradients.** Each level used gets the current frame's central-difference `Ix`, `Iy` once, with its luma alongside in the same texel.
 3. **LK, coarse to fine.** From the coarsest level used down to level 0, each level starts from the coarser level's flow, scaled by the two levels' size ratio. Each pass matches the window round a pixel against the previous frame shifted by that pixel's flow so far, the same shift for the whole window (Bouguet). It solves the Gaussian-weighted 2×2 system `A d = b` and adds `d`. Iterations runs this pass that many times a level, each from the last, with the window shifted again.
 4. **Smooth** mixes level 0's flow with last frame's result: `mix(now, last, smooth)`.
-5. **View** draws the output, and the input is copied to keep for Warp.
+5. **View** draws the output, and the input is copied to keep for Warp. Motion Blur adds a pass of its own first (see below).
 
 The first frame, and the first after a resize, is compared with itself, so it shows no motion.
 
@@ -1094,6 +1094,7 @@ The first frame, and the first after a resize, is compared with itself, so it sh
 | Texture | 0–8 | 0.5 | Grey levels a texel luma must change by in a window's flattest direction for its motion to be solved |
 | Iterations | 1–5 | 2 | LK passes a level |
 | Smooth | 0–0.99 | 0 | Temporal smoothing of the flow |
+| Shutter | 0–4 | 1 | Motion Blur's length as a share of a frame's motion: 1 is a shutter open for the whole frame, 0.5 a 180° shutter, above 1 longer than real |
 
 **Views:**
 
@@ -1104,10 +1105,17 @@ The first frame, and the first after a resize, is compared with itself, so it sh
 | Arrows | One arrow a Spacing cell over the input, coloured as Color, two cells long at Range |
 | Warp | The previous frame pulled along the flow, `prev(x − f)`, mixed 65/35 with the current frame. Where the flow is right this matches the current frame |
 | Vectors | x in red, y in green, encoded as Displacer reads them: 128 is still, 0 and 255 are −Range and +Range (127/128 of it). Blue is 128 |
+| Motion Blur | The input blurred along its own motion, as an effect (see below) |
 
 **Into Displacer.** Cable Vectors to Displacer's `map`, with X From Red, Y From Green, and X Max and Y Max equal to Range. With the current frame in `in`, Displacer then outputs `curr(x + f)`, which is the previous frame again; with −Range it pushes the picture on along its motion. In the check below, the previous frame came back within 0.11 levels on average.
 
 **Arrows on the GPU.** The sketch read the flow back with `loadPixels()` and drew arrows with p5 lines, which stalls the GPU every frame and can't export (strokes aren't in node-gles3's runtime). Here the view shader draws them. An arrow is capped at two cells long, so a pixel tests only the arrows of the 5×5 cells round its own, against three segments each, antialiased to one device pixel.
+
+**Motion Blur.** The input averaged along the flow, as a camera whose shutter stays open for Shutter of the frame would have caught it, centred on the frame's time. It is a gather after McGuire et al., "A Reconstruction Filter for Plausible Motion Blur" (2012), without their depth test, since there is no depth here. Two passes (`opticalFlowTileMaxFrag`, `opticalFlowMotionBlurFrag`), with programs of their own so the other views' shader is untouched:
+1. **Tile max.** The longest blur (flow × Shutter) in each 20 px tile of the logical frame, into a buffer of one texel a tile.
+2. **Gather.** Each pixel samples 24 points along the longest blur of the 3×3 tiles round its own, so a still pixel beside a moving thing gathers across it too. Each sample stands for a moment of the shutter. It gives its own colour if its blur reaches the pixel (it passes over the pixel then), or if the pixel's own blur reaches it; otherwise it gives the pixel's own colour (the pixel shows itself at that moment). Uniform motion so becomes a box blur of the motion's length, and a moving thing over a still background smears out by the share of the shutter it covers, transparent areas included, since alpha is averaged too. A fixed per-pixel offset along the line turns the samples' banding into fine grain that doesn't crawl. Where no blur nearby reaches half a pixel the input passes through exactly.
+
+Blurs are capped at 40 px, the most a 3×3 tile neighbourhood can see. Flow only counts where the input has texture: where its luma changes by at least Texture grey levels a texel, read from level 0's gradients. In a flat area the pyramid hands down whatever the coarser levels made up, often long and wrong, and would win its tile. A flat area looks the same blurred either way, so nothing is lost. The same gate means soft, slow-changing pictures (Cloudy, say) barely blur at the default Texture; lower Texture to blur them more.
 
 **Changes from the sketch:**
 - **Window shifted as a whole.** The sketch corrected `It` by the prior flow to first order (`It + Ix·pf.x + Iy·pf.y`), which falls apart for the large priors the pyramid hands down. Warping each window pixel by its own prior, the obvious fix, doesn't converge either: a window then solves for its pixels' mean residual, so noise in the prior field survives every iteration. Shifting the window by its centre's flow, as Bouguet does, converges.
@@ -1122,7 +1130,9 @@ The first frame, and the first after a resize, is compared with itself, so it sh
 - **Rotation.** The field turned round the point where rotation and translation cancel, where it should.
 - **Elsewhere.** A resize to 1280×720 reallocated the buffers and stayed as accurate (99.5% within 0.5 px). A patch saves its params by id. Exported to node-gles3 with SpiralGalaxy as the source, after 60 frames at a fixed 30 fps the output matched Chrome's within 16 levels, and within 8 on all but 0.03% of pixels.
 
-**Cost.** On an M2 Max at defaults, about 0.5 ms a frame at 640×480; Window 15 costs about 2 ms. LK is 2–3 fetches per window texel per iteration, so cost grows with Window², Iterations and the frame's area.
+- **Motion Blur.** The grass photo, moved rigidly by Transform each frame, was compared with the exact blur of the same picture: the mean of 256 copies shifted along the motion over the shutter. Over motions of (8, 0), (6, 4) and (10, −6) px a frame and Shutter 0.5–2, the output was within 1.0–2.0 levels of it on average inside the picture (the unblurred input was 4.6–13 levels off), and within 1.1–4.2 levels across the picture's edges, where it smears into the transparent surround (unblurred 9–17). Without the texture gate the edges were 7–11 levels off: made-up flow in the flat surround won the edge tiles. A still input, and the still background round a moving picture, came through exactly. Views 0–4 stayed identical to before Motion Blur was added, at density 1 and 2. Exported to node-gles3 (Cloudy → Swarm → OpticalFlow), after 120 frames at a fixed 60 fps the output matched Chrome's within 1 level at density 1 and 2.
+
+**Cost.** On an M2 Max at defaults, about 0.5 ms a frame at 640×480; Window 15 costs about 2 ms. LK is 2–3 fetches per window texel per iteration, so cost grows with Window², Iterations and the frame's area. Motion Blur adds about 0.4 ms at 640×480 at density 1 and 0.8 ms at density 2, measured by throughput on a moving input; the other views cost about 0.01 ms.
 
 ## VideoToasting Module
 
