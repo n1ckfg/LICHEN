@@ -253,3 +253,135 @@ void main() {
   gl_FragColor = vec4(rgb, 1.0);
 }
 `;
+
+// Motion Blur: the input averaged along the motion, as a shutter open for
+// uShutter of the frame would have caught it, centred on the frame's time. A
+// gather after McGuire et al., "A Reconstruction Filter for Plausible Motion
+// Blur" (2012), without their depth test, since there is no depth here:
+//   1. opticalFlowTileMaxFrag: the longest flow in each MB_TILE px tile
+//   2. opticalFlowMotionBlurFrag: each pixel gathers along the longest flow of
+//      the 3x3 tiles round its own, so a still pixel next to a moving thing
+//      gathers across it too
+// Flow is only trusted where the input has texture: where its luma changes by
+// at least uMinGrad a texel (Texture, in grey levels). In a flat area the
+// pyramid hands down whatever the coarser levels made up, often long and
+// wrong, and a flat area looks the same blurred any way, so its flow counts as
+// none. Otherwise a made-up vector beside a moving thing wins its tile.
+// Each of MB_SAMPLES samples along that line stands for a moment of the
+// shutter. It gives its own colour if its blur reaches the pixel (it passes
+// over the pixel then), or if the pixel's own blur reaches it; otherwise the
+// pixel's own colour (the pixel shows itself then). So uniform motion is a box
+// blur of the motion's length, and a moving edge over a still background
+// smears out by the share of the shutter it covers. Blurs reach at most
+// MB_TILE px either way, the most a 3x3 tile neighbourhood can see. A fixed
+// per-pixel offset along the line turns the samples' banding into fine grain
+// that stays still. Alpha is averaged with colour, so a smear carries into
+// transparent areas. Its own programs, so the other views' shader stays
+// exactly as it was.
+export const MB_SAMPLES = 24;
+export const MB_TILE = 20;
+
+const MB_COMMON = `
+${ENCODING}
+uniform vec2 uSize;         // logical frame
+uniform float uShutter;     // the blur's length, as a share of a frame's motion
+uniform sampler2D uGrads;   // level 0's gradients, from the LK passes
+uniform float uMinGrad;     // the luma change a texel needs for its flow to count
+
+// The flow at uv as a blur, in logical px, at most 2 * MB_TILE long; none
+// where the input is flat
+vec2 blurAt(sampler2D flow, vec2 uv) {
+  if (length(decGrad(texture2D(uGrads, uv).xy)) < uMinGrad) return vec2(0.0);
+  vec2 v = decFlow(texture2D(flow, uv).xy) * uShutter;
+  float len = length(v);
+  float cap = 2.0 * ${MB_TILE.toFixed(1)};
+  return len > cap ? v * (cap / len) : v;
+}
+`;
+
+// One texel a tile: the longest blur among the tile's flow texels, encoded as
+// flow (so in the flow buffers' format) but already scaled by uShutter
+export const opticalFlowTileMaxFrag = `
+precision highp float;
+varying vec2 vTexCoord;
+uniform sampler2D uFlow;
+uniform vec2 uTileCount;    // tiles across and down, the size of this buffer
+${MB_COMMON}
+void main() {
+  // The tile's top-left logical px; flow texels are logical px
+  vec2 origin = floor(vTexCoord * uTileCount) * ${MB_TILE.toFixed(1)};
+  vec2 best = vec2(0.0);
+  float bestLen = 0.0;
+  for (int j = 0; j < ${MB_TILE}; j++) {
+    for (int i = 0; i < ${MB_TILE}; i++) {
+      vec2 p = origin + vec2(float(i), float(j)) + 0.5;
+      if (p.x > uSize.x || p.y > uSize.y) continue;
+      vec2 v = blurAt(uFlow, p / uSize);
+      float len = dot(v, v);
+      if (len > bestLen) { bestLen = len; best = v; }
+    }
+  }
+  gl_FragColor = vec4(encFlow(best), 0.0, 1.0);
+}
+`;
+
+export const opticalFlowMotionBlurFrag = `
+precision highp float;
+varying vec2 vTexCoord;
+uniform sampler2D tex0;     // input
+uniform sampler2D uFlow;
+uniform sampler2D uTiles;   // opticalFlowTileMaxFrag's
+uniform vec2 uTileCount;    // tiles across and down
+${MB_COMMON}
+const int SAMPLES = ${MB_SAMPLES};
+
+float hash(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+// Whether a blur of length len, centred where it starts, reaches d px away,
+// with an edge one px wide
+float reaches(float d, float len) {
+  return clamp(0.5 * len - d + 0.5, 0.0, 1.0);
+}
+
+void main() {
+  vec4 cX = texture2D(tex0, vTexCoord);
+  float lenX = length(blurAt(uFlow, vTexCoord));
+
+  // The longest blur in the 3x3 tiles round this pixel's
+  vec2 tile = floor(vTexCoord * uSize / ${MB_TILE.toFixed(1)});
+  vec2 vN = vec2(0.0);
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      vec2 t = tile + vec2(float(i), float(j));
+      if (t.x < 0.0 || t.y < 0.0 || t.x >= uTileCount.x || t.y >= uTileCount.y) continue;
+      vec2 v = decFlow(texture2D(uTiles, (t + 0.5) / uTileCount).xy);
+      if (dot(v, v) > dot(vN, vN)) vN = v;
+    }
+  }
+  // Under half a pixel of blur anywhere near, the picture is as it was
+  if (length(vN) < 0.5) {
+    gl_FragColor = cX;
+    return;
+  }
+
+  vec4 sum = cX;
+  float jitter = hash(gl_FragCoord.xy);
+  for (int i = 0; i < SAMPLES; i++) {
+    float t = (float(i) + jitter) / float(SAMPLES) - 0.5;   // -0.5..0.5 along the blur
+    vec2 offset = vN * t;
+    vec2 uv = vTexCoord + offset / uSize;
+    if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) {
+      sum += cX;
+      continue;
+    }
+    float d = length(offset);
+    float lenY = length(blurAt(uFlow, uv));
+    sum += mix(cX, texture2D(tex0, uv), max(reaches(d, lenY), reaches(d, lenX)));
+  }
+  gl_FragColor = sum / float(SAMPLES + 1);
+}
+`;

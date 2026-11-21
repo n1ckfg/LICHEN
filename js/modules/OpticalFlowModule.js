@@ -3,7 +3,8 @@ import { vertSrc } from '../shaders/vert.js';
 import { passthroughFrag } from '../shaders/passthrough.js';
 import {
   opticalFlowBlurFrag, opticalFlowDownFrag, opticalFlowGradientFrag, opticalFlowLKFrag,
-  opticalFlowSmoothFrag, opticalFlowViewFrag,
+  opticalFlowMotionBlurFrag, opticalFlowSmoothFrag, opticalFlowTileMaxFrag, opticalFlowViewFrag,
+  MB_TILE,
 } from '../shaders/optical-flow.js';
 import { registerModule } from '../moduleRegistry.js';
 
@@ -12,7 +13,9 @@ import { registerModule } from '../moduleRegistry.js';
 // always built to MAX_LEVELS, so Levels can change without the previous
 // frame's pyramid missing a level.
 
-const VIEWS = ['Color', 'Magnitude', 'Arrows', 'Warp', 'Vectors'];
+// Motion Blur is appended, so saved patches keep their views
+const VIEWS = ['Color', 'Magnitude', 'Arrows', 'Warp', 'Vectors', 'Motion Blur'];
+const MOTION_BLUR = 5;
 const MAX_LEVELS = 5;
 const ZERO8 = 128 / 255;
 
@@ -37,6 +40,9 @@ export class OpticalFlowModule extends Module {
       texture: { id: '86ad', value: 0.5, min: 0, max: 8, step: 0.05, label: 'Texture' },
       iterations: { id: 'd558', value: 2, min: 1, max: 5, step: 1, label: 'Iterations' },
       smooth: { id: 'e596', value: 0, min: 0, max: 0.99, step: 0.01, label: 'Smooth' },
+      // Motion Blur's length, as a share of a frame's motion: 0.5 is a film
+      // camera's 180 degree shutter, 1 the whole frame
+      shutter: { id: 'f7dc', value: 1, min: 0, max: 4, step: 0.05, label: 'Shutter' },
     };
 
     this.blurShader = glCanvas.createShader(vertSrc, opticalFlowBlurFrag);
@@ -45,6 +51,8 @@ export class OpticalFlowModule extends Module {
     this.lkShader = glCanvas.createShader(vertSrc, opticalFlowLKFrag);
     this.smoothShader = glCanvas.createShader(vertSrc, opticalFlowSmoothFrag);
     this.copyShader = glCanvas.createShader(vertSrc, passthroughFrag);
+    this.tileMaxShader = glCanvas.createShader(vertSrc, opticalFlowTileMaxFrag);
+    this.motionBlurShader = glCanvas.createShader(vertSrc, opticalFlowMotionBlurFrag);
     this.createShader(opticalFlowViewFrag);
     this.createOutputFBO();
 
@@ -107,6 +115,9 @@ export class OpticalFlowModule extends Module {
     // Two a level, since each iteration reads the last one's flow
     this.flows = [0, 1].map(() => this.sizes.map(([w, h]) => this._buffer(w, h)));
     this.smoothed = [this._buffer(w0, h0), this._buffer(w0, h0)];
+    // Motion Blur's longest blur a tile
+    this.tileCount = [Math.ceil(w0 / MB_TILE), Math.ceil(h0 / MB_TILE)];
+    this.tiles = this._buffer(this.tileCount[0], this.tileCount[1]);
     this.current = 0;     // which pyramid and smoothed buffer this frame writes
     this.hasHistory = false;
   }
@@ -157,6 +168,46 @@ export class OpticalFlowModule extends Module {
       this._pass(this.downShader, pyr[i], sh => {
         sh.setUniform('tex0', pyr[i - 1]);
         sh.setUniform('uTexel', [1 / sw, 1 / sh0]);
+      });
+    }
+  }
+
+  // The output: a picture of the smoothed flow, out, or Motion Blur's
+  _drawView(input, out, texture, glCanvas) {
+    const view = Math.round(this.params.view.value);
+    if (view === MOTION_BLUR) {
+      const shutter = Math.max(0, this.params.shutter.value);
+      this._pass(this.tileMaxShader, this.tiles, sh => {
+        this._setEncoding(sh);
+        sh.setUniform('uFlow', out);
+        sh.setUniform('uGrads', this.grads[0]);
+        sh.setUniform('uMinGrad', texture);
+        sh.setUniform('uTileCount', this.tileCount);
+        sh.setUniform('uSize', this.sizes[0]);
+        sh.setUniform('uShutter', shutter);
+      });
+      this._pass(this.motionBlurShader, this.outputFBO, sh => {
+        this._setEncoding(sh);
+        sh.setUniform('tex0', input);
+        sh.setUniform('uFlow', out);
+        sh.setUniform('uTiles', this.tiles);
+        sh.setUniform('uGrads', this.grads[0]);
+        sh.setUniform('uMinGrad', texture);
+        sh.setUniform('uTileCount', this.tileCount);
+        sh.setUniform('uSize', this.sizes[0]);
+        sh.setUniform('uShutter', shutter);
+      });
+    } else {
+      this._pass(this.shader, this.outputFBO, sh => {
+        this._setEncoding(sh);
+        sh.setUniform('tex0', input);
+        sh.setUniform('tex1', this.hasHistory ? this.prevColor : input);
+        sh.setUniform('uFlow', out);
+        sh.setUniform('uSize', [glCanvas.width, glCanvas.height]);
+        sh.setUniform('uDensity', this.pixelDensity);
+        sh.setUniform('uView', view);
+        sh.setUniform('uRange', Math.max(this.params.range.value, 1e-3));
+        sh.setUniform('uSpacing', Math.max(this.params.spacing.value, 1));
       });
     }
   }
@@ -220,17 +271,7 @@ export class OpticalFlowModule extends Module {
       sh.setUniform('uSmooth', this.hasHistory ? Math.max(0, Math.min(0.99, this.params.smooth.value)) : 0);
     });
 
-    this._pass(this.shader, this.outputFBO, sh => {
-      this._setEncoding(sh);
-      sh.setUniform('tex0', input);
-      sh.setUniform('tex1', this.hasHistory ? this.prevColor : input);
-      sh.setUniform('uFlow', out);
-      sh.setUniform('uSize', [glCanvas.width, glCanvas.height]);
-      sh.setUniform('uDensity', this.pixelDensity);
-      sh.setUniform('uView', Math.round(this.params.view.value));
-      sh.setUniform('uRange', Math.max(this.params.range.value, 1e-3));
-      sh.setUniform('uSpacing', Math.max(this.params.spacing.value, 1));
-    });
+    this._drawView(input, out, texture, glCanvas);
 
     this._pass(this.copyShader, this.prevColor, sh => sh.setUniform('tex0', input));
 
@@ -249,6 +290,8 @@ export class OpticalFlowModule extends Module {
     this.lkShader = null;
     this.smoothShader = null;
     this.copyShader = null;
+    this.tileMaxShader = null;
+    this.motionBlurShader = null;
     super.dispose();
   }
 }
