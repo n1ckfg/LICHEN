@@ -36,7 +36,7 @@ const MODULE_CATEGORIES = {
   'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Crop', 'Delay', 'Displacer', 'Dither', 'Edges', 'Inpainter', 'Levels', 'LUT', 'Matte', 'Mosaic', 'OpticalFlow', 'Resample', 'Restore', 'Sharpen', 'Slitscan', 'Transform', 'VideoMixer'],
   'Control': ['Calculator', 'Constant', 'Random', 'Remap', 'Skeleton'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
-  'Generative': ['Cloudy', 'Coils', 'Conway', 'Crystalline', 'GridGuys', 'InkDrops', 'LetterForms', 'Protozoa', 'SpiralGalaxy', 'Whitney', 'Yellowtail'],
+  'Generative': ['Cloudy', 'Coils', 'Conway', 'Crystalline', 'GridGuys', 'InkDrops', 'LetterForms', 'Protozoa', 'SpiralGalaxy', 'Swarm', 'Whitney', 'Yellowtail'],
   'Emulation': ['DeeSeventySix', 'ESP32', 'InkMarkers', 'NTSC', 'RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
   'img2img': ['DepthAnything', 'InfrDrawings', 'Pix2Pix'],
   'Formats': ['Latk', 'NAPLPS', 'Panorama', 'QTVR', 'VRML'],
@@ -100,6 +100,7 @@ const MODULE_COLORS = {
   LetterForms: color_generative,
   Protozoa: color_generative,
   SpiralGalaxy: color_generative,
+  Swarm: color_generative,
   Whitney: color_generative,
   Yellowtail: color_generative,
   // - - - EMULATION - - -

@@ -21,13 +21,13 @@
 		"name": "NAPLPS",
 		"year": 1978,
 		"title": "<a href='https://en.wikipedia.org/wiki/Telidon'>Telidon</a> / <a href='https://en.wikipedia.org/wiki/NAPLPS'>NAPLPS</a>",
-		"body": "TK"
+		"body": "A graphics language for use originally with videotex and teletext services. NAPLPS was developed from the Telidon system"
 	},
 	{
 		"name": "HyperCard",
 		"year": 1987,
 		"title": "<a href='https://en.wikipedia.org/wiki/HyperCard'>HyperCard</a>",
-		"body": "TK"
+		"body": "Created by <a href='https://en.wikipedia.org/wiki/Bill_Atkinson'>Bill Atkinson</a>, HyperCard was one of the first multimedia authoring environments, with a distinctive monochrome dithered appearance."
 	},
 	{
 		"name": "RuttEtra",
@@ -39,7 +39,7 @@
 		"name": "GameBoy",
 		"year": 1998,
 		"title": "<a href='https://en.wikipedia.org/wiki/Game_Boy_Camera'>Game Boy Camera</a>",
-		"body": "TK"
+		"body": "One of the earliest consumer digital cameras, with a 128×128-pixel sensor that captured four shades of gray."
 	},
 	{
 		"name": "HSFlow",
@@ -141,5 +141,11 @@
 		"year": 1953,
 		"title": "<a href='https://en.wikipedia.org/wiki/NTSC'>NTSC Color Television</a>",
 		"body": "Emulation of the NTSC analog color video signal, ported from <a href='https://github.com/undef-i/ntsc-wasm'>ntsc-wasm</a> by <a href='https://nedifinita.com/'>noxylva</a>."
+	},
+	{
+		"name": "Swarm",
+		"year": 2007,
+		"title": "<a href='https://neural.it/2007/07/dynamic-abstraction-the-beauty-of-randomness-by-joshua-davis/'>Dynamic Abstraction</a>",
+		"body": "Inspired by a series of Flash animation pieces by <a href='https://en.wikipedia.org/wiki/Joshua_Davis_(designer)'>Joshua Davis</a>."
 	}
 ]
