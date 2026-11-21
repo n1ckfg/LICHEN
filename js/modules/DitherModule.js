@@ -1,6 +1,13 @@
 import { Module } from './Module.js';
-import { ditherFrag, ditherErrorInitFrag, ditherErrorDiffuseFrag } from '../shaders/dither.js';
+import {
+  ditherFrag, ditherErrorInitFrag, ditherErrorDiffuseFrag,
+  ditherAtkinsonInitFrag, ditherAtkinsonDiffuseFrag,
+} from '../shaders/dither.js';
 import { registerModule } from '../moduleRegistry.js';
+
+// Classes of Atkinson's phased passes (see dither.js). Its sources reach 4 steps
+// back along x + 2y, so it needs more than 4; 7 measured best.
+const ATKINSON_PHASES = 7;
 
 export class DitherModule extends Module {
   static uid = 'ac9e381e';
@@ -11,8 +18,8 @@ export class DitherModule extends Module {
     this.outputs = [{ id: '1f3e', name: 'out', type: 'video' }];
     this.params = {
       mode: {
-        id: 'd3cf', value: 0, min: 0, max: 2, step: 1, label: 'Mode', widget: 'dropdown',
-        valueLabels: ['Bayer', 'Blue Noise', 'Error Diffusion'],
+        id: 'd3cf', value: 0, min: 0, max: 3, step: 1, label: 'Mode', widget: 'dropdown',
+        valueLabels: ['Bayer', 'Blue Noise', 'Error Diffusion', 'Atkinson'],
       },
       // Grey by default, so patches saved before RGB existed still dither in grey
       color: {
@@ -22,6 +29,9 @@ export class DitherModule extends Module {
       levels: { id: 'c1e3', value: 2, min: 2, max: 16, step: 1, label: 'Levels' },
       ditherStrength: { id: 'e6b9', value: 1.0, min: 0, max: 2, step: 0.01, label: 'Strength' },
       passes: { id: '6062', value: 4, min: 1, max: 8, step: 1, label: 'Passes' },
+      // Sweeps of Atkinson's phased passes. One sweep measured worse than Error
+      // Diffusion at 4 passes, so it starts at 2.
+      sweeps: { id: '9395', value: 2, min: 2, max: 4, step: 1, label: 'Sweeps' },
     };
 
     // Main shader for modes 0 and 1
@@ -32,7 +42,11 @@ export class DitherModule extends Module {
     this.errorInitShader = glCanvas.createShader(this._getVertSrc(), ditherErrorInitFrag);
     this.errorDiffuseShader = glCanvas.createShader(this._getVertSrc(), ditherErrorDiffuseFrag);
 
-    // Ping-pong FBOs for error diffusion
+    // Phased Atkinson shaders for mode 3
+    this.atkinsonInitShader = glCanvas.createShader(this._getVertSrc(), ditherAtkinsonInitFrag);
+    this.atkinsonDiffuseShader = glCanvas.createShader(this._getVertSrc(), ditherAtkinsonDiffuseFrag);
+
+    // Ping-pong FBOs for error diffusion and Atkinson
     this.fboA = this.createFramebuffer();
     this.fboB = this.createFramebuffer();
   }
@@ -73,9 +87,12 @@ export class DitherModule extends Module {
       this.shader.setUniform('uResolution', this.fragResolution());
       this.renderQuad();
       this.outputFBO.end();
-    } else {
+    } else if (mode === 2) {
       // Mode 2: Multi-pass error diffusion
       this._processErrorDiffusion(inputFBO, glCanvas, grey);
+    } else {
+      // Mode 3: phased Atkinson
+      this._processAtkinson(inputFBO, glCanvas, grey);
     }
   }
 
@@ -128,11 +145,59 @@ export class DitherModule extends Module {
     }
   }
 
+  // Phased Atkinson (see dither.js): an init pass, then Sweeps x ATKINSON_PHASES
+  // passes, one class each. The ping-pong buffers hold each pixel's adjusted
+  // value, and the last pass writes the output colour straight into outputFBO.
+  _processAtkinson(inputFBO, glCanvas, grey) {
+    // A typed value may go under 2
+    const sweeps = Math.max(1, Math.round(this.params.sweeps.value));
+    const numPasses = sweeps * ATKINSON_PHASES;
+    const resolution = this.fragResolution();
+
+    this.fboA.begin();
+    glCanvas.clear();
+    glCanvas.shader(this.atkinsonInitShader);
+    this.atkinsonInitShader.setUniform('tex0', inputFBO);
+    this.atkinsonInitShader.setUniform('levels', this.params.levels.value);
+    this.atkinsonInitShader.setUniform('uGrey', grey);
+    this.atkinsonInitShader.setUniform('uResolution', resolution);
+    this.renderQuad();
+    this.fboA.end();
+
+    const s = this.atkinsonDiffuseShader;
+    let readFBO = this.fboA;
+    let writeFBO = this.fboB;
+    for (let i = 0; i < numPasses; i++) {
+      const final = i === numPasses - 1;
+      const target = final ? this.outputFBO : writeFBO;
+      target.begin();
+      glCanvas.clear();
+      glCanvas.shader(s);
+      s.setUniform('tex0', readFBO);
+      s.setUniform('texOriginal', inputFBO);
+      s.setUniform('levels', this.params.levels.value);
+      s.setUniform('uGrey', grey);
+      s.setUniform('ditherStrength', this.params.ditherStrength.value);
+      s.setUniform('uResolution', resolution);
+      s.setUniform('uPhases', ATKINSON_PHASES);
+      s.setUniform('uClass', i % ATKINSON_PHASES);
+      s.setUniform('uFinal', final ? 1 : 0);
+      this.renderQuad();
+      target.end();
+
+      const temp = readFBO;
+      readFBO = writeFBO;
+      writeFBO = temp;
+    }
+  }
+
   dispose() {
     this.fboA = null;
     this.fboB = null;
     this.errorInitShader = null;
     this.errorDiffuseShader = null;
+    this.atkinsonInitShader = null;
+    this.atkinsonDiffuseShader = null;
     super.dispose();
   }
 }

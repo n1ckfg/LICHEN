@@ -250,3 +250,100 @@ void main() {
   gl_FragColor = uFinal > 0.5 ? vec4(newQuantized, 1.0) : vec4(newError * 0.5 + 0.5, 1.0);
 }
 `;
+
+// Atkinson runs in "phased" passes. Atkinson is sequential: each pixel waits for
+// the pixels that diffuse error into it, which lie to its left and in the two
+// rows above. Here each pixel has a class, (x + 2y) mod uPhases, with y counted
+// down from the top. Every source a pixel gathers from lies 1 to 4 steps earlier
+// along x + 2y, which is an order a sequential scan could visit them in. A pass
+// updates one class and copies the rest, and a sweep runs the classes in order,
+// so most of the error a pixel gathers was already updated earlier in the same
+// sweep. That gets far closer to sequential Atkinson than updating every pixel
+// at once from the pass before (see Dither Module in ARCHITECTURE.md).
+//
+// A pixel's state is its adjusted value a = original + gathered error, per
+// channel. Its output step and its error both follow from a: step = quantize(a),
+// error = a - step. a is stored as (a - A_MIN) / A_RANGE in RGB, which 8 bits
+// hold as well as a float would.
+//
+// A fixed per-pixel threshold offset, hashed from the pixel's position, stops a
+// flat area making the same choice everywhere, and keeps a still input still.
+const atkinsonCommon = `
+${colorMode}
+uniform float levels;
+uniform vec2 uResolution;
+
+const float THRESHOLD_NOISE = 0.25;   // of a step, peak to peak
+const float A_MIN = -0.75;
+const float A_RANGE = 2.5;
+
+float hash(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
+
+// The step a pixel at p (a gl_FragCoord) takes for adjusted value a
+vec3 quantize(vec3 a, vec2 p) {
+  float numSteps = max(levels - 1.0, 1.0);
+  vec3 v = clamp(a + (hash(p) - 0.5) * THRESHOLD_NOISE / numSteps, 0.0, 1.0);
+  return floor(v * numSteps + 0.5) / numSteps;
+}
+
+vec3 encodeA(vec3 a) { return clamp((a - A_MIN) / A_RANGE, 0.0, 1.0); }
+vec3 decodeA(vec3 c) { return c * A_RANGE + A_MIN; }
+`;
+
+// Atkinson init: every pixel's adjusted value is its original colour
+export const ditherAtkinsonInitFrag = `
+precision highp float;
+uniform sampler2D tex0;
+varying vec2 vTexCoord;
+${atkinsonCommon}
+void main() {
+  gl_FragColor = vec4(encodeA(colorMode(texture2D(tex0, vTexCoord).rgb)), 1.0);
+}
+`;
+
+// One phased Atkinson pass: pixels of class uClass gather 1/8 of the error of
+// each pixel that would have diffused to them (one and two to the left, above
+// left, above, above right, and two above; gl_FragCoord y - 1 is the row above)
+// and take a new adjusted value; the rest keep theirs. Atkinson drops the other
+// 2/8. The last pass of the last sweep (uFinal = 1) writes every pixel's step
+// instead, as the module's output.
+export const ditherAtkinsonDiffuseFrag = `
+precision highp float;
+uniform sampler2D tex0;         // the state
+uniform sampler2D texOriginal;
+uniform float ditherStrength;
+uniform float uPhases;
+uniform float uClass;
+uniform float uFinal;
+varying vec2 vTexCoord;
+${atkinsonCommon}
+// The error of the pixel at offset o; none off the frame
+vec3 errorAt(vec2 o) {
+  vec2 p = gl_FragCoord.xy + o;
+  if (p.x < 0.0 || p.y < 0.0 || p.x > uResolution.x || p.y > uResolution.y) return vec3(0.0);
+  vec3 a = decodeA(texture2D(tex0, p / uResolution).rgb);
+  return a - quantize(a, p);
+}
+
+void main() {
+  vec2 cell = floor(gl_FragCoord.xy);
+  float t = cell.x + 2.0 * cell.y;
+  // t mod uPhases, with + 0.5 so the division never lands on a whole number
+  float phase = t - uPhases * floor((t + 0.5) / uPhases);
+  vec3 a;
+  if (abs(phase - uClass) < 0.5) {
+    vec3 orig = colorMode(texture2D(texOriginal, vTexCoord).rgb);
+    vec3 gathered = (errorAt(vec2(-1.0, 0.0)) + errorAt(vec2(-2.0, 0.0)) +
+      errorAt(vec2(1.0, -1.0)) + errorAt(vec2(0.0, -1.0)) + errorAt(vec2(-1.0, -1.0)) +
+      errorAt(vec2(0.0, -2.0))) / 8.0;
+    a = orig + gathered * ditherStrength;
+  } else {
+    a = decodeA(texture2D(tex0, gl_FragCoord.xy / uResolution).rgb);
+  }
+  gl_FragColor = uFinal > 0.5 ? vec4(quantize(a, gl_FragCoord.xy), 1.0) : vec4(encodeA(a), 1.0);
+}
+`;

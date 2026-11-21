@@ -1,3 +1,6 @@
+// The HyperCard module's shaders.
+//
+// Fast: a 4x4 ordered pattern, mixed into the threshold, in one pass
 export const hypercardFrag = `
 precision highp float;
 varying vec2 vTexCoord;
@@ -58,5 +61,35 @@ void main() {
   }
 
   gl_FragColor = vec4(color, 1.0);
+}
+`;
+
+// Accurate runs Atkinson's error diffusion exactly, on the CPU in a worker (see
+// js/modules/hypercard/worker.js), so these only feed it and show what it returns.
+
+// The input's luminance, one texel per logical pixel of the frame, into R. At
+// pixel density 2 each texel's centre falls between four of the input's pixels,
+// so linear filtering averages them.
+export const hypercardLumaFrag = `
+precision highp float;
+varying vec2 vTexCoord;
+uniform sampler2D tex0;
+
+void main() {
+  vec3 col = texture2D(tex0, vTexCoord).rgb;
+  gl_FragColor = vec4(vec3(dot(col, vec3(0.299, 0.587, 0.114))), 1.0);
+}
+`;
+
+// The dithered picture, 0 or 1 in R a pixel, sampled nearest so each logical
+// pixel stays one solid block, in Fast's near-black and near-white
+export const hypercardResultFrag = `
+precision highp float;
+varying vec2 vTexCoord;
+uniform sampler2D tex0;
+
+void main() {
+  float white = texture2D(tex0, vTexCoord).r;
+  gl_FragColor = vec4(vec3(mix(0.066, 0.937, step(0.5, white))), 1.0);
 }
 `;

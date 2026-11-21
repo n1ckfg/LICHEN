@@ -2,7 +2,7 @@
 // SlowscanJam app's WebGLEncoder read its signal: readPixels into a pixel
 // buffer behind a fence, which poll() checks once a frame. Rows come back top
 // first (see Framebuffer Orientation in ARCHITECTURE.md). SlowscanJam reads its
-// source picture this way, and Skeleton its mask.
+// source picture this way, Skeleton its mask and HyperCard its luminance.
 export class PixelReadback {
   constructor(glCanvas) {
     this.glCanvas = glCanvas;
