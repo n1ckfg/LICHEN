@@ -63,3 +63,47 @@ export class Target {
     return min + Math.random() * (max - min);
   }
 }
+
+// The 3D mode's cursor: Target's wander in a cube of side `size` cells,
+// centred on 0. It is a class of its own, so the 2D mode's Target draws from
+// Math.random() exactly as it always did.
+export class Target3D {
+  constructor(size) {
+    this.size = size;
+    this.speedMin = 0.01;
+    this.speedMax = 0.05;
+    this.speed = 0.03;
+    this.clickOdds = 0.1;
+    this.chooseOdds = 0.01;
+    this.markTime = 0;
+    this.timeInterval = 200;
+
+    this.pos = [0, 0, 0];
+    this.goal = [0, 0, 0];
+    this.minDist = 0.5;
+    this.clicked = false;
+    this.armResetAll = false;
+
+    this.pickTarget();
+  }
+
+  run() {
+    for (let i = 0; i < 3; i++) this.pos[i] += (this.goal[i] - this.pos[i]) * this.speed;
+    const dist = Math.hypot(this.goal[0] - this.pos[0], this.goal[1] - this.pos[1], this.goal[2] - this.pos[2]);
+    if (performance.now() > this.markTime + this.timeInterval || dist < this.minDist) {
+      this.pickTarget();
+    }
+  }
+
+  pickTarget() {
+    this.markTime = performance.now();
+    const half = this.size / 2;
+    for (let i = 0; i < 3; i++) {
+      this.goal[i] = this.pos[i] + ((Math.random() * 2 - 1) * half - this.pos[i]) * 0.5;
+    }
+    this.speed = this.speedMin + Math.random() * (this.speedMax - this.speedMin);
+    const r = Math.random();
+    if (r < this.clickOdds) this.clicked = !this.clicked;
+    if (r < this.chooseOdds) this.armResetAll = true;
+  }
+}

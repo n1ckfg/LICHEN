@@ -311,6 +311,11 @@ function fitText(p, text, maxW) {
   return s + '…';
 }
 
+// GridGuys takes the mouse in fullscreen only in 3D mode, to orbit
+function isGridGuys3D(mod) {
+  return mod.type === 'GridGuys' && mod.is3D();
+}
+
 export class NodeGraphUI {
   constructor(pipeline, p) {
     this.pipeline = pipeline;
@@ -2140,7 +2145,7 @@ export class NodeGraphUI {
       // Conway / InkDrops / InkMarkers / QTVR / Panorama / VRML / Latk / Mesh / RuttEtra / ChromaKey / Transform / Crop: handle the click instead of exiting fullscreen
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' || mod.type === 'InkMarkers' ||
                   mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'ChromaKey' ||
-                  mod.type === 'Transform' || mod.type === 'Crop')) {
+                  mod.type === 'Transform' || mod.type === 'Crop' || isGridGuys3D(mod))) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
         mod.handleMouseDown(mx, my, this.p.width, this.p.height, btnName);
         return;
@@ -2548,7 +2553,7 @@ export class NodeGraphUI {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop')) {
+                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop' || isGridGuys3D(mod))) {
         mod.handleMouseDrag(mx, my, this.p.width, this.p.height, Boolean(event && event.altKey));
         return;
       }
@@ -2606,7 +2611,7 @@ export class NodeGraphUI {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop')) {
+                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop' || isGridGuys3D(mod))) {
         mod.handleMouseUp();
         return;
       }
@@ -2768,7 +2773,7 @@ export class NodeGraphUI {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
       if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
-                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform')) {
+                  mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || isGridGuys3D(mod))) {
         mod.handleWheel(delta);
         return;
       }
@@ -2789,10 +2794,10 @@ export class NodeGraphUI {
     // (i.e. the first click exited it), don't immediately re-enter.
     if (performance.now() - this._fullscreenExitTime < 400) return;
 
-    // Latk / Mesh / RuttEtra: a double-click in fullscreen resets the camera
+    // Latk / Mesh / RuttEtra / GridGuys in 3D: a double-click in fullscreen resets the camera
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra')) {
+      if (mod && (mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || isGridGuys3D(mod))) {
         mod.handleDoubleClick();
       }
       // The graph is hidden, so a double-click mustn't reach its nodes
