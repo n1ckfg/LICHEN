@@ -158,12 +158,15 @@ export class WetPaintModule extends Module {
     return size * (0.35 + 0.85 * pressure) * thin;
   }
 
-  _beginStroke(x, y, pressure, water) {
+  // A stroke starts with a dab where the brush comes down, as the sketch's
+  // pointerdown, unless `speed` says it comes down already moving at that
+  // many px a move, as the X and Y pen does
+  _beginStroke(x, y, pressure, water, speed = 0) {
     // Re-dipping cleans the brush halfway back toward its base ink
     for (let i = 0; i < 3; i++) this.ink[i] += (this.base[i] - this.ink[i]) * 0.5;
-    const r = this._radius(pressure, 0);
+    const r = this._radius(pressure, speed);
     const s = { x, y, r, load: 1, seed: Math.random() * 100, water, moved: true };
-    this._pushSeg(s, x, y, r);
+    if (speed === 0) this._pushSeg(s, x, y, r);
     return s;
   }
 
@@ -305,13 +308,20 @@ export class WetPaintModule extends Module {
 
   // A loop's beam moves under a pixel a sample, and every segment over a pixel
   // lays ink down in the same pass, so moves are kept about half the brush's
-  // radius apart, as a mouse's events come in the sketch at a steady drag
+  // radius apart, as a mouse's events come in the sketch at a steady drag. A
+  // loop is painted over and over, a stroke a lit run each time, so its
+  // strokes come down without the pen-down dab, which would bead them.
   _penFromInputs(graph) {
     const minStep = Math.max(1, this.params.size.value * PEN_SPACING);
     const moves = this.xyPen.trace(this, graph, this.w, this.h, minStep) ?? [UP];
     for (const m of moves) {
+      // The pen stops the intro, as the mouse does, but leaves Autopilot be
+      if (m !== UP && this.autoIntro > 0) {
+        this.autoIntro = 0;
+        if (this.params.auto.value < 0.5) this.autoStroke = null;
+      }
       if (m === UP) this.cableStroke = null;
-      else if (!this.cableStroke) this.cableStroke = this._beginStroke(m.x, m.y, MOUSE_PRESSURE, false);
+      else if (!this.cableStroke) this.cableStroke = this._beginStroke(m.x, m.y, MOUSE_PRESSURE, false, minStep);
       else this._moveStroke(this.cableStroke, m.x, m.y, MOUSE_PRESSURE);
     }
   }
