@@ -1,8 +1,13 @@
 import { Module } from './Module.js';
 import { crystallineFrag } from '../shaders/crystalline.js';
+import { passthroughFrag } from '../shaders/passthrough.js';
+import { vertSrc } from '../shaders/vert.js';
 import { registerModule } from '../moduleRegistry.js';
 
 const MAX_DT = 0.1;   // clamp long stalls so a tab switch doesn't jump the cycle
+
+// Res: the crystal is drawn at the output's size over this, then scaled up
+const RES_DIVISORS = [1, 2, 4];
 
 // The cycle, in thirds: assemble, hold, shatter. Assembly and shatter are one
 // quantity inverted (see js/shaders/crystalline.js), so this returns the single
@@ -29,8 +34,8 @@ export class CrystallineModule extends Module {
       { id: '173d', name: 'burst', type: 'control' },
     ];
     // `random` ranges keep a fresh seed away from the knobs' degenerate ends
-    // (frozen at speed 0, frantic at cycle 5). Steps is a render budget, not a
-    // look, so the seed leaves it alone.
+    // (frozen at speed 0, frantic at cycle 5). Steps and Res are a render
+    // budget, not a look, so the seed leaves them alone.
     this.params = {
       speed: { id: '74dd', value: 1.0, min: 0, max: 3, step: 0.01, label: 'Speed', random: [0.25, 2] },
       cycle: { id: 'bb33', value: 60, min: 5, max: 180, step: 1, label: 'Cycle', random: [20, 120] },
@@ -41,11 +46,16 @@ export class CrystallineModule extends Module {
       hue: { id: '6cfd', value: 0.55, min: 0, max: 1, step: 0.01, label: 'Hue', random: true },
       glow: { id: 'f847', value: 2.0, min: 0, max: 5, step: 0.05, label: 'Glow', random: [0.5, 3.5] },
       steps: { id: 'd2ea', value: 64, min: 16, max: 80, step: 1, label: 'Steps' },
+      res: { id: 'e32b', value: 0, min: 0, max: 2, step: 1, label: 'Res', widget: 'dropdown', valueLabels: ['Full', 'Half', 'Quarter'] },
       reseed: { id: 'cb2f', value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };
 
     this.createShader(crystallineFrag);
     this.createOutputFBO();
+    // Half and Quarter draw into lowFBO, made when first needed, and this
+    // scales it up into the output
+    this.copyShader = glCanvas.createShader(vertSrc, passthroughFrag);
+    this.lowFBO = null;
 
     // Every new crystal starts from its own seed. Patch loads and duplicates
     // then restore the saved params and seed over this one.
@@ -68,7 +78,10 @@ export class CrystallineModule extends Module {
 
     const shatter = burstAmount(this.cycles - Math.floor(this.cycles));
 
-    this.outputFBO.begin();
+    const divisor = RES_DIVISORS[Math.round(this.params.res.value)] || 1;
+    const target = divisor === 1 ? this.outputFBO : this._lowTarget(divisor);
+
+    target.begin();
     glCanvas.clear();
     glCanvas.shader(this.shader);
     // Only the aspect ratio is read, so the logical size is what this wants
@@ -83,9 +96,40 @@ export class CrystallineModule extends Module {
     this.shader.setUniform('uGlow', this.params.glow.value);
     this.shader.setUniform('uSteps', this.params.steps.value);
     this.renderQuad();
-    this.outputFBO.end();
+    target.end();
+
+    if (target !== this.outputFBO) {
+      // Bilinear, the framebuffer's own filtering
+      this.outputFBO.begin();
+      glCanvas.clear();
+      glCanvas.shader(this.copyShader);
+      this.copyShader.setUniform('tex0', target);
+      this.renderQuad();
+      this.outputFBO.end();
+    }
 
     this.controlValues['burst'] = shatter;
+  }
+
+  // The output's physical size over `divisor`, rounded, at density 1. Checked
+  // every frame, so it follows a frame resize or a change of Res.
+  _lowTarget(divisor) {
+    const d = this.outputFBO.density;
+    const w = Math.max(1, Math.round(this.glCanvas.width * d / divisor));
+    const h = Math.max(1, Math.round(this.glCanvas.height * d / divisor));
+    if (!this.lowFBO) {
+      this.lowFBO = this.createFramebuffer({ width: w, height: h, density: 1 });
+    } else if (this.lowFBO.width !== w || this.lowFBO.height !== h) {
+      this.lowFBO.resize(w, h);
+    }
+    return this.lowFBO;
+  }
+
+  dispose() {
+    if (this.lowFBO) this.lowFBO.remove();
+    this.lowFBO = null;
+    this.copyShader = null;
+    super.dispose();
   }
 
   onTrigger(name) {

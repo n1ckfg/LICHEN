@@ -61,27 +61,6 @@ vec3 hash33(vec3 p) {
   return fract((p.xyz + p.yzx) * p.zxy);
 }
 
-float noise(vec3 p) {
-  vec3 i = floor(p), f = fract(p);
-  f = f * f * (3.0 - 2.0 * f);
-  return mix(
-    mix(mix(hash11(i), hash11(i + vec3(1, 0, 0)), f.x),
-        mix(hash11(i + vec3(0, 1, 0)), hash11(i + vec3(1, 1, 0)), f.x), f.y),
-    mix(mix(hash11(i + vec3(0, 0, 1)), hash11(i + vec3(1, 0, 1)), f.x),
-        mix(hash11(i + vec3(0, 1, 1)), hash11(i + vec3(1, 1, 1)), f.x), f.y),
-    f.z
-  );
-}
-
-float fbm(vec3 p) {
-  float v = 0.0, a = 0.5;
-  for (int i = 0; i < 2; i++) {
-    v += a * noise(p);
-    p *= 2.0; a *= 0.5;
-  }
-  return v;
-}
-
 float sdSphere(vec3 p, float r) { return length(p) - r; }
 
 // Nearest and second-nearest feature point over the 3x3x3 neighbourhood
@@ -119,16 +98,6 @@ float crystalBaseSDF(vec3 p, float time) {
   return voronoiEdges(p, cellScale(time));
 }
 
-// The field the surface is shaded from: the base plus an organic wobble and a
-// second, finer cell layer read as internal facets
-float crystalSDF(vec3 p, float time) {
-  float edges = crystalBaseSDF(p, time);
-  edges += 0.03 * fbm(p * 3.0 + time * 0.1);
-  vec3 r = p * 1.5 + time * 0.2 * vec3(1.0, 1.3, 0.7);
-  float facets = 0.5 / (1.0 + 10.0 * abs(voronoiEdges(r, 1.0)));
-  return edges - facets * 0.02;
-}
-
 // Each cell flies off in its own hashed direction. Constant within a cell, so
 // the field stays a distance field everywhere except at the cell walls.
 vec3 burstOffset(vec3 p, float time) {
@@ -162,16 +131,95 @@ float map(float time, vec3 ro, vec3 rd) {
   return -1.0;
 }
 
-// 4-tap tetrahedron normal, cheaper than the 6-tap central difference and
-// accurate enough for a field this noisy
-vec3 calcNormal(vec3 p, float time) {
-  vec2 e = vec2(1.0, -1.0) * 0.5773 * 0.001;
-  return normalize(
-    e.xyy * crystalSDF(p + e.xyy, time) +
-    e.yyx * crystalSDF(p + e.yyx, time) +
-    e.yxy * crystalSDF(p + e.yxy, time) +
-    e.xxx * crystalSDF(p + e.xxx, time)
-  );
+// The field the surface is shaded from is the base plus an organic wobble (two
+// octaves of value noise) and a second, finer cell layer read as internal
+// facets. Shading reads it at five points: the hit, for the edge glow, and the
+// four taps of a tetrahedron normal, 0.001 away. All five almost always share
+// a lattice cell, so each layer below is evaluated for the five at once: one
+// set of 27 feature points per voronoi layer and 8 corner hashes per noise
+// octave, instead of five. A tap that falls across a cell wall from the hit is
+// measured from the hit's cell; its fractional position lands just outside
+// 0..1, which changes nothing unless a third cell over was needed.
+
+// voronoi() for a centre point c and four taps a, b, g, h: F2 - F1 for c, and
+// for the taps as a vec4. The nearest-two update is the branch-free form of
+// voronoi()'s, and keeps the same two values.
+void voronoiEdges5(vec3 c, vec3 a, vec3 b, vec3 g, vec3 h, out float e0, out vec4 e4) {
+  vec3 i = floor(c);
+  vec3 fc = c - i, fa = a - i, fb = b - i, fg = g - i, fh = h - i;
+  vec2 r0 = vec2(1e9);
+  vec4 rx = vec4(1e9), ry = vec4(1e9);
+  for (int z = -1; z <= 1; z++)
+  for (int y = -1; y <= 1; y++)
+  for (int x = -1; x <= 1; x++) {
+    vec3 n = vec3(x, y, z);
+    vec3 pt = hash33(i + n);
+    vec3 d0 = fc - n - pt, d1 = fa - n - pt, d2 = fb - n - pt, d3 = fg - n - pt, d4 = fh - n - pt;
+    float dist = dot(d0, d0);
+    vec4 dist4 = vec4(dot(d1, d1), dot(d2, d2), dot(d3, d3), dot(d4, d4));
+    r0.y = min(r0.y, max(r0.x, dist));
+    r0.x = min(r0.x, dist);
+    ry = min(ry, max(rx, dist4));
+    rx = min(rx, dist4);
+  }
+  r0 = sqrt(r0);
+  e0 = r0.y - r0.x;
+  e4 = sqrt(ry) - sqrt(rx);
+}
+
+// Trilinear value noise with a smoothstep fade, for c and four taps
+void noise5(vec3 c, vec3 a, vec3 b, vec3 g, vec3 h, out float v0, out vec4 v4) {
+  vec3 i = floor(c);
+  float c000 = hash11(i),                   c100 = hash11(i + vec3(1, 0, 0));
+  float c010 = hash11(i + vec3(0, 1, 0)),   c110 = hash11(i + vec3(1, 1, 0));
+  float c001 = hash11(i + vec3(0, 0, 1)),   c101 = hash11(i + vec3(1, 0, 1));
+  float c011 = hash11(i + vec3(0, 1, 1)),   c111 = hash11(i + vec3(1, 1, 1));
+
+  vec3 f = c - i;
+  f = f * f * (3.0 - 2.0 * f);
+  v0 = mix(mix(mix(c000, c100, f.x), mix(c010, c110, f.x), f.y),
+           mix(mix(c001, c101, f.x), mix(c011, c111, f.x), f.y), f.z);
+
+  vec4 fx = vec4(a.x, b.x, g.x, h.x) - i.x;
+  vec4 fy = vec4(a.y, b.y, g.y, h.y) - i.y;
+  vec4 fz = vec4(a.z, b.z, g.z, h.z) - i.z;
+  fx = fx * fx * (3.0 - 2.0 * fx);
+  fy = fy * fy * (3.0 - 2.0 * fy);
+  fz = fz * fz * (3.0 - 2.0 * fz);
+  v4 = mix(mix(mix(vec4(c000), vec4(c100), fx), mix(vec4(c010), vec4(c110), fx), fy),
+           mix(mix(vec4(c001), vec4(c101), fx), mix(vec4(c011), vec4(c111), fx), fy), fz);
+}
+
+const vec2 NORMAL_TAP = vec2(1.0, -1.0) * 0.5773 * 0.001;
+
+// The shading field at p (s0) and at its four normal taps (s4)
+void crystalSDF5(vec3 p, float time, out float s0, out vec4 s4) {
+  vec2 e = NORMAL_TAP;
+  vec3 pa = p + e.xyy, pb = p + e.yyx, pg = p + e.yxy, ph = p + e.xxx;
+
+  float cs = cellScale(time);
+  float edges0; vec4 edges4;
+  voronoiEdges5(p * cs, pa * cs, pb * cs, pg * cs, ph * cs, edges0, edges4);
+
+  vec3 wob = vec3(time * 0.1);
+  vec3 q0 = p * 3.0 + wob, qa = pa * 3.0 + wob, qb = pb * 3.0 + wob, qg = pg * 3.0 + wob, qh = ph * 3.0 + wob;
+  float fbm0 = 0.0, amp = 0.5, n0;
+  vec4 fbm4 = vec4(0.0), n4;
+  for (int k = 0; k < 2; k++) {
+    noise5(q0, qa, qb, qg, qh, n0, n4);
+    fbm0 += amp * n0;
+    fbm4 += amp * n4;
+    q0 *= 2.0; qa *= 2.0; qb *= 2.0; qg *= 2.0; qh *= 2.0;
+    amp *= 0.5;
+  }
+  edges0 += 0.03 * fbm0;
+  edges4 += 0.03 * fbm4;
+
+  vec3 drift = time * 0.2 * vec3(1.0, 1.3, 0.7);
+  float cells0; vec4 cells4;
+  voronoiEdges5(p * 1.5 + drift, pa * 1.5 + drift, pb * 1.5 + drift, pg * 1.5 + drift, ph * 1.5 + drift, cells0, cells4);
+  s0 = edges0 - 0.5 / (1.0 + 10.0 * abs(cells0)) * 0.02;
+  s4 = edges4 - 0.5 / (1.0 + 10.0 * abs(cells4)) * 0.02;
 }
 
 vec3 crystalColor(vec3 p, vec3 n, vec3 rd, float time, float dist) {
@@ -222,10 +270,15 @@ void main() {
     // cell, so this is the point the shard was carved from.
     vec3 pos = ro + rd * dist;
     vec3 sp = pos + burstOffset(pos, time);
-    vec3 n = calcNormal(sp, time);
+    float s0; vec4 s4;
+    crystalSDF5(sp, time, s0, s4);
+    // 4-tap tetrahedron normal, cheaper than the 6-tap central difference and
+    // accurate enough for a field this noisy
+    vec2 e = NORMAL_TAP;
+    vec3 n = normalize(e.xyy * s4.x + e.yyx * s4.y + e.yxy * s4.z + e.xxx * s4.w);
     col = crystalColor(sp, n, rd, time, dist);
 
-    float edgeGlow = smoothstep(0.02, 0.0, abs(crystalSDF(sp, time)));
+    float edgeGlow = smoothstep(0.02, 0.0, abs(s0));
     col += vec3(0.3, 0.5, 0.8) * edgeGlow * uGlow;
   }
 
