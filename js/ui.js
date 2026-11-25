@@ -35,9 +35,9 @@ const MODULE_CATEGORIES = {
   'Sandin': ['AdderMultiplier', 'ColorEncoder', 'Comparator', 'Differentiator', 'FunctionGenerator', 'GRASS', 'Oscillator', 'SyncGenerator', 'ValueScrambler'],
   'Utility': ['Blur', 'Brcosa', 'Channel', 'ChromaKey', 'Crop', 'Delay', 'Displacer', 'Dither', 'Edges', 'Inpainter', 'Levels', 'LUT', 'Matte', 'Mosaic', 'OpticalFlow', 'Resample', 'Restore', 'Sharpen', 'Slitscan', 'Transform', 'VideoMixer'],
   'Control': ['Calculator', 'Constant', 'Random', 'Remap', 'Skeleton'],
-  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
-  'Generative': ['Cloudy', 'Coils', 'Conway', 'Crystalline', 'GridGuys', 'InkDrops', 'LetterForms', 'Protozoa', 'SpiralGalaxy', 'Swarm', 'Whitney', 'Yellowtail'],
-  'Drawing': ['InkMarkers', 'WetPaint'],
+  'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'SpatialSlice', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
+  'Generative': ['Cloudy', 'Coils', 'Conway', 'Crystalline', 'GridGuys', 'LetterForms', 'Protozoa', 'SpiralGalaxy', 'Swarm', 'TimeTunnel', 'Whitney', 'Yellowtail'],
+  'Drawing': ['InkDrops', 'InkMarkers', 'WetPaint'],
   'Emulation': ['DeeSeventySix', 'ESP32', 'NTSC', 'RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
   'img2img': ['DepthAnything', 'InfrDrawings', 'Pix2Pix'],
   'Formats': ['Latk', 'NAPLPS', 'Panorama', 'QTVR', 'VRML'],
@@ -98,14 +98,15 @@ const MODULE_COLORS = {
   Conway: color_generative,
   Crystalline: color_generative,
   GridGuys: color_generative,
-  InkDrops: color_generative,
   LetterForms: color_generative,
   Protozoa: color_generative,
   SpiralGalaxy: color_generative,
   Swarm: color_generative,
+  TimeTunnel: color_generative,
   Whitney: color_generative,
   Yellowtail: color_generative,
   // - - - DRAWING - - -
+  InkDrops: color_drawing,
   InkMarkers: color_drawing,
   WetPaint: color_drawing,
   // - - - EMULATION - - -
@@ -138,7 +139,6 @@ const MODULE_COLORS = {
   PixelVision: color_effect,
   LuminanceDelay: color_effect,
   SpatialSlice: color_effect,
-  TimeTunnel: color_effect,
   TVLines: color_effect,
   UnrealBloom: color_effect,
   VHSC: color_effect,
@@ -1511,7 +1511,7 @@ export class NodeGraphUI {
           }
           // Render terminal/REPL overlays on top of the clean video
           mod.renderOverlays(p);
-        } else if (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey' || mod.type === 'InkMarkers' || mod.type === 'WetPaint') {
+        } else if (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey' || mod.type === 'InkDrops' || mod.type === 'InkMarkers' || mod.type === 'WetPaint') {
           if (mod.outputFBO) {
             this._drawFBO(mod.outputFBO, dx, dy, dw, dh);
           }
@@ -2556,7 +2556,7 @@ export class NodeGraphUI {
     // Conway: handle mouse drawing in fullscreen (QTVR / Panorama / VRML / Latk / Mesh / RuttEtra: turn the view; Transform: move, or turn with Alt; Crop: draw the box)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'WetPaint' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' || mod.type === 'InkMarkers' || mod.type === 'WetPaint' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
                   mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop' || isGridGuys3D(mod))) {
         mod.handleMouseDrag(mx, my, this.p.width, this.p.height, Boolean(event && event.altKey));
         return;
@@ -2614,7 +2614,7 @@ export class NodeGraphUI {
     // Conway: handle mouse release in fullscreen
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'WetPaint' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' || mod.type === 'InkMarkers' || mod.type === 'WetPaint' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
                   mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop' || isGridGuys3D(mod))) {
         mod.handleMouseUp();
         return;
@@ -2988,7 +2988,7 @@ export class NodeGraphUI {
     const mod = this.pipeline.graph.nodes.get(id);
     if (mod) {
       // Hide Conway UI if deleting a fullscreened Conway
-      if ((mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey' || mod.type === 'InkMarkers' || mod.type === 'WetPaint') && mod.hideFullscreenUI) {
+      if ((mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey' || mod.type === 'InkDrops' || mod.type === 'InkMarkers' || mod.type === 'WetPaint') && mod.hideFullscreenUI) {
         mod.hideFullscreenUI();
       }
       // Start fade-out animation

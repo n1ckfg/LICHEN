@@ -5,6 +5,7 @@ import {
   INK_MAXD, INK_MAXR, INK_RING_LIFE,
 } from '../shaders/inkdrops.js';
 import { letterbox } from '../frame.js';
+import { XYPen, UP, pinLoop, isLitSample } from './latk/strokes.js';
 import { registerModule } from '../moduleRegistry.js';
 
 const MAXD = INK_MAXD;          // wet drops uploaded per pass
@@ -22,6 +23,13 @@ const RING_CLICK_GAP = 0.7;     // min seconds between click-spawned wipes
 const RING_LIFT = 1.6;          // how fast the solvent lifts pigment, per second
 const RING_CAP = 8;             // live wipes; the spare slots let retired ones fade out
 const RING_RETIRE = 1.0;        // seconds a wipe takes to fade when its slot is claimed
+// A pen held down, the mouse's or the X and Y pins', lays a trail of drops.
+// Paced in sheet time, so it takes Speed, and so a pin's loop, which can sweep
+// the whole drawing in a frame, lays no more than the mouse does: at about 16
+// drops a second, each wet for about 2 s, a trail fits the 32 wet slots.
+const PEN_GAP = 0.06;           // seconds between a trail's drops
+const PEN_STEP = 0.015;         // sheet heights the pen moves before its next drop
+const PEN_HOLD = 0.3;           // seconds between drops on one spot while it stays put
 
 // Per-drop wobble, applied in HSV so a jittered drop stays inside the hue family
 const JITTER_HUE = 0.018;
@@ -124,7 +132,10 @@ export class InkDropsModule extends Module {
 
   constructor(glCanvas, id) {
     super('InkDrops', glCanvas, id);
-    this.inputs = [];
+    // A pen that lays drops as the mouse does when held, at X and Y (0..1, Y
+    // up), while either is cabled; an unplugged one stays at the centre. A loop
+    // on either (Latk's, Yellowtail's) is walked along, stroke by stroke.
+    this.inputs = [{ id: '7904', name: 'x', type: 'control' }, { id: 'e571', name: 'y', type: 'control' }];
     this.outputs = [{ id: '935b', name: 'out', type: 'video' }];
     // `random` ranges keep a fresh seed away from the knobs' degenerate ends:
     // frozen at speed 0, a sheet that barely holds a stain at fade 5, and
@@ -176,6 +187,16 @@ export class InkDropsModule extends Module {
     this.nextStain = 4.0;
     this.nextRing = 1.2;
     this.lastRingClick = -99;
+    // The mouse held down and the X and Y pins each have a pen (see _pen())
+    this.mousePen = this._pen();
+    this.cablePen = this._pen();
+    this.xyPen = new XYPen();
+    // Where the pen walking a loop is: a share of the loop, so it keeps its
+    // place when the loop's length changes, and the drop it last laid
+    this.walker = { phase: 0, last: null, lastT: -99, base: null };
+    this._loop = null;
+    this._frame = 0;
+    this._shownAt = -1;
 
     // Every new sheet starts from its own seed. Patch loads and duplicates
     // then restore the saved params and seed over this one.
@@ -515,8 +536,18 @@ export class InkDropsModule extends Module {
     // update, then split into still-wet (drawn live) and settled (stamped down)
     const wet = [], bake = [];
 
+    this._frame++;
+    if (this.mousePen.down && this._shownAt < this._frame - 1) this.mousePen.down = false;
+    this._penFromInputs(graph);
+
     if (dt > 0) {
       this.time += dt;
+      for (const pen of [this.mousePen, this.cablePen]) {
+        if (pen.down) this._penStep(pen);
+        else if (pen.tail) this._penStep(pen, pen.tail.x, pen.tail.y);
+        pen.tail = null;
+      }
+      if (this._loop) this._walk(this._loop);
 
       for (let i = this.queue.length - 1; i >= 0; i--) {
         if (this.time >= this.queue[i].at) {
@@ -617,7 +648,8 @@ export class InkDropsModule extends Module {
   }
 
   // Fullscreen only: a click throws a cluster, a splash and (at most every
-  // RING_CLICK_GAP seconds) a wipe. ESC exits fullscreen, C clears the sheet.
+  // RING_CLICK_GAP seconds) a wipe, and while the button is held the pen lays
+  // a trail of drops. ESC exits fullscreen, C clears the sheet.
   handleMouseDown(mx, my, canvasW, canvasH) {
     const [ux, uy] = this.getSheetUV(mx, my, canvasW, canvasH);
     this.cluster(ux, uy);
@@ -626,6 +658,138 @@ export class InkDropsModule extends Module {
       this.lastRingClick = this.time;
       this.addRing((ux - 0.5) * (this.glCanvas.width / this.glCanvas.height), uy - 0.5);
     }
+    // The burst is the trail's first drop, so the next waits its turn
+    this._penDown(this.mousePen, ux, uy);
+    this.mousePen.lastT = this.time;
+  }
+
+  handleMouseDrag(mx, my, canvasW, canvasH) {
+    if (!this.mousePen.down) return;
+    const [ux, uy] = this.getSheetUV(mx, my, canvasW, canvasH);
+    this.mousePen.x = ux;
+    this.mousePen.y = uy;
+  }
+
+  handleMouseUp() {
+    this.mousePen.down = false;
+  }
+
+  // ui.js calls this every frame while the node is fullscreen. A frame without
+  // it lifts the mouse's pen, so a button still held when fullscreen ends
+  // (ESC, or a patch loaded over it) doesn't keep drawing.
+  showFullscreenUI() {
+    this._shownAt = this._frame;
+  }
+
+  hideFullscreenUI() {
+    this.mousePen.down = false;
+  }
+
+  // - - - Pens: a trail of drops while held down - - -
+
+  // Where the pen is, in sheet uv (y up), the drop it last laid, and the
+  // colour of its stroke, drawn from the splash palette when it goes down
+  _pen() {
+    return { down: false, x: 0, y: 0, lastT: -99, lastX: 0, lastY: 0, base: null, tail: null };
+  }
+
+  _penDown(pen, x, y) {
+    pen.down = true;
+    pen.x = x;
+    pen.y = y;
+    pen.lastT = -99;
+    pen.lastX = x;
+    pen.lastY = y;
+    pen.base = this.pick();
+  }
+
+  // The X and Y pen (see XYPen in latk/strokes.js): it is down where the moves
+  // are, up where they lift, and drops where it ends the frame, or, if it
+  // lifted since, where it last was down (its tail)
+  _penFromInputs(graph) {
+    const w = this.glCanvas.width, h = this.glCanvas.height;
+    // A loop is walked, in process(), and the beam's pen stays up
+    this._loop = pinLoop(this.getControlInput(graph, 0), this.getControlInput(graph, 1));
+    if (this._loop) {
+      this.cablePen.down = false;
+      this.cablePen.tail = null;
+      return;
+    }
+    this.walker.last = null;
+    const moves = this.xyPen.trace(this, graph, w, h, 1) ?? [UP];
+    const pen = this.cablePen;
+    let at = null;
+    for (const m of moves) {
+      if (m === UP) {
+        pen.down = false;
+        continue;
+      }
+      const x = m.x / w, y = 1 - m.y / h;
+      if (!pen.down) this._penDown(pen, x, y);
+      pen.x = x;
+      pen.y = y;
+      at = { x, y };
+    }
+    pen.tail = at && !pen.down ? at : null;
+  }
+
+  // A loop on X or Y is walked rather than followed. Its beam can sweep the
+  // whole drawing in a frame, faster than drops can be laid, and dropping
+  // where the beam happens to be would scatter them over the drawing. So the
+  // pen walks along the loop's lit samples instead, a drop every PEN_GAP and
+  // PEN_STEP along, as a hand would trace the drawing: a stroke at a time, in
+  // the loop's order, each in a colour of its own, round and round. The loop
+  // is read afresh each time, so the walk follows strokes that move.
+  _walk(loop) {
+    const wk = this.walker;
+    if (this.time - wk.lastT < PEN_GAP) return;
+    const { x, y, z, n } = loop;
+    const aspect = this.glCanvas.width / this.glCanvas.height;
+    let i = Math.floor(wk.phase * n) % n;
+    let last = wk.last;
+    for (let k = 0; k < n; k++) {
+      i = (i + 1) % n;
+      // A stroke never runs over the loop's start, nor over a blank sample
+      if (i === 0 || !isLitSample(z, i)) {
+        last = null;
+        continue;
+      }
+      const u = (Math.min(1, Math.max(-1, x[i])) + 1) / 2;
+      const v = (Math.min(1, Math.max(-1, y[i])) + 1) / 2;
+      if (!Number.isFinite(u) || !Number.isFinite(v)) continue;
+      if (last && Math.hypot((u - last.u) * aspect, v - last.v) < PEN_STEP) continue;
+      if (!last) wk.base = this.pick();
+      wk.phase = i / n;
+      wk.last = { u, v };
+      wk.lastT = this.time;
+      this._drop(u, v, wk.base);
+      return;
+    }
+    // Nothing lit: the walk waits where it is
+    wk.last = null;
+  }
+
+  _drop(x, y, base) {
+    this.spawn({
+      x: clamp01(x), y: clamp01(y),
+      rMax: rnd(0.025, 0.06),
+      base: Math.random() < 0.8 ? base : this.pick(),
+      satellites: Math.random() < 0.3 ? 1 : 0,
+      bake: rnd(1.6, 2.4),
+    });
+  }
+
+  // A drop where the pen is, once PEN_GAP has passed since the last, and the
+  // pen has moved PEN_STEP since, or stayed put PEN_HOLD
+  _penStep(pen, x = pen.x, y = pen.y) {
+    const since = this.time - pen.lastT;
+    if (since < PEN_GAP) return;
+    const moved = Math.hypot((x - pen.lastX) * this.glCanvas.width / this.glCanvas.height, y - pen.lastY);
+    if (moved < PEN_STEP && since < PEN_HOLD) return;
+    pen.lastT = this.time;
+    pen.lastX = x;
+    pen.lastY = y;
+    this._drop(x, y, pen.base);
   }
 
   // Every buffer came back cleared, and the sheet starts as bare paper

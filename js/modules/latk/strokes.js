@@ -402,6 +402,21 @@ export class XYPen {
   }
 }
 
+// The loop X and Y bring, if either pin brings one, as XYInputs.read() makes
+// it: { x, y, z, n }, x and y in scope units (-1..1, +Y up), or null. For a
+// module that reads a loop its own way (InkDrops walks along its strokes).
+export function pinLoop(xIn, yIn) {
+  const looped = [xIn, yIn].find((c) => c && c.signal && c.signal.samples.length >= 2);
+  if (!looped) return null;
+  const n = looped.signal.samples.length;
+  return { x: lane(xIn, n), y: lane(yIn, n), z: looped.signal.z ?? null, n };
+}
+
+// Whether sample i of a loop's blanking is lit; a loop without blanking is lit throughout
+export function isLitSample(z, i) {
+  return !z || z[i] > (Z_OFF + Z_ON) / 2;
+}
+
 // One pin's samples over a loop of n: its own loop, stretched to n if it is
 // another length, its 0..1 value held across the loop, or 0 when unplugged
 function lane(input, n) {
