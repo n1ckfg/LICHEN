@@ -88,3 +88,32 @@ void main() {
   gl_FragColor = vec4(color, 1.0);
 }
 `;
+
+// The X and Y pen's pass: live cells within u_radius of any of u_count
+// segments, each from xy to zw in physical px (a dot has both ends the same),
+// and every other cell as it is. The same test as the simulation's spawn, for
+// many segments at once, so a pen that follows a loop's beam takes few passes.
+export const CONWAY_PEN_SEGMENTS = 32;
+
+export const conwayPenFrag = `
+precision highp float;
+uniform sampler2D u_state;
+uniform vec2 u_resolution;
+uniform vec4 u_segs[${CONWAY_PEN_SEGMENTS}];
+uniform float u_count;
+uniform float u_radius;
+
+void main() {
+  vec2 uv = gl_FragCoord.xy / u_resolution;
+  float next = texture2D(u_state, uv).r > 0.5 ? 1.0 : 0.0;
+  for (int i = 0; i < ${CONWAY_PEN_SEGMENTS}; i++) {
+    if (float(i) >= u_count) break;
+    vec2 pa = gl_FragCoord.xy - u_segs[i].xy;
+    vec2 ba = u_segs[i].zw - u_segs[i].xy;
+    float len2 = dot(ba, ba);
+    float h = len2 > 0.0 ? clamp(dot(pa, ba) / len2, 0.0, 1.0) : 0.0;
+    if (length(pa - ba * h) < u_radius) next = 1.0;
+  }
+  gl_FragColor = vec4(next, next, next, 1.0);
+}
+`;

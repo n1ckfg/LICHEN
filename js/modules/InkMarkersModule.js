@@ -5,6 +5,7 @@ import {
 } from '../shaders/inkmarkers.js';
 import { InkMarkersPanel } from './inkmarkers/panel.js';
 import { letterbox } from '../frame.js';
+import { XYPen, UP } from './latk/strokes.js';
 import { registerModule } from '../moduleRegistry.js';
 
 // Ink Markers Studio's widths per tip, as multiples of Size, and pressure curves
@@ -24,7 +25,8 @@ export class InkMarkersModule extends Module {
   constructor(glCanvas, id) {
     super('InkMarkers', glCanvas, id);
     // A pen that draws as the mouse does, at X and Y (0..1, Y up), while
-    // either is cabled; an unplugged one stays at the centre
+    // either is cabled; an unplugged one stays at the centre. A loop on either
+    // (Latk's, Yellowtail's) draws its strokes, as the beam traces them.
     this.inputs = [{ id: '1169', name: 'x', type: 'control' }, { id: '724a', name: 'y', type: 'control' }];
     this.outputs = [{ id: 'b227', name: 'out', type: 'video' }];
     this.params = {
@@ -65,6 +67,7 @@ export class InkMarkersModule extends Module {
     // The mouse and the X and Y pins each draw their own stroke, at once if need be
     this.mousePen = { active: null, lastX: 0, lastY: 0, lastPressure: 0.5 };
     this.cablePen = { active: null, lastX: 0, lastY: 0, lastPressure: 0.5 };
+    this.xyPen = new XYPen();
     this._paperType = -1;
     this._pendingClear = true;
     this._dirty = true;
@@ -179,27 +182,24 @@ export class InkMarkersModule extends Module {
     this.endStroke(this.mousePen);
   }
 
-  // The X and Y pen: down while either pin is cabled, drawing a line each
-  // frame from where it was to where it is, as a drag does, at the mouse's
-  // pressure. It lifts when both are unplugged. Flow and Bleed are a stroke's
-  // from its start, so when either has moved the pen lifts and goes straight
-  // down again where it was, and they take effect.
+  // The X and Y pen (see XYPen): a line from where it was to each place it
+  // moves to, as a drag does, at the mouse's pressure. It lifts when both are
+  // unplugged, or where a loop's blanking is off. Flow and Bleed are a
+  // stroke's from its start, so when either has moved the pen lifts and goes
+  // straight down again where it was, and they take effect.
   _penFromInputs(graph) {
     const pen = this.cablePen;
-    const xIn = this.getControlInput(graph, 0);
-    const yIn = this.getControlInput(graph, 1);
-    const x = (xIn ? xIn.value : 0.5) * this.w;
-    const y = (1 - (yIn ? yIn.value : 0.5)) * this.h;
-    if ((!xIn && !yIn) || !Number.isFinite(x) || !Number.isFinite(y)) {
-      this.endStroke(pen);
-      return;
-    }
+    // The sketch's 2 px spacing, at this frame's scale, as continueStroke() keeps
+    const moves = this.xyPen.trace(this, graph, this.w, this.h, 2 * this.w / SKETCH_WIDTH) ?? [UP];
     const s = pen.active;
     if (s && (s.flow !== this.params.flow.value || s.bleed !== this.params.bleed.value)) {
       this.startStroke(pen, pen.lastX, pen.lastY, 0.5);
     }
-    if (!pen.active) this.startStroke(pen, x, y, 0.5);
-    else this.continueStroke(pen, x, y, 0.5);
+    for (const m of moves) {
+      if (m === UP) this.endStroke(pen);
+      else if (!pen.active) this.startStroke(pen, m.x, m.y, 0.5);
+      else this.continueStroke(pen, m.x, m.y, 0.5);
+    }
   }
 
   handleWheel(delta) {

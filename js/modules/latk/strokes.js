@@ -285,6 +285,123 @@ export class XYInputs {
   }
 }
 
+// A pen on a module's X and Y control input pins, for a module that draws into
+// a picture it keeps, as the mouse does (Conway, InkMarkers). Each frame,
+// trace() says where the pen went since the last one, as a list of moves:
+// { x, y } in px of a w x h frame (Y down), drawn to with the pen down, or
+// UP, which lifts it. It returns null with neither pin cabled in, which lifts
+// it too.
+// - With a loop on either pin (Latk's, Yellowtail's), the pen follows the
+//   beam: through the samples the loop played since the last frame, at its
+//   sample rate, down on the lit ones and up on the blank, so it draws the
+//   loop's strokes as Twoscilloscope does. It lifts where the loop starts
+//   again, since a stroke never runs over it (findPieces()), and follows at
+//   most one whole loop a frame. A move is kept only once the beam is minStep
+//   px from the last, and at the end of each lit run.
+// - A source sends a new loop each frame, and its strokes can move along it
+//   (Yellowtail's crawl, and grow, shrink, split or drop out). So the pen
+//   stays down from one frame to the next only while the beam is in the same
+//   lit run, counted from the loop's start, and within JOIN_SHARE of the
+//   frame's longer side of where it was; else a line would join two strokes.
+//   Yellowtail's gestures crawl 5 to 15 px a frame at 640 x 480.
+// - With only values, such as an Oscillator's, it goes where they are each
+//   frame, down all the time, as before loops were read. An unplugged pin
+//   stays at the centre, and a value that isn't finite lifts the pen.
+export const UP = Object.freeze({ up: true });
+const JOIN_SHARE = 0.05;
+
+export class XYPen {
+  constructor() {
+    this.phase = 0;        // where the beam is in the loop, 0..1
+    this.lastTime = null;  // s; null until a loop comes in
+    this.lit = false;      // whether the last sample followed was lit
+    this.run = -1;         // which lit run of the loop that sample was in
+    this.last = null;      // the last move kept while lit, in px
+  }
+
+  trace(mod, graph, w, h, minStep = 1, xPort = 0, yPort = 1) {
+    const xIn = mod.getControlInput(graph, xPort);
+    const yIn = mod.getControlInput(graph, yPort);
+    if (!xIn && !yIn) {
+      this._reset();
+      return null;
+    }
+    const looped = [xIn, yIn].find((c) => c && c.signal && c.signal.samples.length >= 2);
+    if (!looped) {
+      this._reset();
+      const x = (xIn ? xIn.value : 0.5) * w;
+      const y = (1 - (yIn ? yIn.value : 0.5)) * h;
+      return [Number.isFinite(x) && Number.isFinite(y) ? { x, y } : UP];
+    }
+
+    const moves = [];
+    const now = performance.now() / 1000;
+    // A loop that has just come in starts with the pen up, wherever values left it
+    if (this.lastTime === null) moves.push(UP);
+    const dt = this.lastTime === null ? 0 : Math.max(0, now - this.lastTime);
+    this.lastTime = now;
+    const { samples, sampleRate, z } = looped.signal;
+    const n = samples.length;
+    const xs = lane(xIn, n), ys = lane(yIn, n);
+    const mid = (Z_OFF + Z_ON) / 2;
+    // The samples played since the last frame, up to one whole loop
+    const count = Math.min(n, Math.floor(this.phase * n + dt * sampleRate) - Math.floor(this.phase * n));
+    const first = (Math.floor(this.phase * n) + 1) % n;
+    this.phase = (this.phase + dt * sampleRate / n) % 1;
+    const isLit = (i) => !z || z[i] > mid;
+    let runs = 0;   // lit runs begun so far in the loop
+    if (count > 0) for (let i = 0; i < first; i++) if (isLit(i) && (i === 0 || !isLit(i - 1))) runs++;
+
+    for (let k = 0; k < count; k++) {
+      const i = (first + k) % n;
+      if (i === 0) {   // the loop starts again
+        this._lift(moves);
+        runs = 0;
+      }
+      const lit = isLit(i);
+      if (!lit) {
+        this._lift(moves);
+        continue;
+      }
+      if (i === 0 || !isLit(i - 1)) runs++;
+      const x = (Math.min(1, Math.max(-1, xs[i])) + 1) / 2 * w;
+      const y = (1 - Math.min(1, Math.max(-1, ys[i]))) / 2 * h;
+      if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        this._lift(moves);
+        continue;
+      }
+      // Only the frame's first sample can be in another stroke than the last one followed
+      if (this.lit && (runs - 1 !== this.run || Math.hypot(x - this.last.x, y - this.last.y) > JOIN_SHARE * Math.max(w, h))) {
+        this._lift(moves);
+      }
+      this.run = runs - 1;
+      // The last lit sample of a run, or of this frame, is always kept
+      const next = (i + 1) % n;
+      const ends = k === count - 1 || next === 0 || !isLit(next);
+      if (!this.lit || ends || Math.hypot(x - this.last.x, y - this.last.y) >= minStep) {
+        this.last = { x, y };
+        moves.push(this.last);
+      }
+      this.lit = true;
+    }
+    return moves;
+  }
+
+  _lift(moves) {
+    if (this.lit) moves.push(UP);
+    this.lit = false;
+    this.last = null;
+  }
+
+  _reset() {
+    this.phase = 0;
+    this.lastTime = null;
+    this.lit = false;
+    this.run = -1;
+    this.last = null;
+  }
+}
+
 // One pin's samples over a loop of n: its own loop, stretched to n if it is
 // another length, its 0..1 value held across the loop, or 0 when unplugged
 function lane(input, n) {

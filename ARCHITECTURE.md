@@ -44,7 +44,7 @@ A control value is one number a frame, and a parameter cable applies it after ev
 - **Control signals:** a control output can also publish a loop in `this.controlSignals['portName']`, as `{ samples, sampleRate, z, color }`. `samples` is a `Float32Array` in −1..1. `z` (blanking, XYscope's −1 off and 1 on) and `color` (0xRRGGBB a sample) are optional lanes the same length, or `null`. It should still set a numeric `controlValues` entry for the same port, because a knob cable sees only that.
 - **Control input pins:** an input declared `{ name, type: 'control' }` is drawn green, as is a cable into it, and takes a control output's cable. The cable is stored in `connections`, like a video cable, so the topological sort runs the source first, in the same frame. `this.getControlInput(graph, portIndex)` returns `{ value, signal }`: the source's control value and its control signal, or `null` for the signal if it has none. It returns `null` when nothing is cabled to the pin, or when a video output is.
 
-Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs, and Twoscilloscope's and ESP32's X and Y pins, are the only ones so far (see Latk Module, NAPLPS Module, RuttEtra Module, Skeleton Module, Yellowtail Module and ESP32 Module). Calculator's `a` and `b`, Remap's five pins, and Conway's and InkMarkers' X and Y are control input pins too, but read only the value (see Random, Constant, Calculator and Remap Modules, Conway Module and InkMarkers Module).
+Latk's, NAPLPS's, RuttEtra's, Skeleton's and Yellowtail's X and Y outputs, and Twoscilloscope's, ESP32's, Conway's and InkMarkers' X and Y pins, are the only ones so far (see Latk Module, NAPLPS Module, RuttEtra Module, Skeleton Module, Yellowtail Module, ESP32 Module, Conway Module and InkMarkers Module). Calculator's `a` and `b` and Remap's five pins are control input pins too, but read only the value (see Random, Constant, Calculator and Remap Modules).
 
 The UI renders each param in the `params` object: `{ paramName: { id, value, min, max, step, label } }` as a draggable knob. A param may add `valueLabels: [...]`, an array indexed by the rounded param value; when it has an entry for the current value the knob shows that name instead of the number.
 
@@ -485,13 +485,13 @@ The Conway module (`js/modules/ConwayModule.js`) implements Conway's Game of Lif
 - ESC exits fullscreen
 
 **X and Y.** Two control input pins drive a pen that draws as the mouse does, live cells with the mouse's radius of one Cell Size. They take 0..1 values, with Y up, as Latk's X and Y outputs give them, so a beam's place on the canvas is the pen's: `x × width` across and `(1 − y) × height` down.
-- **Pen down:** while either pin is cabled, the pen draws every frame, a line from where it was last frame to where it is now, as a drag does. The frame it goes down it draws a dot. A pin with nothing cabled in stays at 0.5, the centre.
+- **Pen down:** while either pin is cabled, the pen draws every frame, a line from where it was to each place it moves to, as a drag does. Where it goes down it draws a dot. A pin with nothing cabled in stays at 0.5, the centre.
 - **Pen up:** with both unplugged, or a value that isn't finite, the pen lifts, and the next line starts afresh.
-- **Values only:** like Calculator's pins, they read a source's value, not its loop. Latk's X and Y draw where the beam is each frame, which jumps around the drawing.
-- **One pass:** the simulation shader's spawn is a segment (`u_spawnPos` to `u_spawnEnd`), so each frame's line is one pass. The mouse still spawns dots, with the two ends the same, which reduces to the old circle exactly.
-- **Doesn't step the board:** every mouse spawn's pass also steps the board a generation, even while paused. The pen's pass sets `u_evolve` to 0, which keeps every cell but those it draws, so the board steps only as Running and Speed say.
+- **Loops:** `XYPen.trace()`, in `latk/strokes.js`, moves the pen (see X and Y pens, under Twoscilloscope Module). A loop on either pin, such as Latk's or Yellowtail's, draws its strokes. Values only, such as an Oscillator's, put the pen where they are each frame.
+- **Few passes:** the pen's segments go to their own shader, `conwayPenFrag`, 32 (`CONWAY_PEN_SEGMENTS`) a pass, with live cells within one Cell Size of any of them. A pen following a loop has dozens of segments a frame, and hundreds at a high Loop Hz, where one simulation pass a segment would be too many. The simulation shader is unchanged, and the mouse's spawns still use it: its spawn is a segment (`u_spawnPos` to `u_spawnEnd`), and a mouse dot has the two ends the same, which reduces to the old circle exactly.
+- **Doesn't step the board:** every mouse spawn's pass also steps the board a generation, even while paused. The pen's passes keep every cell but those they draw, so the board steps only as Running and Speed say.
 
-Checked in headless Chrome on a virtual clock: a drag and a right-click pattern on a running board give the same output as HEAD's module on every pixel. Constants of 0.25 and 0.75 put a dot centred at (160, 120) on 640 × 480. On a paused random board, ten frames of the pen changed only cells under it. Two Oscillators, 1 Hz on X and 2 Hz on Y, drew a figure of eight in one unbroken line.
+Checked in headless Chrome on a virtual clock: a drag and a right-click pattern on a running board give the same output as HEAD's module on every pixel. Constants of 0.25 and 0.75 put a dot centred at (160, 120) on 640 × 480. On a paused random board, ten frames of the pen changed only cells under it. Two Oscillators, 1 Hz on X and 2 Hz on Y, drew a figure of eight in one unbroken line. With values only, the pen shader gives the same output as the simulation shader's spawn did on every pixel (see X and Y pens).
 
 ## Protozoa Module
 
@@ -570,7 +570,7 @@ Flow and bleed are taken when a stroke starts, so turning them mid-stroke change
 - **Pen down:** while either pin is cabled, the pen draws every frame, a line from where it was last frame to where it is now, as a drag does, at the mouse's pressure of 0.5. A pin with nothing cabled in stays at 0.5, the centre. As with a click, the frame it goes down draws nothing until it moves.
 - **Pen up:** with both unplugged, or a value that isn't finite, the stroke ends and is baked into the sheet, and the next one starts afresh.
 - **Flow and Bleed:** a stroke keeps the Flow and Bleed it started with, and the pen can stay down for as long as the pins stay cabled. So when either has moved since, the pen lifts and goes straight back down where it was, and the new values take effect. A cable on either therefore ends a stroke every frame it moves the value.
-- **Values only:** like Conway's, they read a source's value, not its loop. Latk's X and Y draw where the beam is each frame, which jumps around the drawing.
+- **Loops:** as Conway's, the pen follows `XYPen.trace()` (see X and Y pens, under Twoscilloscope Module). A loop on either pin draws its strokes, each a stroke of its own, and values only put the pen where they are each frame. The pen keeps a move once the beam is the sketch's 2 px spacing from the last, which `continueStroke()` then fills in.
 
 The pin pen and the mouse each keep a stroke of their own, so both can draw at once into the same wet layer. A bake takes in everything wet, so when one stroke ends, the other goes into the sheet as far as it has got, and carries on in the wiped layer. A pen held down for minutes would keep millions of points, so after each pass a stroke keeps only its last two drawn points, all the next pass reads.
 
@@ -1469,6 +1469,15 @@ The Twoscilloscope module (`js/modules/TwoscilloscopeModule.js`, `js/modules/two
 - **Unplugged:** a pin with nothing cabled in stays at 0, the centre.
 
 The lit runs in the blanking are the strokes. Each is drawn in the colour of its first sample, or in white without a colour lane, where the library Oscilloscope's default is amber (hue 50). A loop without blanking is one stroke, lit from end to end.
+
+**X and Y pens.** Conway and InkMarkers keep a picture and draw into it with a pen, as the mouse does, so they don't take a whole loop each frame as this module does. `XYPen.trace(mod, graph, w, h, minStep)`, in `latk/strokes.js`, reads the same two pins and returns where the pen went since the last frame: a list of moves, each `{ x, y }` in px of the frame (Y down) with the pen down, or `UP`. It returns `null` with neither pin cabled in.
+- **Loops:** the pen follows the beam through the samples the loop played since the last frame, at its sample rate, and at most one whole loop a frame. It is down on lit samples and up on blank ones, and lifts where the loop starts again, as no stroke runs over it (`findPieces()`). A move is kept once the beam is `minStep` px from the last one, and at the end of each lit run and of each frame.
+- **A new loop each frame:** a source's strokes can move along its loop from one frame to the next, as Yellowtail's crawl, grow, wrap or drop out. So the pen stays down into the next frame only if the beam is still in the same lit run, counted from the loop's start, and within 5% of the frame's longer side of where it was (`JOIN_SHARE`). Otherwise it would join two strokes with a straight line. Yellowtail's gestures crawl 5 to 15 px a frame at 640×480, and the joins this stops were 200 px and more.
+- **Values only:** the pen goes where they are each frame, down all the time, as it did before the pens read loops. An unplugged pin stays at 0.5, the centre, and a value that isn't finite lifts the pen.
+
+Before they read loops, Conway and InkMarkers took only the beam's place each frame, which with Yellowtail or Latk drew straight lines jumping around the drawing. Checked in headless Chrome on a virtual clock:
+- **Loops:** with Yellowtail's X and Y cabled into Conway, InkMarkers, ESP32 and this module, Conway and InkMarkers trace the same gestures as ESP32, the right way up, with no straight joins, at Loop Hz 5, 30 and 100. So does a Latk preset. At Loop Hz 100 and a Cell Size of 1, Conway's pen had about 420 segments a frame, 14 passes.
+- **Values only:** two Oscillators on Conway (running and paused) and InkMarkers, and one on X alone, gave the same output as HEAD's on every pixel at pixel density 1 and 2. That includes unplugging both pins for two frames and plugging them back in.
 
 **Params.**
 

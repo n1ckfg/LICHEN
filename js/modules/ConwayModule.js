@@ -1,5 +1,6 @@
 import { Module } from './Module.js';
-import { conwaySimulationFrag, conwayRenderFrag } from '../shaders/conway.js';
+import { conwaySimulationFrag, conwayRenderFrag, conwayPenFrag, CONWAY_PEN_SEGMENTS } from '../shaders/conway.js';
+import { XYPen, UP } from './latk/strokes.js';
 import { letterbox } from '../frame.js';
 import { registerModule } from '../moduleRegistry.js';
 
@@ -20,7 +21,8 @@ export class ConwayModule extends Module {
   constructor(glCanvas, id) {
     super('Conway', glCanvas, id);
     // A pen that draws as the mouse does, at X and Y (0..1, Y up), while
-    // either is cabled; an unplugged one stays at the centre
+    // either is cabled; an unplugged one stays at the centre. A loop on either
+    // (Latk's, Yellowtail's) draws its strokes, as the beam traces them.
     this.inputs = [{ id: 'a1d0', name: 'x', type: 'control' }, { id: '8a8b', name: 'y', type: 'control' }];
     this.outputs = [{ id: '8702', name: 'out', type: 'video' }];
     this.historicalInfo = "Conway";
@@ -32,6 +34,7 @@ export class ConwayModule extends Module {
 
     this.simulationShader = glCanvas.createShader(this._getVertSrc(), conwaySimulationFrag);
     this.renderShader = glCanvas.createShader(this._getVertSrc(), conwayRenderFrag);
+    this.penShader = glCanvas.createShader(this._getVertSrc(), conwayPenFrag);
 
     this.fboA = this.createFramebuffer();
     this.fboB = this.createFramebuffer();
@@ -47,8 +50,11 @@ export class ConwayModule extends Module {
     this.drawValue = 1;
     this.lastDrawX = -1;
     this.lastDrawY = -1;
-    // Where the X and Y pen was last frame, in pixels; null while it's up
+    // The X and Y pins, and where their pen was last, in pixels; null while it's up
+    this.xyPen = new XYPen();
     this.lastPen = null;
+    // This frame's pen segments, [x1, y1, x2, y2] in pixels
+    this.penSegments = [];
 
     this.pendingSpawns = [];
     this.pendingClear = false;
@@ -168,21 +174,50 @@ export class ConwayModule extends Module {
     this.pendingSpawns.push({ x: px, y: py, x2: px2, y2: py2, value, radius, evolve });
   }
 
-  // The X and Y pen: each frame a line from where it was last frame, in one
-  // pass, or a dot on the frame it goes down. It lifts when both are unplugged.
-  // Its pass only draws, so the board still steps only as Running and Speed say.
+  // The X and Y pen (see XYPen): a line from where it was to each place it
+  // moves to, or a dot where it goes down. It lifts when both are unplugged,
+  // or where a loop's blanking is off. Its passes only draw, so the board
+  // still steps only as Running and Speed say.
   _penFromInputs(graph) {
-    const xIn = this.getControlInput(graph, 0);
-    const yIn = this.getControlInput(graph, 1);
-    const px = (xIn ? xIn.value : 0.5) * this.glCanvas.width;
-    const py = (1 - (yIn ? yIn.value : 0.5)) * this.glCanvas.height;
-    if ((!xIn && !yIn) || !Number.isFinite(px) || !Number.isFinite(py)) {
-      this.lastPen = null;
-      return;
+    const cellSize = this.params.cellSize.value;
+    const moves = this.xyPen.trace(this, graph, this.glCanvas.width, this.glCanvas.height, cellSize) ?? [UP];
+    for (const m of moves) {
+      if (m === UP) {
+        this.lastPen = null;
+        continue;
+      }
+      const from = this.lastPen ?? m;
+      this.penSegments.push([from.x, from.y, m.x, m.y]);
+      this.lastPen = m;
     }
-    const from = this.lastPen ?? { x: px, y: py };
-    this.spawnAt(from.x, from.y, 1, this.params.cellSize.value, px, py, false);
-    this.lastPen = { x: px, y: py };
+  }
+
+  // The pen's segments, CONWAY_PEN_SEGMENTS a pass
+  _drawPen(glCanvas, density) {
+    const segs = this.penSegments;
+    const data = new Float32Array(CONWAY_PEN_SEGMENTS * 4);
+    for (let at = 0; at < segs.length; at += CONWAY_PEN_SEGMENTS) {
+      const count = Math.min(CONWAY_PEN_SEGMENTS, segs.length - at);
+      data.fill(0);
+      for (let k = 0; k < count; k++) {
+        const s = segs[at + k];
+        for (let j = 0; j < 4; j++) data[k * 4 + j] = s[j] * density;
+      }
+      const readFBO = this.currentBuffer === 0 ? this.fboA : this.fboB;
+      const writeFBO = this.currentBuffer === 0 ? this.fboB : this.fboA;
+      writeFBO.begin();
+      glCanvas.clear();
+      glCanvas.shader(this.penShader);
+      this.penShader.setUniform('u_state', readFBO);
+      this.penShader.setUniform('u_resolution', this.fragResolution());
+      this.penShader.setUniform('u_segs', Array.from(data));
+      this.penShader.setUniform('u_count', count);
+      this.penShader.setUniform('u_radius', this.params.cellSize.value * density);
+      this.renderQuad();
+      writeFBO.end();
+      this.currentBuffer = 1 - this.currentBuffer;
+    }
+    this.penSegments = [];
   }
 
   spawnPattern(px, py, patternName) {
@@ -310,11 +345,12 @@ export class ConwayModule extends Module {
       this.pendingRandomize = false;
     }
 
-    this._penFromInputs(graph);
     while (this.pendingSpawns.length > 0) {
       const spawn = this.pendingSpawns.shift();
       doSimStep(true, [spawn.x, spawn.y], spawn.radius, spawn.value, false, false, [spawn.x2, spawn.y2], spawn.evolve);
     }
+    this._penFromInputs(graph);
+    this._drawPen(glCanvas, density);
 
     if (running) {
       for (let i = 0; i < speed; i++) {
@@ -353,6 +389,7 @@ export class ConwayModule extends Module {
     this.fboB = null;
     this.simulationShader = null;
     this.renderShader = null;
+    this.penShader = null;
     super.dispose();
   }
 }
