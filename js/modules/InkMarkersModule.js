@@ -4,6 +4,7 @@ import {
   inkMarkersPaperFrag, inkMarkersStrokeVert, inkMarkersStrokeFrag, inkMarkersBlendFrag,
 } from '../shaders/inkmarkers.js';
 import { InkMarkersPanel } from './inkmarkers/panel.js';
+import { colorParams } from './palette/ColorPalette.js';
 import { letterbox } from '../frame.js';
 import { XYPen, UP } from './latk/strokes.js';
 import { registerModule } from '../moduleRegistry.js';
@@ -38,9 +39,7 @@ export class InkMarkersModule extends Module {
       // Changing the paper starts a fresh sheet, as in the sketch, so Seed leaves it be
       paper: { id: '31e4', value: 2, min: 0, max: 3, step: 1, label: 'Paper', widget: 'dropdown',
                valueLabels: ['Smooth', 'Cold Press', 'Marker Pad', 'Kraft'] },
-      r: { id: '48a6', value: 0, min: 0, max: 255, step: 1, label: 'R', random: true },
-      g: { id: '577a', value: 0, min: 0, max: 255, step: 1, label: 'G', random: true },
-      b: { id: 'f39a', value: 0, min: 0, max: 255, step: 1, label: 'B', random: true },
+      ...colorParams({ r: '48a6', g: '577a', b: 'f39a' }),
       clear: { id: '3736', value: 0, min: 0, max: 1, step: 1, label: 'Clear', widget: 'trigger' },
       reseed: { id: 'debd', value: 0, min: 0, max: 1, step: 1, label: 'Seed', widget: 'trigger' },
     };

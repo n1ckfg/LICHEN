@@ -5,12 +5,14 @@ import {
   WET_PAINT_SEGMENTS, WET_PAINT_PICK_SCALE,
 } from '../shaders/wet-paint.js';
 import { WetPaintPanel } from './wetpaint/panel.js';
+import { colorParams } from './palette/ColorPalette.js';
 import { PixelReadback } from './slowscanjam/PixelReadback.js';
 import { XYPen, UP } from './latk/strokes.js';
 import { letterbox } from '../frame.js';
 import { registerModule } from '../moduleRegistry.js';
 
-// The sketch's inks, as pigment absorption per channel
+// The sketch's inks, as pigment absorption per channel. R, G and B set the
+// ink now; these are its 1-5 keys and its autopilot's choices.
 const INKS = [
   { name: 'Sumi', abs: [0.92, 0.88, 0.82] },
   { name: 'Indigo', abs: [1.00, 0.72, 0.18] },
@@ -24,6 +26,23 @@ const INKS = [
 const SKETCH_WIDTH = 1400;
 // A mouse paints at the sketch's pressure for a mouse
 const MOUSE_PRESSURE = 0.6;
+// An ink's colour is how it shows on bare paper at a pigment density of 1,
+// as the display pass draws it: paper x exp(-absorption x INK_DEPTH)
+const PAPER = [0.945, 0.915, 0.855];
+const INK_DEPTH = 2.3;
+// Absorption a black gets, a little past the sketch's darkest ink (1.05)
+const MAX_ABSORPTION = 1.2;
+function absorptionToRgb(abs) {
+  return abs.map((a, i) => Math.round(255 * PAPER[i] * Math.exp(-a * INK_DEPTH)));
+}
+function rgbToAbsorption(rgb) {
+  return rgb.map((c, i) => {
+    const a = -Math.log(Math.max(c / 255, 1e-4) / PAPER[i]) / INK_DEPTH;
+    return Math.min(MAX_ABSORPTION, Math.max(0, a));
+  });
+}
+const INK_RGB = INKS.map(ink => absorptionToRgb(ink.abs));
+
 // The sketch's per-frame drying rate at a Drying of 1
 const DRY_RATE = 0.01;
 // The X and Y pen's spacing, as a share of Size
@@ -44,8 +63,8 @@ export class WetPaintModule extends Module {
     this.inputs = [{ id: 'dabd', name: 'x', type: 'control' }, { id: '3f6e', name: 'y', type: 'control' }];
     this.outputs = [{ id: 'ecd7', name: 'out', type: 'video' }];
     this.params = {
-      ink: { id: '6e46', value: 0, min: 0, max: INKS.length - 1, step: 1, label: 'Ink', widget: 'dropdown',
-             valueLabels: INKS.map(i => i.name), random: true },
+      // The ink, as InkMarkers' colour; a new node starts with the sketch's sumi
+      ...colorParams({ r: 'ecb5', g: 'ea8a', b: '2952' }, INK_RGB[0]),
       size: { id: '6517', value: 12, min: 2, max: 96, step: 1, label: 'Size', random: [4, 40] },
       gravity: { id: '8fdf', value: 1.3, min: 0, max: 4, step: 0.01, label: 'Gravity', random: [0.3, 2.5] },
       swirl: { id: 'b5e8', value: 0.55, min: 0, max: 2, step: 0.01, label: 'Swirl', random: [0, 1.2] },
@@ -78,8 +97,8 @@ export class WetPaintModule extends Module {
     this.w = glCanvas.width;
     this.h = glCanvas.height;
 
-    this.inkIndex = -1;
-    this.base = INKS[0].abs.slice();
+    this.inkKey = null;               // R, G and B as the brush was last dipped in them
+    this.base = INKS[0].abs.slice();  // their absorption
     this.ink = INKS[0].abs.slice();   // the brush's colour, drifting as it picks up ink
     this.segs = [];                   // this frame's segments, in sim px
     // The mouse and the X and Y pins each paint their own stroke
@@ -138,16 +157,22 @@ export class WetPaintModule extends Module {
     this.mouseStroke = null;
   }
 
-  // The brush's colour on paper, for the toolbar's swatch, as the sketch's
-  brushCss() {
-    const paper = [241, 233, 218];
-    return `rgb(${paper.map((p, i) => Math.round(p * Math.exp(-this.ink[i] * 1.6))).join(',')})`;
+  color255() {
+    return [this.params.r.value, this.params.g.value, this.params.b.value];
   }
 
+  // The brush's colour on paper, for the toolbar's swatch: R, G and B while
+  // the brush is clean, drifting as it picks up ink
+  brushCss() {
+    return `rgb(${absorptionToRgb(this.ink).join(',')})`;
+  }
+
+  // One of the sketch's inks into R, G and B
   _setInk(i) {
-    this.inkIndex = i;
-    this.base = INKS[i].abs.slice();
-    this.ink = INKS[i].abs.slice();
+    const [r, g, b] = INK_RGB[i];
+    this.setParam('r', r);
+    this.setParam('g', g);
+    this.setParam('b', b);
   }
 
   // - - - Strokes, in frame px with y down, as the sketch's in CSS px - - -
@@ -218,7 +243,7 @@ export class WetPaintModule extends Module {
   handleKey(key, keyCode, p) {
     const mod = p && (p.keyIsDown(p.CONTROL) || p.keyIsDown(91) || p.keyIsDown(93));
     const k = key.length === 1 ? key.toLowerCase() : key;
-    if (k >= '1' && k <= String(INKS.length)) this.setParam('ink', parseInt(k) - 1);
+    if (k >= '1' && k <= String(INKS.length)) this._setInk(parseInt(k) - 1);
     else if (k === '[') this.setParam('size', Math.round(this.params.size.value / 1.2));
     else if (k === ']') this.setParam('size', Math.round(this.params.size.value * 1.2));
     else if (k === 'f') this.setParam('vortex', this.params.vortex.value > 0 ? 0 : 1);
@@ -277,7 +302,7 @@ export class WetPaintModule extends Module {
     const scale = w / SKETCH_WIDTH;
     let a = this.autoStroke;
     if (!a) {
-      if (Math.random() < 0.4) this.setParam('ink', Math.floor(Math.random() * INKS.length));
+      if (Math.random() < 0.4) this._setInk(Math.floor(Math.random() * INKS.length));
       this._syncInk();
       a = this.autoStroke = {
         x: w * (0.15 + 0.7 * Math.random()), y: h * (0.15 + 0.55 * Math.random()),
@@ -328,9 +353,14 @@ export class WetPaintModule extends Module {
 
   // - - - Passes - - -
 
+  // A new colour, from the toolbar, a dial or a cable, dips the brush clean in it
   _syncInk() {
-    const i = Math.max(0, Math.min(INKS.length - 1, Math.round(this.params.ink.value)));
-    if (i !== this.inkIndex) this._setInk(i);
+    const rgb = this.color255().map(c => Math.max(0, Math.min(255, Math.round(c))));
+    const key = rgb.join(',');
+    if (key === this.inkKey) return;
+    this.inkKey = key;
+    this.base = rgbToAbsorption(rgb);
+    this.ink = this.base.slice();
   }
 
   _strokes() {

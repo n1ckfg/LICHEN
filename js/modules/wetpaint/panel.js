@@ -1,10 +1,13 @@
 // WetPaint's fullscreen toolbar, a DOM overlay in the manner of InkMarkers'
-// (see inkmarkers/panel.js): the inks, the brush's colour as it is now, the
+// (see inkmarkers/panel.js): the shared colour picker (palette/ColorPalette.js)
+// and the brush's colour as it is now, the
 // sim's knobs, Paint or Water for the mouse, Flow or Freeze, Autopilot, and
 // Clear, Save Image and Seed. Every control writes the module's params, and
 // sync() reads them back each frame, so the dials, cables and Seed show here
 // too. Built with createElement only, so the node-gles3 export's stub
 // document can build it.
+
+import { ColorPalette } from '../palette/ColorPalette.js';
 
 function el(tag, css, text, className) {
   const e = document.createElement(tag);
@@ -76,8 +79,8 @@ export class WetPaintPanel {
       return { input, out, digits };
     };
 
-    const ink = paramChoices('Ink', 'ink');
-    this._inkButtons = ink.buttons;
+    const colorSection = section('Color');
+    this._color = new ColorPalette(this.mod, colorSection);
     // The brush's colour now: it drifts toward the ink it passes over
     const current = el('div', 'display: flex; align-items: center; gap: 8px; margin-top: 8px;');
     this._swatch = el('div', `
@@ -86,7 +89,7 @@ export class WetPaintPanel {
     `);
     current.appendChild(this._swatch);
     current.appendChild(el('span', 'color: #888;', 'Brush colour'));
-    ink.section.appendChild(current);
+    colorSection.appendChild(current);
 
     this._brushButtons = choices('Brush', ['Paint', 'Water'], (i) => { this.mod.waterMode = i === 1; }).buttons;
 
@@ -116,7 +119,7 @@ export class WetPaintPanel {
     root.appendChild(actions);
 
     this.hint = el('div', 'left: 224px; pointer-events: none;',
-      'Drag to paint · right-drag or Shift: water · hold still to pool · 1–5 ink · [ ] size · F vortex · A autopilot · Space freeze · C clear · S save · ESC exit',
+      'Drag to paint · right-drag or Shift: water · hold still to pool · 1–5 the sketch\'s inks · [ ] size · F vortex · A autopilot · Space freeze · C clear · S save · ESC exit',
       'retro-hint');
 
     document.body.appendChild(root);
@@ -129,6 +132,7 @@ export class WetPaintPanel {
       this.root.style.display = 'block';
       this.hint.style.display = 'block';
       this._synced = {};
+      this._color.invalidate();
     }
     this.sync();
   }
@@ -150,8 +154,7 @@ export class WetPaintPanel {
     };
     const highlight = (buttons, index) => buttons.forEach((b, i) => b.classList.toggle('active', i === index));
 
-    const inkIndex = Math.round(params.ink.value);
-    if (changed('ink', inkIndex)) highlight(this._inkButtons, inkIndex);
+    this._color.sync();
     const water = this.mod.waterMode ? 1 : 0;
     if (changed('water', water)) highlight(this._brushButtons, water);
     const freeze = Math.round(params.freeze.value);
