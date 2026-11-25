@@ -34,6 +34,7 @@ import './modules/DelayModule.js';
 import './modules/CyberlaceModule.js';
 import './modules/ESP32Module.js';
 import './modules/InkMarkersModule.js';
+import './modules/WetPaintModule.js';
 import './modules/NTSCModule.js';
 import './modules/FilmGrainModule.js';
 import './modules/GameBoyModule.js';
@@ -198,7 +199,7 @@ const sketch = (p) => {
   };
 
   p.keyPressed = () => {
-    // When a GRASS, Conway, InkDrops, InkMarkers, Panorama, Twoscilloscope or ChromaKey module is fullscreened it owns all keyboard input
+    // When a GRASS, Conway, InkDrops, InkMarkers, WetPaint, Panorama, Twoscilloscope or ChromaKey module is fullscreened it owns all keyboard input
     if (ui.fullscreenMonitor !== null) {
       const fsmod = pipeline.graph.nodes.get(ui.fullscreenMonitor);
       if (fsmod && fsmod.type === 'GRASS') {
@@ -231,7 +232,7 @@ const sketch = (p) => {
         }
         return false;
       }
-      if (fsmod && fsmod.type === 'InkMarkers') {
+      if (fsmod && (fsmod.type === 'InkMarkers' || fsmod.type === 'WetPaint')) {
         // ESC exits fullscreen and hides the toolbar; the rest are the sketch's keys
         if (p.key === 'Escape') {
           fsmod.hideFullscreenUI();

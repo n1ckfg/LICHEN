@@ -37,7 +37,8 @@ const MODULE_CATEGORIES = {
   'Control': ['Calculator', 'Constant', 'Random', 'Remap', 'Skeleton'],
   'Effects': ['BooleanLogic', 'BufferSmear', 'Cyberlace', 'FilmGrain', 'GameBoy', 'Glitch', 'HSFlow', 'HyperCard', 'LuminanceDelay', 'Maelstrom', 'PixelVision', 'SpatialSlice', 'TimeTunnel', 'TVLines', 'UnrealBloom', 'VHSC', 'VideoToasting'],
   'Generative': ['Cloudy', 'Coils', 'Conway', 'Crystalline', 'GridGuys', 'InkDrops', 'LetterForms', 'Protozoa', 'SpiralGalaxy', 'Swarm', 'Whitney', 'Yellowtail'],
-  'Emulation': ['DeeSeventySix', 'ESP32', 'InkMarkers', 'NTSC', 'RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
+  'Drawing': ['InkMarkers', 'WetPaint'],
+  'Emulation': ['DeeSeventySix', 'ESP32', 'NTSC', 'RuttEtra', 'SlowscanJam', 'Twoscilloscope'],
   'img2img': ['DepthAnything', 'InfrDrawings', 'Pix2Pix'],
   'Formats': ['Latk', 'NAPLPS', 'Panorama', 'QTVR', 'VRML'],
   'Output': ['Monitor'],
@@ -54,6 +55,7 @@ const color_utility = [85, 120, 100];
 const color_control = [96, 140, 56];
 const color_output = [170, 85, 34];
 const color_emulation = [30, 125, 135];
+const color_drawing = [150, 105, 55];
 const color_img2img = [150, 50, 80];
 
 const MODULE_COLORS = {
@@ -103,10 +105,12 @@ const MODULE_COLORS = {
   Swarm: color_generative,
   Whitney: color_generative,
   Yellowtail: color_generative,
+  // - - - DRAWING - - -
+  InkMarkers: color_drawing,
+  WetPaint: color_drawing,
   // - - - EMULATION - - -
   DeeSeventySix: color_emulation,
   ESP32: color_emulation,
-  InkMarkers: color_emulation,
   NTSC: color_emulation,
   RuttEtra: color_emulation,
   SlowscanJam: color_emulation,
@@ -1507,7 +1511,7 @@ export class NodeGraphUI {
           }
           // Render terminal/REPL overlays on top of the clean video
           mod.renderOverlays(p);
-        } else if (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey' || mod.type === 'InkMarkers') {
+        } else if (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey' || mod.type === 'InkMarkers' || mod.type === 'WetPaint') {
           if (mod.outputFBO) {
             this._drawFBO(mod.outputFBO, dx, dy, dw, dh);
           }
@@ -2142,8 +2146,8 @@ export class NodeGraphUI {
   mousePressed(mx, my, button) {
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      // Conway / InkDrops / InkMarkers / QTVR / Panorama / VRML / Latk / Mesh / RuttEtra / ChromaKey / Transform / Crop: handle the click instead of exiting fullscreen
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' || mod.type === 'InkMarkers' ||
+      // Conway / InkDrops / InkMarkers / WetPaint / QTVR / Panorama / VRML / Latk / Mesh / RuttEtra / ChromaKey / Transform / Crop: handle the click instead of exiting fullscreen
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkDrops' || mod.type === 'InkMarkers' || mod.type === 'WetPaint' ||
                   mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' || mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'ChromaKey' ||
                   mod.type === 'Transform' || mod.type === 'Crop' || isGridGuys3D(mod))) {
         const btnName = button === this.p.RIGHT ? 'right' : 'left';
@@ -2552,7 +2556,7 @@ export class NodeGraphUI {
     // Conway: handle mouse drawing in fullscreen (QTVR / Panorama / VRML / Latk / Mesh / RuttEtra: turn the view; Transform: move, or turn with Alt; Crop: draw the box)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'WetPaint' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
                   mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop' || isGridGuys3D(mod))) {
         mod.handleMouseDrag(mx, my, this.p.width, this.p.height, Boolean(event && event.altKey));
         return;
@@ -2610,7 +2614,7 @@ export class NodeGraphUI {
     // Conway: handle mouse release in fullscreen
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'WetPaint' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
                   mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || mod.type === 'Crop' || isGridGuys3D(mod))) {
         mod.handleMouseUp();
         return;
@@ -2772,7 +2776,7 @@ export class NodeGraphUI {
     // Conway: handle scroll wheel for cell size in fullscreen (QTVR / Panorama / VRML / Latk / Mesh / RuttEtra: zoom; Transform: scale)
     if (this.fullscreenMonitor !== null) {
       const mod = this.pipeline.graph.nodes.get(this.fullscreenMonitor);
-      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
+      if (mod && (mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'InkMarkers' || mod.type === 'WetPaint' || mod.type === 'QTVR' || mod.type === 'Panorama' || mod.type === 'VRML' ||
                   mod.type === 'Latk' || mod.type === 'Mesh' || mod.type === 'RuttEtra' || mod.type === 'Transform' || isGridGuys3D(mod))) {
         mod.handleWheel(delta);
         return;
@@ -2984,7 +2988,7 @@ export class NodeGraphUI {
     const mod = this.pipeline.graph.nodes.get(id);
     if (mod) {
       // Hide Conway UI if deleting a fullscreened Conway
-      if ((mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey' || mod.type === 'InkMarkers') && mod.hideFullscreenUI) {
+      if ((mod.type === 'Conway' || mod.type === 'Yellowtail' || mod.type === 'ChromaKey' || mod.type === 'InkMarkers' || mod.type === 'WetPaint') && mod.hideFullscreenUI) {
         mod.hideFullscreenUI();
       }
       // Start fade-out animation
